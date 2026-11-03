@@ -540,26 +540,24 @@ export default function Home() {
                                   ? "Em atividade"
                                   : "Arquivado"}
                               </span>
-                              <span className="muted subtle">{p.currency}</span>
                             </div>
-                            <h2>{p.name}</h2>
-                            <p className="subtle">
-                              {p.parent_company_name
-                                ? `${p.parent_company_name} · ${p.company_name}`
-                                : p.company_name ||
-                                  (p.company_id
-                                    ? "Vínculo existente"
-                                    : "Projeto geral da organização")}
-                              {p.company_kind === "brand" ? " (Marca)" : ""}
-                            </p>
-                            <p className="muted module-text">
-                              {p.description ||
-                                "Seu Business Plan está pronto para ganhar forma."}
-                            </p>
-                            <span className="subtle muted">
-                              {p.modules.length} áreas autorizadas · Template v
-                              {p.template_version}
-                            </span>
+                            <div className="project-summary">
+                              <h2>{p.name}</h2>
+                              {p.description?.trim() && (
+                                <p className="muted module-text">
+                                  {p.description}
+                                </p>
+                              )}
+                              <p className="subtle project-company">
+                                {p.parent_company_name
+                                  ? `${p.parent_company_name} · ${p.company_name}`
+                                  : p.company_name ||
+                                    (p.company_id
+                                      ? "Vínculo existente"
+                                      : "Projeto geral da organização")}
+                                {p.company_kind === "brand" ? " (Marca)" : ""}
+                              </p>
+                            </div>
                             <button
                               className="btn secondary"
                               onClick={() => {

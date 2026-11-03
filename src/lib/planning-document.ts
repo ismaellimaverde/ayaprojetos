@@ -9,12 +9,10 @@ export function areaDocument(
     return summaryFromLegacy(document.fields, document.items);
   const content: SummaryDocument["content"] = [];
   const text = (value: string) =>
-    value
-      .split("\n")
-      .map((line) => ({
-        type: "paragraph" as const,
-        ...(line ? { content: [{ type: "text" as const, text: line }] } : {}),
-      }));
+    value.split("\n").map((line) => ({
+      type: "paragraph" as const,
+      ...(line ? { content: [{ type: "text" as const, text: line }] } : {}),
+    }));
   const label = (value: string): SummaryDocument["content"][number] => ({
     type: "paragraph",
     content: [{ type: "text", text: value, marks: [{ type: "bold" }] }],
@@ -86,6 +84,7 @@ export function consolidatedDocument(
         block.type === "heading"
           ? {
               type: "paragraph",
+              attrs: { textAlign: block.attrs.textAlign },
               content: block.content?.map((n) =>
                 n.type === "text"
                   ? {

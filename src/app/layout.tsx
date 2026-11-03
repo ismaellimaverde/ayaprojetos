@@ -1,3 +1,4 @@
+import "@fontsource/montserrat/700.css";
 import "@fontsource-variable/archivo";
 import "./globals.css";
 import type { Metadata } from "next";

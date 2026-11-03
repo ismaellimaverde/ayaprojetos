@@ -103,6 +103,17 @@ test("shared UI surfaces remain usable across routes and responsive internal scr
         fullPage: true,
       });
     }
+    const menuItem = page.locator(".sidebar nav button").first();
+    await page.evaluate(() => document.fonts.ready);
+    expect(
+      await page.evaluate(() => document.fonts.check('700 14px "Montserrat"')),
+    ).toBe(true);
+    expect(
+      await menuItem.evaluate((el) => getComputedStyle(el).fontFamily),
+    ).toContain("Montserrat");
+    expect(
+      await menuItem.evaluate((el) => getComputedStyle(el).fontWeight),
+    ).toBe("700");
     for (const name of [
       "Projetos",
       "Empresas e unidades",
@@ -163,6 +174,7 @@ test("shared UI surfaces remain usable across routes and responsive internal scr
     await page
       .getByRole("button", { name: "Fechar área", exact: true })
       .click();
+    await page.getByRole("button", { name: "Não salvar", exact: true }).click();
     await page
       .getByRole("button", { name: "Alternar tema", exact: true })
       .click();

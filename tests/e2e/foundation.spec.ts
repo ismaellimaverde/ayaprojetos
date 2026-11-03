@@ -96,6 +96,7 @@ test("real password-only admin access, optional MFA, project creation, invitatio
     "Informações salvas",
   );
   await editorDialog.getByRole("button", { name: "Fechar área" }).click();
+  await page.getByRole("button", { name: "Não salvar", exact: true }).click();
   await page.reload();
   await page.getByRole("button", { name: "Abrir Business Plan" }).click();
   await page
@@ -107,10 +108,9 @@ test("real password-only admin access, optional MFA, project creation, invitatio
   await expect(
     editorDialog.getByText("Planning persisted by E2E", { exact: true }),
   ).toBeVisible();
-  await editorDialog
-    .getByRole("button", { name: "Histórico", exact: true })
-    .click();
-  await editorDialog.getByRole("button", { name: /^Revisão 1/ }).click();
+  await expect(
+    editorDialog.getByRole("button", { name: "Histórico", exact: true }),
+  ).toHaveCount(0);
   await expect(
     editorDialog.getByText("Research evidence", { exact: true }),
   ).toBeVisible();
@@ -164,6 +164,7 @@ test("real password-only admin access, optional MFA, project creation, invitatio
     editorDialog.getByText("Concurrent saved content", { exact: true }),
   ).toBeVisible();
   await editorDialog.getByRole("button", { name: "Fechar área" }).click();
+  await page.getByRole("button", { name: "Não salvar", exact: true }).click();
   await page.setViewportSize({ width: 1280, height: 720 });
   // Single rich summary, literal legacy text, formatting, reload and browser PDF.
   const richURL = `/api/boss/module-content/${planProject.id}/executive`;
@@ -211,8 +212,17 @@ test("real password-only admin access, optional MFA, project creation, invitatio
     .getByRole("button", { name: "Itálico", exact: true })
     .click();
   await editorDialog
-    .getByRole("button", { name: "Título H1", exact: true })
+    .getByRole("combobox", { name: "Estilo do parágrafo", exact: true })
+    .selectOption("1");
+  await editorDialog
+    .getByRole("button", { name: "Sublinhado", exact: true })
     .click();
+  await editorDialog
+    .getByRole("combobox", { name: "Tamanho da fonte", exact: true })
+    .selectOption("20px");
+  await editorDialog
+    .getByRole("combobox", { name: "Alinhamento", exact: true })
+    .selectOption("center");
   await editorDialog
     .getByRole("combobox", { name: "Fonte", exact: true })
     .selectOption("Georgia");
@@ -224,8 +234,10 @@ test("real password-only admin access, optional MFA, project creation, invitatio
   await expect(editorDialog.getByRole("status")).toContainText(
     "Informações salvas",
   );
-  await editorDialog
-    .getByRole("button", { name: "Recarregar", exact: true })
+  await editorDialog.getByRole("button", { name: "Fechar área" }).click();
+  await page.getByRole("button", { name: "Não salvar", exact: true }).click();
+  await page
+    .getByRole("button", { name: "Acessar Resumo executivo", exact: true })
     .click();
   await expect(editorDialog.locator(".summary-prose h1 strong")).toContainText(
     "Resumo com acentuação",
@@ -270,14 +282,13 @@ test("real password-only admin access, optional MFA, project creation, invitatio
   await pdfPage.close();
   await page.screenshot({ path: "/tmp/boss-summary-desktop.png" });
   await page.setViewportSize({ width: 390, height: 844 });
-  await editorDialog
-    .getByRole("button", { name: "Editar informações", exact: true })
-    .click();
+
   expect(
     await editorDialog.evaluate((el) => el.scrollWidth <= el.clientWidth),
   ).toBe(true);
   await page.screenshot({ path: "/tmp/boss-summary-mobile.png" });
   await editorDialog.getByRole("button", { name: "Fechar área" }).click();
+  await page.getByRole("button", { name: "Não salvar", exact: true }).click();
   await page.setViewportSize({ width: 1280, height: 720 });
   await page.getByRole("button", { name: "Biblioteca", exact: true }).click();
   await expect(

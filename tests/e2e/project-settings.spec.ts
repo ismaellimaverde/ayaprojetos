@@ -53,6 +53,26 @@ test("project form hides technical settings and preserves nondefault values on e
   await expect.poll(() => writes.length).toBe(1);
   expect(writes[0].currency).toBe("BRL");
   expect(writes[0].timezone).toBe("America/Fortaleza");
+  const projectCard = page.locator("article.project");
+  await expect(projectCard.getByText("USD", { exact: true })).toHaveCount(0);
+  await expect(projectCard).not.toContainText("áreas autorizadas");
+  await expect(projectCard).not.toContainText("Template v");
+  await expect(
+    projectCard.locator(".project-summary > :nth-child(1)"),
+  ).toHaveText(project.name);
+  await expect(
+    projectCard.locator(".project-summary > :nth-child(2)"),
+  ).toHaveText(project.description);
+  await expect(
+    projectCard.locator(".project-summary > :nth-child(3)"),
+  ).toHaveText("Projeto geral da organização");
+  await page.setViewportSize({ width: 390, height: 844 });
+  expect(
+    await page.evaluate(
+      () => document.documentElement.scrollWidth <= innerWidth,
+    ),
+  ).toBe(true);
+  await page.setViewportSize({ width: 1280, height: 720 });
   await page.getByRole("button", { name: "Abrir Business Plan" }).click();
   const heading = page.locator("main.content > .heading");
   await expect(heading.locator("p")).toHaveText(project.description);
@@ -101,6 +121,10 @@ test("project form hides technical settings and preserves nondefault values on e
   expect(writes[1].timezone).toBe("America/New_York");
   project.description = "   ";
   await page.reload();
+  await expect(projectCard.locator(".project-summary > p")).toHaveCount(1);
+  await expect(projectCard.locator(".project-company")).toHaveText(
+    "Projeto geral da organização",
+  );
   await page.getByRole("button", { name: "Abrir Business Plan" }).click();
   await expect(heading.locator("p")).toHaveCount(0);
 });

@@ -910,3 +910,73 @@ h3 {
 .library-document .summary-prose {
   min-height: 0;
 }
+
+.project-summary {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+}
+.project-summary h2,
+.project-summary p {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+.project-summary p {
+  line-height: 1.45;
+}
+.project {
+  padding: 20px;
+  gap: 12px;
+}
+@media (max-width: 650px) {
+  .project {
+    padding: 18px;
+  }
+}
+
+.sidebar nav button {
+  font-family: "Montserrat", "Archivo Variable", sans-serif;
+  font-weight: 700;
+}
+.module-editor > .heading {
+  margin-bottom: 8px;
+}
+.module-editor > .muted {
+  margin: 0 0 14px;
+}
+.editor-close-prompt {
+  max-width: 560px;
+}
+.editor-close-prompt .row {
+  margin-top: 20px;
+}
+.module-editor[hidden] {
+  display: none;
+}
+.summary-prose h2 {
+  font-size: 1.5rem;
+  line-height: 1.35;
+  margin: 18px 0 10px;
+}
+.summary-prose h3 {
+  font-size: 1.2rem;
+  line-height: 1.4;
+  margin: 16px 0 8px;
+}
+.summary-prose {
+  font-size: 16px;
+}
+@media (max-width: 650px) {
+  .module-editor > .heading {
+    flex-direction: row;
+    align-items: flex-start;
+    gap: 12px;
+  }
+  .module-editor > .heading > div {
+    min-width: 0;
+  }
+  .module-editor > .heading > button {
+    flex-shrink: 0;
+    padding: 10px 12px;
+  }
+}

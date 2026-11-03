@@ -166,3 +166,19 @@ User selected Archivo for the full interface. Installed the pinned @fontsource-v
 User additionally requested removing the peach introductory “Fundação do seu Business OS” notice from the portfolio. Removed only that static block; data and capability state are unchanged. Included in the same unpublished release.
 
 Publication authorization received for the complete tested project-copy/card-action/direct-editor/library/Archivo/notice-removal release. No database migration or configuration change is required. The separate login-error diagnostic remains excluded. Remote commit and production deployment must be verified independently.
+
+## Compact project cards — local, publication pending
+
+User requested removing the displayed currency and “áreas autorizadas · Template v1” metadata from project cards, with text ordered as project name, saved description, then company/unit affiliation. Removed only UI output. Empty/whitespace descriptions omit the paragraph; long text wraps. Existing status badge and Business Plan action remain unchanged. Compact text spacing (6px), outer gap (12px) and card padding (20px desktop/18px mobile) reduce excess whitespace. Currency, timezone, template version, modules, affiliations and permissions remain stored and unchanged.
+
+User additionally selected Montserrat Bold for the platform's main navigation items only. Added the pinned local Fontsource package, imported only weight 700, scoped it to sidebar navigation buttons, and retained its OFL license. Archivo remains the body/interface font elsewhere; logos and authored document fonts are unchanged. No external font requests or configuration changes are introduced.
+
+## Editor close confirmation and formatting — local, publication pending
+
+User requested an explicit choice on every editor close. “Salvar e fechar” waits for a successful write; failed writes keep the dialog and draft. With no pending changes it closes without creating an empty revision. “Não salvar” only discards the local draft; “Cancelar” returns to the same mounted editor, preserving its state. Escape opens the same prompt (and cancels it when already open). Pending writes disable closing actions. Existing unload warnings and server permission/conflict checks remain.
+
+Replaced the generic editor introduction with the catalog definition for its area and reduced header spacing. Removed the editor's Recarregar/Histórico buttons and empty “Ainda não preenchido” header label as specifically identified in the screenshot. Existing revision rows and authenticated history API remain untouched; card status badges remain because the removal targeted the editor header.
+
+Rich formatting now includes known font families, 12–32px size choices, normal text/H1/H2/H3, bold, italic, underline, strike, left/center/right/justified alignment, links, clear formatting, undo and redo. Validation admits only those enumerated styles and known attributes; display and PDF map them to safe elements/styles without raw HTML. Existing rich documents remain readable. Tables, images, lists, DOCX import/export, spellchecking and Word-equivalent features are not implemented or promised. PDF still uses the browser's Save as PDF workflow and saved revisions. No migration or remote data change is needed.
+
+Publication approved by the user for compact project cards, Montserrat Bold navigation, explicit editor close choices, simplified area headers and expanded rich formatting. Release is limited to these tested changes, with no migration or configuration change. The separate login-error diagnostic remains excluded.

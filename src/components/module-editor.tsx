@@ -7,11 +7,11 @@ import {
   type ModuleItem,
 } from "@/lib/module-fields";
 import { Modal } from "./modal";
+import { modules } from "@/lib/catalog";
 import { RichSummaryEditor, SummaryView } from "./rich-summary";
 import { SUMMARY_KEY, summaryFromLegacy } from "@/lib/rich-summary";
 import { printSummary } from "@/lib/print-summary";
 
-type HistoryRow = { revision: number; created_at: string; author_name: string };
 export function ModuleEditor({
   org,
   projectId,
@@ -36,8 +36,7 @@ export function ModuleEditor({
   const [busy, setBusy] = useState(false);
   const [summaryInvalid, setSummaryInvalid] = useState(false);
   const [message, setMessage] = useState("");
-  const [history, setHistory] = useState<HistoryRow[] | null>(null);
-  const [snapshot, setSnapshot] = useState<ModuleDocument | null>(null);
+  const [confirmClose, setConfirmClose] = useState(false);
   async function reload() {
     const r = await api(path, org);
     setDocument(r.document);
@@ -46,8 +45,6 @@ export function ModuleEditor({
     setDirty(false);
     setSummaryInvalid(false);
     setEditing(false);
-    setHistory(null);
-    setSnapshot(null);
   }
   useEffect(() => {
     let active = true;
@@ -93,7 +90,7 @@ export function ModuleEditor({
   const discard = () =>
     !dirty || confirm("Descartar as alterações ainda não salvas?");
   const close = () => {
-    if (!busy && discard()) onClose();
+    if (!busy) setConfirmClose((value) => !value);
   };
   const changeField = (id: string, value: string) => {
     setDocument((d) => d && { ...d, fields: { ...d.fields, [id]: value } });
@@ -109,16 +106,96 @@ export function ModuleEditor({
     );
     setDirty(true);
   };
-  const content = snapshot ?? document;
+  const content = document;
   const summary =
     area === "executive" && content
       ? summaryFromLegacy(content.fields, content.items)
       : null;
   const canEdit =
     !archived && permissions.includes(document?.revision ? "edit" : "create");
+  async function save(closeAfter: boolean) {
+    if (busy || summaryInvalid || !document) return;
+    if (!dirty) {
+      if (closeAfter) onClose();
+      return;
+    }
+    if (!canEdit) {
+      setMessage("Seu acesso não permite salvar alterações.");
+      return;
+    }
+    setBusy(true);
+    setMessage("");
+    try {
+      await api(path, org, "POST", {
+        revision: document.revision,
+        fields: document.fields,
+        items: document.items,
+      });
+      onSaved();
+      if (closeAfter) {
+        onClose();
+        return;
+      }
+      await reload();
+      setMessage("Informações salvas.");
+    } catch (error) {
+      setMessage((error as Error).message);
+    } finally {
+      setBusy(false);
+    }
+  }
   return (
     <Modal onClose={close}>
-      <section className="panel module-editor" aria-label={`Área ${title}`}>
+      {confirmClose && (
+        <section
+          className="panel editor-close-prompt"
+          role="alertdialog"
+          aria-modal="true"
+          aria-labelledby="close-editor-title"
+        >
+          <h2 id="close-editor-title">Salvar antes de fechar?</h2>
+          <p>
+            {dirty
+              ? "Você pode salvar suas alterações ou fechar sem salvar. O conteúdo já salvo será preservado."
+              : "Não há alterações pendentes. O conteúdo já salvo será preservado."}
+          </p>
+          {message && (
+            <p role="alert" className="notice">
+              {message}
+            </p>
+          )}
+          {summaryInvalid && (
+            <p role="alert">
+              Corrija a formatação antes de salvar, ou escolha não salvar.
+            </p>
+          )}
+          <div className="row">
+            <button
+              className="btn"
+              disabled={busy || summaryInvalid}
+              onClick={() => save(true)}
+            >
+              {busy ? "Salvando…" : "Salvar e fechar"}
+            </button>
+            <button className="btn secondary" disabled={busy} onClick={onClose}>
+              Não salvar
+            </button>
+            <button
+              className="btn secondary"
+              disabled={busy}
+              autoFocus
+              onClick={() => setConfirmClose(false)}
+            >
+              Cancelar
+            </button>
+          </div>
+        </section>
+      )}
+      <section
+        hidden={confirmClose}
+        className="panel module-editor"
+        aria-label={`Área ${title}`}
+      >
         <div className="heading">
           <div>
             <div className="eyebrow">Business Plan</div>
@@ -129,9 +206,7 @@ export function ModuleEditor({
           </button>
         </div>
         <p className="muted">
-          Informações de planejamento preenchidas pela equipe. Registros
-          operacionais e indicadores calculados serão integrados nas próximas
-          etapas.
+          {modules.find((module) => module.id === area)?.description}
         </p>
         {message && (
           <p role="status" className="notice">
@@ -142,13 +217,17 @@ export function ModuleEditor({
           <p>Carregando conteúdo…</p>
         ) : (
           <>
-            <div className="row" style={{ marginBottom: 20 }}>
+            <div
+              className="row"
+              style={{
+                marginBottom: 14,
+                display: !editing && canEdit ? "flex" : "none",
+              }}
+            >
               {!editing && canEdit && (
                 <button
                   className="btn"
                   onClick={() => {
-                    setHistory(null);
-                    setSnapshot(null);
                     if (area === "executive" && document) {
                       setDocument({
                         ...document,
@@ -169,39 +248,6 @@ export function ModuleEditor({
                     : "Preencher informações"}
                 </button>
               )}
-              <button
-                type="button"
-                className="btn secondary"
-                disabled={busy}
-                onClick={async () => {
-                  if (!discard()) return;
-                  try {
-                    await reload();
-                    setMessage("");
-                  } catch (e) {
-                    setMessage((e as Error).message);
-                  }
-                }}
-              >
-                Recarregar
-              </button>
-              <button
-                type="button"
-                className="btn secondary"
-                disabled={busy}
-                onClick={async () => {
-                  if (!discard()) return;
-                  try {
-                    await reload();
-                    setHistory(await api(`${path}/history`, org));
-                    setMessage("");
-                  } catch (e) {
-                    setMessage((e as Error).message);
-                  }
-                }}
-              >
-                Histórico
-              </button>
             </div>
             {area === "executive" &&
               permissions.includes("export") &&
@@ -215,10 +261,7 @@ export function ModuleEditor({
                     onClick={async () => {
                       setBusy(true);
                       try {
-                        const r = await api(
-                          `${path}/export${snapshot ? `/${snapshot.revision}` : ""}`,
-                          org,
-                        );
+                        const r = await api(`${path}/export`, org);
                         const saved = r.document ?? r;
                         printSummary(
                           summaryFromLegacy(saved.fields, saved.items),
@@ -247,66 +290,23 @@ export function ModuleEditor({
                 Seu acesso permite consultar estas informações.
               </p>
             )}
-            {history && (
-              <section aria-label="Histórico da área">
-                <h3>Últimas 50 revisões</h3>
-                {!history.length && <p>Nenhuma revisão salva.</p>}
-                <div className="stack">
-                  {history.map((h) => (
-                    <button
-                      key={h.revision}
-                      className="btn secondary"
-                      onClick={async () => {
-                        try {
-                          setSnapshot(
-                            await api(`${path}/history/${h.revision}`, org),
-                          );
-                        } catch (e) {
-                          setMessage((e as Error).message);
-                        }
-                      }}
-                    >
-                      Revisão {h.revision} · {h.author_name} ·{" "}
-                      {new Date(h.created_at).toLocaleString("pt-BR")}
-                    </button>
-                  ))}
-                </div>
-              </section>
-            )}
             {content && (
               <form
                 inert={busy}
                 onSubmit={async (e) => {
                   e.preventDefault();
-                  if (!editing || busy || summaryInvalid) return;
-                  setBusy(true);
-                  setMessage("");
-                  try {
-                    await api(path, org, "POST", {
-                      revision: document.revision,
-                      fields: document.fields,
-                      items: document.items,
-                    });
-                    await reload();
-                    setMessage("Informações salvas.");
-                    onSaved();
-                  } catch (error) {
-                    setMessage((error as Error).message);
-                  } finally {
-                    setBusy(false);
-                  }
+                  await save(false);
                 }}
               >
-                <p className="muted subtle">
-                  {snapshot ? "Consulta de histórico · " : ""}
-                  {content.revision
-                    ? `Revisão ${content.revision}`
-                    : "Ainda não preenchido"}
-                  {content.author_name ? ` · ${content.author_name}` : ""}
-                  {content.updated_at
-                    ? ` · ${new Date(content.updated_at).toLocaleString("pt-BR")}`
-                    : ""}
-                </p>
+                {content.revision > 0 && (
+                  <p className="muted subtle">
+                    {content.revision ? `Revisão ${content.revision}` : ""}
+                    {content.author_name ? ` · ${content.author_name}` : ""}
+                    {content.updated_at
+                      ? ` · ${new Date(content.updated_at).toLocaleString("pt-BR")}`
+                      : ""}
+                  </p>
+                )}
                 {summary ? (
                   <section className="module-field-card">
                     {editing ? (

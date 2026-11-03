@@ -1,10 +1,13 @@
 "use client";
 import { useEditor, EditorContent, useEditorState } from "@tiptap/react";
+import TextAlign from "@tiptap/extension-text-align";
 import StarterKit from "@tiptap/starter-kit";
-import { TextStyle, FontFamily } from "@tiptap/extension-text-style";
+import { TextStyle, FontFamily, FontSize } from "@tiptap/extension-text-style";
 import { useState, type ReactNode } from "react";
 import {
   summaryFonts,
+  summarySizes,
+  summaryAlignments,
   parseSummary,
   safeLink,
   type SummaryDocument,
@@ -24,7 +27,7 @@ export function RichSummaryEditor({
     immediatelyRender: false,
     extensions: [
       StarterKit.configure({
-        heading: { levels: [1] },
+        heading: { levels: [1, 2, 3] },
         blockquote: false,
         bulletList: false,
         orderedList: false,
@@ -33,12 +36,12 @@ export function RichSummaryEditor({
         code: false,
         codeBlock: false,
         horizontalRule: false,
-        strike: false,
-        underline: false,
         link: { openOnClick: false, autolink: false, isAllowedUri: safeLink },
       }),
       TextStyle,
       FontFamily,
+      FontSize,
+      TextAlign.configure({ types: ["heading", "paragraph"] }),
     ],
     content: initial,
     editorProps: {
@@ -70,6 +73,14 @@ export function RichSummaryEditor({
       bold: editor?.isActive("bold") ?? false,
       italic: editor?.isActive("italic") ?? false,
       heading: editor?.isActive("heading") ?? false,
+      underline: editor?.isActive("underline") ?? false,
+      strike: editor?.isActive("strike") ?? false,
+      level: editor?.getAttributes("heading").level ?? 0,
+      align:
+        editor?.getAttributes("paragraph").textAlign ??
+        editor?.getAttributes("heading").textAlign ??
+        "left",
+      size: editor?.getAttributes("textStyle").fontSize ?? "16px",
       font: editor?.getAttributes("textStyle").fontFamily ?? "Arial",
     }),
   });
@@ -95,6 +106,44 @@ export function RichSummaryEditor({
             ))}
           </select>
         </label>
+        <label>
+          Tamanho
+          <select
+            aria-label="Tamanho da fonte"
+            value={state.size}
+            onChange={(e) =>
+              editor.chain().focus().setFontSize(e.target.value).run()
+            }
+          >
+            {summarySizes.map((size) => (
+              <option key={size} value={size}>
+                {size.replace("px", " px")}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label>
+          Estilo
+          <select
+            aria-label="Estilo do parágrafo"
+            value={state.level}
+            onChange={(e) => {
+              const level = Number(e.target.value);
+              if (level)
+                editor
+                  .chain()
+                  .focus()
+                  .setHeading({ level: level as 1 | 2 | 3 })
+                  .run();
+              else editor.chain().focus().setParagraph().run();
+            }}
+          >
+            <option value={0}>Texto normal</option>
+            <option value={1}>Título 1</option>
+            <option value={2}>Título 2</option>
+            <option value={3}>Título 3</option>
+          </select>
+        </label>
         <button
           type="button"
           aria-label="Negrito"
@@ -113,13 +162,49 @@ export function RichSummaryEditor({
         </button>
         <button
           type="button"
-          aria-label="Título H1"
-          aria-pressed={state.heading}
+          aria-label="Sublinhado"
+          aria-pressed={state.underline}
+          onClick={() => editor.chain().focus().toggleUnderline().run()}
+        >
+          <u>U</u>
+        </button>
+        <button
+          type="button"
+          aria-label="Tachado"
+          aria-pressed={state.strike}
+          onClick={() => editor.chain().focus().toggleStrike().run()}
+        >
+          <s>S</s>
+        </button>
+        <label>
+          Alinhamento
+          <select
+            aria-label="Alinhamento"
+            value={state.align}
+            onChange={(e) =>
+              editor.chain().focus().setTextAlign(e.target.value).run()
+            }
+          >
+            {summaryAlignments.map((align, i) => (
+              <option key={align} value={align}>
+                {["Esquerda", "Centro", "Direita", "Justificado"][i]}
+              </option>
+            ))}
+          </select>
+        </label>
+        <button
+          type="button"
           onClick={() =>
-            editor.chain().focus().toggleHeading({ level: 1 }).run()
+            editor
+              .chain()
+              .focus()
+              .unsetAllMarks()
+              .setParagraph()
+              .unsetTextAlign()
+              .run()
           }
         >
-          H1
+          Limpar formatação
         </button>
         <button
           type="button"
@@ -179,9 +264,16 @@ export function SummaryView({ value }: { value: SummaryDocument }) {
           for (const mark of node.marks ?? []) {
             if (mark.type === "bold") text = <strong>{text}</strong>;
             if (mark.type === "italic") text = <em>{text}</em>;
+            if (mark.type === "underline") text = <u>{text}</u>;
+            if (mark.type === "strike") text = <s>{text}</s>;
             if (mark.type === "textStyle")
               text = (
-                <span style={{ fontFamily: mark.attrs.fontFamily }}>
+                <span
+                  style={{
+                    fontFamily: mark.attrs.fontFamily ?? undefined,
+                    fontSize: mark.attrs.fontSize ?? undefined,
+                  }}
+                >
                   {text}
                 </span>
               );
@@ -198,10 +290,30 @@ export function SummaryView({ value }: { value: SummaryDocument }) {
           }
           return <span key={j}>{text}</span>;
         });
-        return block.type === "heading" ? (
-          <h1 key={i}>{content}</h1>
-        ) : (
-          <p key={i}>{content?.length ? content : <br />}</p>
+        const style = { textAlign: block.attrs?.textAlign ?? undefined };
+        if (block.type === "heading") {
+          if (block.attrs.level === 2)
+            return (
+              <h2 key={i} style={style}>
+                {content}
+              </h2>
+            );
+          if (block.attrs.level === 3)
+            return (
+              <h3 key={i} style={style}>
+                {content}
+              </h3>
+            );
+          return (
+            <h1 key={i} style={style}>
+              {content}
+            </h1>
+          );
+        }
+        return (
+          <p key={i} style={style}>
+            {content?.length ? content : <br />}
+          </p>
         );
       })}
     </div>

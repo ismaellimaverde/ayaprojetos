@@ -101,3 +101,64 @@ test("legacy fields and archived items are converted as literal text without mut
     doc,
   );
 });
+
+test("expanded formatting admits only known sizes, alignment and heading levels", () => {
+  for (const level of [1, 2, 3]) {
+    const doc = {
+      type: "doc",
+      content: [
+        {
+          type: "heading",
+          attrs: { level, textAlign: "center" },
+          content: [
+            {
+              type: "text",
+              text: "Título",
+              marks: [
+                { type: "underline" },
+                { type: "strike" },
+                {
+                  type: "textStyle",
+                  attrs: { fontFamily: "Georgia", fontSize: "20px" },
+                },
+              ],
+            },
+          ],
+        },
+      ],
+    };
+    assert.doesNotThrow(() => parseSummary(JSON.stringify(doc)));
+  }
+  for (const attrs of [
+    { textAlign: "expression(alert(1))" },
+    { textAlign: "center", style: "color:red" },
+  ])
+    assert.throws(() =>
+      parseSummary(
+        JSON.stringify({
+          type: "doc",
+          content: [{ type: "paragraph", attrs }],
+        }),
+      ),
+    );
+  for (const fontSize of ["url(https://evil.test)", "500px", "20px; color:red"])
+    assert.throws(() =>
+      parseSummary(
+        JSON.stringify({
+          type: "doc",
+          content: [
+            {
+              type: "paragraph",
+              content: [
+                {
+                  type: "text",
+                  text: "x",
+                  marks: [{ type: "textStyle", attrs: { fontSize } }],
+                },
+              ],
+            },
+          ],
+        }),
+      ),
+    );
+});
