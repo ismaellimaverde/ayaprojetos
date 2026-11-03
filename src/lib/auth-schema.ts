@@ -1,15 +1,16 @@
 import {
-  pgTable,
+  pgSchema,
   text,
   timestamp,
   boolean,
   integer,
 } from "drizzle-orm/pg-core";
+const privateSchema = pgSchema("boss_private");
 const dates = () => ({
   createdAt: timestamp("createdAt").notNull().defaultNow(),
   updatedAt: timestamp("updatedAt").notNull().defaultNow(),
 });
-export const user = pgTable("user", {
+export const user = privateSchema.table("user", {
   id: text("id").primaryKey(),
   name: text("name").notNull(),
   email: text("email").notNull().unique(),
@@ -18,7 +19,7 @@ export const user = pgTable("user", {
   twoFactorEnabled: boolean("twoFactorEnabled").default(false),
   ...dates(),
 });
-export const session = pgTable("session", {
+export const session = privateSchema.table("session", {
   id: text("id").primaryKey(),
   token: text("token").notNull().unique(),
   expiresAt: timestamp("expiresAt").notNull(),
@@ -29,7 +30,7 @@ export const session = pgTable("session", {
     .references(() => user.id, { onDelete: "cascade" }),
   ...dates(),
 });
-export const account = pgTable("account", {
+export const account = privateSchema.table("account", {
   id: text("id").primaryKey(),
   accountId: text("accountId").notNull(),
   providerId: text("providerId").notNull(),
@@ -45,14 +46,14 @@ export const account = pgTable("account", {
   password: text("password"),
   ...dates(),
 });
-export const verification = pgTable("verification", {
+export const verification = privateSchema.table("verification", {
   id: text("id").primaryKey(),
   identifier: text("identifier").notNull(),
   value: text("value").notNull(),
   expiresAt: timestamp("expiresAt").notNull(),
   ...dates(),
 });
-export const twoFactor = pgTable("twoFactor", {
+export const twoFactor = privateSchema.table("twoFactor", {
   id: text("id").primaryKey(),
   secret: text("secret").notNull(),
   backupCodes: text("backupCodes").notNull(),
@@ -63,7 +64,7 @@ export const twoFactor = pgTable("twoFactor", {
   failedVerificationCount: integer("failedVerificationCount").default(0),
   lockedUntil: timestamp("lockedUntil"),
 });
-export const rateLimit = pgTable("rateLimit", {
+export const rateLimit = privateSchema.table("rateLimit", {
   id: text("id").primaryKey(),
   key: text("key").unique().notNull(),
   count: integer("count").notNull(),

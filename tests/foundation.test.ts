@@ -1,10 +1,14 @@
+import { migratePrivateDatabase } from "../scripts/database-setup";
+import { isLocalDatabase } from "../src/lib/runtime-config";
 import { test, before, after } from "node:test";
 import assert from "node:assert/strict";
 import nextEnv from "@next/env";
-import { readFile } from "node:fs/promises";
+
 import { randomUUID, randomBytes } from "node:crypto";
 import { Pool } from "pg";
 nextEnv.loadEnvConfig(process.cwd());
+if (!isLocalDatabase(process.env.DATABASE_URL!))
+  throw new Error("Tests require localhost PostgreSQL");
 const adminPool = new Pool({ connectionString: process.env.DATABASE_URL });
 const testURL = new URL(process.env.DATABASE_URL!);
 testURL.pathname = "/boss_test";
@@ -27,18 +31,16 @@ async function makeUser(email: string) {
   const u = await auth.api.signUpEmail({
     body: { name: "Usuário de teste", email, password },
   });
-  await pool.query('UPDATE "user" SET "emailVerified"=true WHERE id=$1', [
-    u.user.id,
-  ]);
+  await pool.query(
+    'UPDATE boss_private."user" SET "emailVerified"=true WHERE id=$1',
+    [u.user.id],
+  );
   return u.user.id;
 }
 before(async () => {
   await adminPool.query("DROP DATABASE IF EXISTS boss_test WITH (FORCE)");
   await adminPool.query("CREATE DATABASE boss_test");
-  await pool.query(await readFile("migrations/001_foundation.sql", "utf8"));
-  await pool.query(
-    await readFile("migrations/002_invite_registration.sql", "utf8"),
-  );
+  await migratePrivateDatabase(pool);
   ownerId = await makeUser("owner@example.test");
   memberId = await makeUser("marketing@example.test");
   financeId = await makeUser("finance@example.test");
@@ -46,12 +48,12 @@ before(async () => {
   const w = randomUUID();
   org = randomUUID();
   other = randomUUID();
-  await pool.query("INSERT INTO workspaces(id,name) VALUES($1,$2)", [
-    w,
-    "TEST ONLY",
-  ]);
   await pool.query(
-    "INSERT INTO organizations(id,workspace_id,name) VALUES($1,$3,$4),($2,$3,$5)",
+    "INSERT INTO boss_private.workspaces(id,name) VALUES($1,$2)",
+    [w, "TEST ONLY"],
+  );
+  await pool.query(
+    "INSERT INTO boss_private.organizations(id,workspace_id,name) VALUES($1,$3,$4),($2,$3,$5)",
     [org, other, w, "AYA test", "Other tenant"],
   );
   for (const [id, role] of [
@@ -61,7 +63,7 @@ before(async () => {
     [managerId, "member"],
   ])
     await pool.query(
-      "INSERT INTO members(id,org_id,user_id,role) VALUES($1,$2,$3,$4)",
+      "INSERT INTO boss_private.members(id,org_id,user_id,role) VALUES($1,$2,$3,$4)",
       [randomUUID(), org, id, role],
     );
   a = (
@@ -236,7 +238,7 @@ test("invite tokens reject expired, revoked, mismatched and replayed acceptance"
   const token = randomBytes(32).toString("hex");
   const iid = randomUUID();
   await pool.query(
-    "INSERT INTO invitations(id,org_id,project_id,email,role,permissions,token_hash,expires_at,created_by) VALUES($1,$2,$3,$4,'viewer',$5,$6,now()-interval '1 minute',$7)",
+    "INSERT INTO boss_private.invitations(id,org_id,project_id,email,role,permissions,token_hash,expires_at,created_by) VALUES($1,$2,$3,$4,'viewer',$5,$6,now()-interval '1 minute',$7)",
     [
       iid,
       org,
@@ -251,7 +253,7 @@ test("invite tokens reject expired, revoked, mismatched and replayed acceptance"
     status: 400,
   });
   await pool.query(
-    "UPDATE invitations SET expires_at=now()+interval '1 hour' WHERE id=$1",
+    "UPDATE boss_private.invitations SET expires_at=now()+interval '1 hour' WHERE id=$1",
     [iid],
   );
   await assert.rejects(() => acceptInvitation(token, financeId), {
@@ -280,7 +282,7 @@ test("suspension blocks data and company foreign keys cannot cross tenant", asyn
   );
   const cid = randomUUID();
   await pool.query(
-    "INSERT INTO companies(id,org_id,name,kind) VALUES($1,$2,'Other','company')",
+    "INSERT INTO boss_private.companies(id,org_id,name,kind) VALUES($1,$2,'Other','company')",
     [cid, other],
   );
   await assert.rejects(() =>
@@ -292,9 +294,10 @@ test("suspension blocks data and company foreign keys cannot cross tenant", asyn
 });
 test("Better Auth persists hashes and verifies actual password sessions", async () => {
   const account = (
-    await pool.query('SELECT password FROM account WHERE "userId"=$1', [
-      ownerId,
-    ])
+    await pool.query(
+      'SELECT password FROM boss_private.account WHERE "userId"=$1',
+      [ownerId],
+    )
   ).rows[0];
   assert.ok(account.password);
   assert.notEqual(account.password, password);

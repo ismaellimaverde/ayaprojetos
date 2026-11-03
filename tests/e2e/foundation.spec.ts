@@ -93,7 +93,7 @@ test("real login, MFA, project creation, invitation, isolation and session revoc
   await page
     .getByLabel("Marketing e growth: Visualizar", { exact: true })
     .check();
-  await page.getByRole("button", { name: "Criar convite local" }).click();
+  await page.getByRole("button", { name: "Criar convite" }).click();
   await expect(page.getByRole("status")).toContainText("Nenhum e-mail externo");
   const invitation = await mail("e2e-guest@example.test", "invitation");
   const context = await browser.newContext();

@@ -16,7 +16,7 @@ async function handler(req: Request) {
       s &&
       (
         await pool.query(
-          "SELECT 1 FROM members WHERE user_id=$1 AND status='active' AND role IN ('owner','admin') UNION ALL SELECT 1 FROM grants WHERE user_id=$1 AND status='active' AND role IN ('company_admin','project_manager','area_manager')",
+          "SELECT 1 FROM boss_private.members WHERE user_id=$1 AND status='active' AND role IN ('owner','admin') UNION ALL SELECT 1 FROM boss_private.grants WHERE user_id=$1 AND status='active' AND role IN ('company_admin','project_manager','area_manager')",
           [s.user.id],
         )
       ).rowCount

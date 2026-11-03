@@ -42,3 +42,7 @@ npm run build
 Tests recreate only `boss_test` and `boss_e2e`. E2E uses `/usr/bin/chromium`, overridable via CHROMIUM_PATH, and port 3100. See docs/TESTING.md. The initial documentation, decisions and phase boundaries are in docs/. Original prompts are in requirements/.
 
 Delivery is submitted for review through a separate branch and draft PR. No merge, deployment or external service provisioning is authorized by this delivery.
+
+## Hosting preparation (unpublished)
+
+Netlify + Supabase Postgres compatibility is prepared locally; see [HOSTING.md](docs/HOSTING.md). Better Auth remains the identity provider. Destinations, credentials, email transport and remote changes are not yet authorized. `npm run check:hosting` performs configuration-only validation. New databases install into boss_private. Existing public-schema installations require a separately reviewed move before using the updated runtime; do not reset or silently migrate business data.

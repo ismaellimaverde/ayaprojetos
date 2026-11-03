@@ -1,6 +1,6 @@
 # Integrations
 
-Implemented local email delivery adapter: writes verification, password-reset and invitation messages into .data/mail with private filesystem permissions. No external mail, SMTP credentials or real recipients. Changing MAIL_MODE away from local fails closed until an authorized provider adapter is implemented.
+Implemented local email delivery adapter: writes verification, password-reset and invitation messages into .data/mail with private filesystem permissions. No external mail, SMTP credentials or real recipients. Hosting preparation adds a generic SMTP adapter gated by explicit delivery enablement and configured credentials; local capture is rejected in hosted environments. No provider or sender has been selected or authorized.
 
 Planned connector interface: provider/account, minimal scopes, encrypted secrets, source IDs, initial/incremental cursor, pagination/rate limits, retry policy, idempotency key, provenance, currency, period, sync timestamp, mapping version, errors and controlled reprocessing. Jobs will run outside HTTP request lifetimes.
 

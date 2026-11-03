@@ -68,8 +68,8 @@ function RecoverContent() {
           <Link href="/login">Voltar ao login</Link>
         </p>
         <p className="muted subtle">
-          Ambiente de desenvolvimento: mensagens na caixa local privada, sem
-          envio externo.
+          O link temporário será disponibilizado pelo canal de e-mail
+          configurado para este ambiente.
         </p>
       </div>
     </main>

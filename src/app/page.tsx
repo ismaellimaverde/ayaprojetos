@@ -154,7 +154,9 @@ export default function Home() {
       setRevision((v) => v + 1);
       setMessage(
         r.delivery
-          ? "Convite salvo na caixa local privada. Nenhum e-mail externo enviado."
+          ? r.delivery === "local-only"
+            ? "Convite salvo na caixa local privada. Nenhum e-mail externo enviado."
+            : "Convite aceito pelo serviço de e-mail. A entrega ao destinatário depende do provedor."
           : "Alteração salva.",
       );
       return true;
@@ -635,8 +637,8 @@ export default function Home() {
                   <section className="panel">
                     <h2>Convites</h2>
                     <p className="muted subtle">
-                      Neste ambiente, mensagens ficam na caixa local privada.
-                      Nenhum envio externo é realizado.
+                      A entrega usa o canal configurado para este ambiente.
+                      Consulte o resultado de cada envio.
                     </p>
                     {invites.map((i) => (
                       <div
@@ -1081,9 +1083,7 @@ export default function Home() {
                   </table>
                 </div>
                 <button className="btn">
-                  {modal === "invite"
-                    ? "Criar convite local"
-                    : "Salvar permissões"}
+                  {modal === "invite" ? "Criar convite" : "Salvar permissões"}
                 </button>
               </form>
             )}

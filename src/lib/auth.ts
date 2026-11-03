@@ -5,6 +5,8 @@ import { drizzle } from "drizzle-orm/node-postgres";
 import { pool } from "./db";
 import * as schema from "./auth-schema";
 import { deliver } from "./mail";
+import { assertHostedIdentity } from "./runtime-config";
+assertHostedIdentity();
 export const auth = betterAuth({
   appName: "BOSS",
   baseURL: process.env.BETTER_AUTH_URL,
@@ -49,7 +51,10 @@ export const auth = betterAuth({
       update: {
         after: async (u) => {
           if (u.twoFactorEnabled)
-            await pool.query('DELETE FROM session WHERE \"userId\"=$1', [u.id]);
+            await pool.query(
+              'DELETE FROM boss_private.session WHERE \"userId\"=$1',
+              [u.id],
+            );
         },
       },
     },
@@ -57,7 +62,7 @@ export const auth = betterAuth({
       create: {
         after: async (s) => {
           await pool.query(
-            "INSERT INTO security_events(user_id,event) VALUES($1,$2)",
+            "INSERT INTO boss_private.security_events(user_id,event) VALUES($1,$2)",
             [s.userId, "session.created"],
           );
         },

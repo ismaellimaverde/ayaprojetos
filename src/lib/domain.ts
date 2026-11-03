@@ -9,7 +9,7 @@ import {
   type Permissions,
 } from "./catalog";
 import { z } from "zod";
-import { deliver } from "./mail";
+import { deliver, deliveryStatus } from "./mail";
 export class DomainError extends Error {
   constructor(
     public status: number,
@@ -78,7 +78,7 @@ export async function audit(
   details: unknown = {},
 ) {
   await c.query(
-    "INSERT INTO audit_logs(org_id,actor_id,action,target_id,details) VALUES($1,$2,$3,$4,$5)",
+    "INSERT INTO boss_private.audit_logs(org_id,actor_id,action,target_id,details) VALUES($1,$2,$3,$4,$5)",
     [org, actor, action, target, JSON.stringify(details)],
   );
 }
@@ -95,7 +95,7 @@ export async function inOrg<T>(
       actor.sessionId &&
       !(
         await c.query(
-          'SELECT 1 FROM session WHERE id=$1 AND \"userId\"=$2 AND \"expiresAt\">now()',
+          'SELECT 1 FROM boss_private.session WHERE id=$1 AND \"userId\"=$2 AND \"expiresAt\">now()',
           [actor.sessionId, actor.userId],
         )
       ).rowCount
@@ -103,7 +103,7 @@ export async function inOrg<T>(
       throw new DomainError(401, "Sessão revogada");
     const member = (
       await c.query(
-        "SELECT m.role FROM members m JOIN organizations o ON o.id=m.org_id WHERE m.org_id=$1 AND m.user_id=$2 AND m.status='active' FOR UPDATE OF o",
+        "SELECT m.role FROM boss_private.members m JOIN boss_private.organizations o ON o.id=m.org_id WHERE m.org_id=$1 AND m.user_id=$2 AND m.status='active' FOR UPDATE OF o",
         [org, actor.userId],
       )
     ).rows[0];
@@ -113,7 +113,7 @@ export async function inOrg<T>(
       admin ||
       !!(
         await c.query(
-          "SELECT 1 FROM grants WHERE org_id=$1 AND user_id=$2 AND status='active' AND role IN ('company_admin','project_manager','area_manager')",
+          "SELECT 1 FROM boss_private.grants WHERE org_id=$1 AND user_id=$2 AND status='active' AND role IN ('company_admin','project_manager','area_manager')",
           [org, actor.userId],
         )
       ).rowCount;
@@ -140,12 +140,15 @@ export async function projectAccess(
 ) {
   idSchema.parse(id);
   const p = (
-    await c.query("SELECT * FROM projects WHERE id=$1 AND org_id=$2", [id, org])
+    await c.query(
+      "SELECT * FROM boss_private.projects WHERE id=$1 AND org_id=$2",
+      [id, org],
+    )
   ).rows[0];
   if (!p) notFound();
   const g = (
     await c.query(
-      "SELECT permissions FROM grants WHERE org_id=$1 AND project_id=$2 AND user_id=$3 AND status='active'",
+      "SELECT permissions FROM boss_private.grants WHERE org_id=$1 AND project_id=$2 AND user_id=$3 AND status='active'",
       [org, id, actor.userId],
     )
   ).rows[0];
@@ -180,7 +183,7 @@ function fresh(actor: Actor) {
 export async function listOrganizations(userId: string) {
   return (
     await pool.query(
-      "SELECT o.*,w.name AS workspace_name,m.role FROM organizations o JOIN workspaces w ON w.id=o.workspace_id JOIN members m ON m.org_id=o.id WHERE m.user_id=$1 AND m.status='active' ORDER BY o.created_at",
+      "SELECT o.*,w.name AS workspace_name,m.role FROM boss_private.organizations o JOIN boss_private.workspaces w ON w.id=o.workspace_id JOIN boss_private.members m ON m.org_id=o.id WHERE m.user_id=$1 AND m.status='active' ORDER BY o.created_at",
       [userId],
     )
   ).rows;
@@ -200,16 +203,16 @@ export async function execute(
       const v = z.object({ name }).parse(body),
         w = randomUUID(),
         o = randomUUID();
-      await c.query("INSERT INTO workspaces(id,name) VALUES($1,$2)", [
-        w,
-        v.name,
-      ]);
       await c.query(
-        "INSERT INTO organizations(id,workspace_id,name) VALUES($1,$2,$3)",
+        "INSERT INTO boss_private.workspaces(id,name) VALUES($1,$2)",
+        [w, v.name],
+      );
+      await c.query(
+        "INSERT INTO boss_private.organizations(id,workspace_id,name) VALUES($1,$2,$3)",
         [o, w, v.name],
       );
       await c.query(
-        "INSERT INTO members(id,org_id,user_id,role) VALUES($1,$2,$3,'owner')",
+        "INSERT INTO boss_private.members(id,org_id,user_id,role) VALUES($1,$2,$3,'owner')",
         [randomUUID(), o, actor.userId],
       );
       await audit(c, o, actor.userId, "organization.created", o);
@@ -219,7 +222,7 @@ export async function execute(
     if (resource === "overview" && method === "GET") {
       const projects = (
         await c.query(
-          `SELECT p.* FROM projects p WHERE p.org_id=$1 AND ($3::boolean OR EXISTS(SELECT 1 FROM grants g WHERE g.project_id=p.id AND g.org_id=$1 AND g.user_id=$2 AND g.status='active' AND EXISTS(SELECT 1 FROM jsonb_each(g.permissions) e WHERE e.value @> '["view"]'::jsonb))) ORDER BY p.created_at DESC`,
+          `SELECT p.* FROM boss_private.projects p WHERE p.org_id=$1 AND ($3::boolean OR EXISTS(SELECT 1 FROM boss_private.grants g WHERE g.project_id=p.id AND g.org_id=$1 AND g.user_id=$2 AND g.status='active' AND EXISTS(SELECT 1 FROM jsonb_each(g.permissions) e WHERE e.value @> '["view"]'::jsonb))) ORDER BY p.created_at DESC`,
           [org, actor.userId, admin],
         )
       ).rows;
@@ -229,7 +232,7 @@ export async function execute(
       const companies = admin
         ? (
             await c.query(
-              "SELECT * FROM companies WHERE org_id=$1 ORDER BY name",
+              "SELECT * FROM boss_private.companies WHERE org_id=$1 ORDER BY name",
               [org],
             )
           ).rows
@@ -248,11 +251,11 @@ export async function execute(
         const v = entitySchema.parse(body);
         const pid = randomUUID();
         await c.query(
-          "INSERT INTO templates(id,version,modules) VALUES($1,$2,$3) ON CONFLICT DO NOTHING",
+          "INSERT INTO boss_private.templates(id,version,modules) VALUES($1,$2,$3) ON CONFLICT DO NOTHING",
           [masterTemplate.id, 1, JSON.stringify(masterTemplate.modules)],
         );
         await c.query(
-          "INSERT INTO projects(id,org_id,company_id,name,description,currency,timezone,template_id,template_version,modules,created_by) VALUES($1,$2,$3,$4,$5,$6,$7,$8,1,$9,$10)",
+          "INSERT INTO boss_private.projects(id,org_id,company_id,name,description,currency,timezone,template_id,template_version,modules,created_by) VALUES($1,$2,$3,$4,$5,$6,$7,$8,1,$9,$10)",
           [
             pid,
             org,
@@ -276,7 +279,7 @@ export async function execute(
         if (method === "PATCH") {
           const v = entitySchema.parse(body);
           await c.query(
-            "UPDATE projects SET name=$3,description=$4,company_id=$5,currency=$6,timezone=$7,modules=$8,updated_at=now() WHERE id=$1 AND org_id=$2",
+            "UPDATE boss_private.projects SET name=$3,description=$4,company_id=$5,currency=$6,timezone=$7,modules=$8,updated_at=now() WHERE id=$1 AND org_id=$2",
             [
               id,
               org,
@@ -294,7 +297,7 @@ export async function execute(
         if (method === "DELETE") {
           fresh(actor);
           await c.query(
-            "UPDATE projects SET status='archived',updated_at=now() WHERE id=$1 AND org_id=$2",
+            "UPDATE boss_private.projects SET status='archived',updated_at=now() WHERE id=$1 AND org_id=$2",
             [id, org],
           );
           await audit(c, org, actor.userId, "project.archived", id);
@@ -314,7 +317,7 @@ export async function execute(
           .parse(body);
         const cid = randomUUID();
         await c.query(
-          "INSERT INTO companies(id,org_id,name,kind,parent_id) VALUES($1,$2,$3,$4,$5)",
+          "INSERT INTO boss_private.companies(id,org_id,name,kind,parent_id) VALUES($1,$2,$3,$4,$5)",
           [cid, org, v.name, v.kind, v.parent_id],
         );
         await audit(c, org, actor.userId, "company.created", cid);
@@ -324,7 +327,7 @@ export async function execute(
         idSchema.parse(id);
         const v = z.object({ name }).parse(body);
         const r = await c.query(
-          "UPDATE companies SET name=$3 WHERE id=$1 AND org_id=$2 RETURNING id",
+          "UPDATE boss_private.companies SET name=$3 WHERE id=$1 AND org_id=$2 RETURNING id",
           [id, org, v.name],
         );
         if (!r.rowCount) notFound();
@@ -335,7 +338,7 @@ export async function execute(
         idSchema.parse(id);
         fresh(actor);
         const r = await c.query(
-          "UPDATE companies SET status='archived' WHERE id=$1 AND org_id=$2 RETURNING id",
+          "UPDATE boss_private.companies SET status='archived' WHERE id=$1 AND org_id=$2 RETURNING id",
           [id, org],
         );
         if (!r.rowCount) notFound();
@@ -349,15 +352,18 @@ export async function execute(
         return {
           users: (
             await c.query(
-              'SELECT m.*,u.name,u.email,u."twoFactorEnabled",(SELECT max(s.created_at) FROM security_events s WHERE s.user_id=u.id) AS last_login FROM members m JOIN "user" u ON u.id=m.user_id WHERE m.org_id=$1 ORDER BY u.name',
+              'SELECT m.*,u.name,u.email,u."twoFactorEnabled",(SELECT max(s.created_at) FROM boss_private.security_events s WHERE s.user_id=u.id) AS last_login FROM boss_private.members m JOIN boss_private."user" u ON u.id=m.user_id WHERE m.org_id=$1 ORDER BY u.name',
               [org],
             )
           ).rows,
-          grants: (await c.query("SELECT * FROM grants WHERE org_id=$1", [org]))
-            .rows,
+          grants: (
+            await c.query("SELECT * FROM boss_private.grants WHERE org_id=$1", [
+              org,
+            ])
+          ).rows,
           invitations: (
             await c.query(
-              "SELECT id,email,role,project_id,status,expires_at FROM invitations WHERE org_id=$1",
+              "SELECT id,email,role,project_id,status,expires_at FROM boss_private.invitations WHERE org_id=$1",
               [org],
             )
           ).rows,
@@ -373,14 +379,14 @@ export async function execute(
           .parse(body);
         const member = (
           await c.query(
-            "SELECT * FROM members WHERE org_id=$1 AND user_id=$2",
+            "SELECT * FROM boss_private.members WHERE org_id=$1 AND user_id=$2",
             [org, id],
           )
         ).rows[0];
         if (!member) notFound();
         if (member.role === "owner" && v.status !== "active") {
           const owners = await c.query(
-            "SELECT 1 FROM members WHERE org_id=$1 AND role='owner' AND status='active'",
+            "SELECT 1 FROM boss_private.members WHERE org_id=$1 AND role='owner' AND status='active'",
             [org],
           );
           if ((owners.rowCount ?? 0) <= 1)
@@ -395,11 +401,13 @@ export async function execute(
             "Não altere seu próprio vínculo administrativo",
           );
         await c.query(
-          "UPDATE members SET status=$3,job_title=$4 WHERE org_id=$1 AND user_id=$2",
+          "UPDATE boss_private.members SET status=$3,job_title=$4 WHERE org_id=$1 AND user_id=$2",
           [org, id, v.status, v.job_title],
         );
         if (v.status !== "active")
-          await c.query('DELETE FROM session WHERE "userId"=$1', [id]);
+          await c.query('DELETE FROM boss_private.session WHERE "userId"=$1', [
+            id,
+          ]);
         await audit(c, org, actor.userId, "member.updated", id, {
           status: v.status,
         });
@@ -420,7 +428,7 @@ export async function execute(
       await projectAccess(c, actor, org, v.project_id, admin);
       const target = (
         await c.query(
-          "SELECT role FROM members WHERE org_id=$1 AND user_id=$2 AND status='active'",
+          "SELECT role FROM boss_private.members WHERE org_id=$1 AND user_id=$2 AND status='active'",
           [org, v.user_id],
         )
       ).rows[0];
@@ -431,7 +439,7 @@ export async function execute(
           "Vínculos globais não são alterados pela matriz de projeto",
         );
       await c.query(
-        "INSERT INTO grants(id,org_id,project_id,user_id,role,permissions,source,status) VALUES($1,$2,$3,$4,$5,$6,$7,$8) ON CONFLICT(project_id,user_id) DO UPDATE SET role=excluded.role,permissions=excluded.permissions,status=excluded.status,source=excluded.source",
+        "INSERT INTO boss_private.grants(id,org_id,project_id,user_id,role,permissions,source,status) VALUES($1,$2,$3,$4,$5,$6,$7,$8) ON CONFLICT(project_id,user_id) DO UPDATE SET role=excluded.role,permissions=excluded.permissions,status=excluded.status,source=excluded.source",
         [
           randomUUID(),
           org,
@@ -462,7 +470,7 @@ export async function execute(
         const token = randomBytes(32).toString("hex"),
           iid = randomUUID();
         await c.query(
-          "INSERT INTO invitations(id,org_id,project_id,email,role,permissions,token_hash,expires_at,created_by) VALUES($1,$2,$3,$4,$5,$6,$7,now()+interval '48 hours',$8)",
+          "INSERT INTO boss_private.invitations(id,org_id,project_id,email,role,permissions,token_hash,expires_at,created_by) VALUES($1,$2,$3,$4,$5,$6,$7,now()+interval '48 hours',$8)",
           [
             iid,
             org,
@@ -482,20 +490,20 @@ export async function execute(
         await audit(c, org, actor.userId, "invitation.created", iid, {
           email: v.email,
         });
-        return { id: iid, delivery: "local-only" };
+        return { id: iid, delivery: deliveryStatus() };
       }
       if (id) {
         idSchema.parse(id);
         const inv = (
           await c.query(
-            "SELECT * FROM invitations WHERE id=$1 AND org_id=$2 AND status='pending'",
+            "SELECT * FROM boss_private.invitations WHERE id=$1 AND org_id=$2 AND status='pending'",
             [id, org],
           )
         ).rows[0];
         if (!inv) notFound();
         if (method === "DELETE") {
           await c.query(
-            "UPDATE invitations SET status='cancelled' WHERE id=$1 AND org_id=$2",
+            "UPDATE boss_private.invitations SET status='cancelled' WHERE id=$1 AND org_id=$2",
             [id, org],
           );
           await audit(c, org, actor.userId, "invitation.cancelled", id);
@@ -504,7 +512,7 @@ export async function execute(
         if (method === "POST") {
           const token = randomBytes(32).toString("hex");
           await c.query(
-            "UPDATE invitations SET token_hash=$3,registration_attempts=0,expires_at=now()+interval '48 hours' WHERE id=$1 AND org_id=$2",
+            "UPDATE boss_private.invitations SET token_hash=$3,registration_attempts=0,expires_at=now()+interval '48 hours' WHERE id=$1 AND org_id=$2",
             [id, org, digest(token)],
           );
           await deliver(
@@ -513,7 +521,7 @@ export async function execute(
             `${process.env.BETTER_AUTH_URL}/invite?token=${token}`,
           );
           await audit(c, org, actor.userId, "invitation.resent", id);
-          return { delivery: "local-only" };
+          return { delivery: deliveryStatus() };
         }
       }
     }
@@ -521,7 +529,7 @@ export async function execute(
       requireAdmin(admin);
       return (
         await c.query(
-          'SELECT a.*,u.name AS actor FROM audit_logs a JOIN "user" u ON u.id=a.actor_id WHERE org_id=$1 ORDER BY a.created_at DESC LIMIT 100',
+          'SELECT a.*,u.name AS actor FROM boss_private.audit_logs a JOIN boss_private."user" u ON u.id=a.actor_id WHERE org_id=$1 ORDER BY a.created_at DESC LIMIT 100',
           [org],
         )
       ).rows;
@@ -537,29 +545,31 @@ export async function acceptInvitation(token: string, userId: string) {
     await c.query("BEGIN");
     const inv = (
       await c.query(
-        "SELECT * FROM invitations WHERE token_hash=$1 AND status='pending' AND expires_at>now() FOR UPDATE",
+        "SELECT * FROM boss_private.invitations WHERE token_hash=$1 AND status='pending' AND expires_at>now() FOR UPDATE",
         [digest(token)],
       )
     ).rows[0];
     if (!inv) throw new DomainError(400, "Convite inválido ou expirado");
-    await c.query("SELECT id FROM organizations WHERE id=$1 FOR UPDATE", [
-      inv.org_id,
-    ]);
+    await c.query(
+      "SELECT id FROM boss_private.organizations WHERE id=$1 FOR UPDATE",
+      [inv.org_id],
+    );
     const u = (
-      await c.query('SELECT email,"emailVerified" FROM "user" WHERE id=$1', [
-        userId,
-      ])
+      await c.query(
+        'SELECT email,"emailVerified" FROM boss_private."user" WHERE id=$1',
+        [userId],
+      )
     ).rows[0];
     if (!u?.emailVerified || u.email.toLowerCase() !== inv.email) deny();
     const m = (
       await c.query(
-        "SELECT status FROM members WHERE org_id=$1 AND user_id=$2",
+        "SELECT status FROM boss_private.members WHERE org_id=$1 AND user_id=$2",
         [inv.org_id, userId],
       )
     ).rows[0];
     if (m && m.status !== "active") deny();
     const existing = await c.query(
-      "SELECT 1 FROM grants WHERE project_id=$1 AND user_id=$2",
+      "SELECT 1 FROM boss_private.grants WHERE project_id=$1 AND user_id=$2",
       [inv.project_id, userId],
     );
     if (existing.rowCount)
@@ -568,11 +578,11 @@ export async function acceptInvitation(token: string, userId: string) {
         "Conflito de acesso: administrador deve revisar o vínculo existente",
       );
     await c.query(
-      "INSERT INTO members(id,org_id,user_id,role) VALUES($1,$2,$3,'member') ON CONFLICT(org_id,user_id) DO NOTHING",
+      "INSERT INTO boss_private.members(id,org_id,user_id,role) VALUES($1,$2,$3,'member') ON CONFLICT(org_id,user_id) DO NOTHING",
       [randomUUID(), inv.org_id, userId],
     );
     await c.query(
-      "INSERT INTO grants(id,org_id,project_id,user_id,role,permissions,source) VALUES($1,$2,$3,$4,$5,$6,$7)",
+      "INSERT INTO boss_private.grants(id,org_id,project_id,user_id,role,permissions,source) VALUES($1,$2,$3,$4,$5,$6,$7)",
       [
         randomUUID(),
         inv.org_id,
@@ -583,9 +593,10 @@ export async function acceptInvitation(token: string, userId: string) {
         `invitation:${inv.id}`,
       ],
     );
-    await c.query("UPDATE invitations SET status='accepted' WHERE id=$1", [
-      inv.id,
-    ]);
+    await c.query(
+      "UPDATE boss_private.invitations SET status='accepted' WHERE id=$1",
+      [inv.id],
+    );
     await audit(c, inv.org_id, userId, "invitation.accepted", inv.id);
     await c.query("COMMIT");
     return { ok: true };

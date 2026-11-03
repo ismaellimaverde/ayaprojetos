@@ -172,7 +172,8 @@ export default function Security() {
             cadastro público.
           </p>
           <p className="muted">
-            Entrega de e-mail externa ainda não configurada.
+            A entrega de e-mail segue a configuração aprovada para este
+            ambiente.
           </p>
         </section>
       </div>

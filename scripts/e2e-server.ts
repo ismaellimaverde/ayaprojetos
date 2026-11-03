@@ -1,9 +1,13 @@
+import { migratePrivateDatabase } from "./database-setup";
+import { isLocalDatabase } from "../src/lib/runtime-config";
 import nextEnv from "@next/env";
 nextEnv.loadEnvConfig(process.cwd());
 import { Pool } from "pg";
-import { readFile, mkdir, writeFile } from "node:fs/promises";
+import { mkdir, writeFile } from "node:fs/promises";
 import { randomUUID, randomBytes } from "node:crypto";
 import { spawn } from "node:child_process";
+if (!isLocalDatabase(process.env.DATABASE_URL!))
+  throw new Error("Tests require localhost PostgreSQL");
 const root = new Pool({ connectionString: process.env.DATABASE_URL });
 await root.query("DROP DATABASE IF EXISTS boss_e2e WITH (FORCE)");
 await root.query("CREATE DATABASE boss_e2e");
@@ -13,31 +17,29 @@ url.pathname = "/boss_e2e";
 process.env.DATABASE_URL = url.toString();
 process.env.BETTER_AUTH_URL = "http://localhost:3100";
 const { pool } = await import("../src/lib/db");
-await pool.query(await readFile("migrations/001_foundation.sql", "utf8"));
-await pool.query(
-  await readFile("migrations/002_invite_registration.sql", "utf8"),
-);
+await migratePrivateDatabase(pool);
 const { auth } = await import("../src/lib/auth");
 const password = randomBytes(24).toString("hex"),
   email = "e2e-owner@example.test";
 const u = await auth.api.signUpEmail({
   body: { name: "Proprietário de teste", email, password },
 });
-await pool.query('UPDATE "user" SET "emailVerified"=true WHERE id=$1', [
-  u.user.id,
-]);
+await pool.query(
+  'UPDATE boss_private."user" SET "emailVerified"=true WHERE id=$1',
+  [u.user.id],
+);
 const w = randomUUID(),
   org = randomUUID();
-await pool.query("INSERT INTO workspaces(id,name) VALUES($1,$2)", [
+await pool.query("INSERT INTO boss_private.workspaces(id,name) VALUES($1,$2)", [
   w,
   "AYA · TESTE E2E",
 ]);
 await pool.query(
-  "INSERT INTO organizations(id,workspace_id,name) VALUES($1,$2,$3)",
+  "INSERT INTO boss_private.organizations(id,workspace_id,name) VALUES($1,$2,$3)",
   [org, w, "AYA · TESTE E2E"],
 );
 await pool.query(
-  "INSERT INTO members(id,org_id,user_id,role) VALUES($1,$2,$3,'owner')",
+  "INSERT INTO boss_private.members(id,org_id,user_id,role) VALUES($1,$2,$3,'owner')",
   [randomUUID(), org, u.user.id],
 );
 await pool.end();

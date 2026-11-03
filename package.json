@@ -12,7 +12,8 @@
     "test": "tsx --test tests/*.test.ts",
     "test:e2e": "playwright test",
     "db:migrate": "tsx scripts/migrate.ts",
-    "bootstrap": "tsx scripts/bootstrap.ts"
+    "bootstrap": "tsx scripts/bootstrap.ts",
+    "check:hosting": "tsx scripts/check-hosting.ts"
   },
   "dependencies": {
     "@better-auth/drizzle-adapter": "^1.7.15",
@@ -20,6 +21,7 @@
     "drizzle-orm": "^0.45.4",
     "lucide-react": "^1.66.0",
     "next": "^16.4.4",
+    "nodemailer": "^10.3.1",
     "pg": "^8.23.1",
     "react": "^19.3.1",
     "react-dom": "^19.3.1",
@@ -29,6 +31,7 @@
     "@playwright/test": "^1.64.1",
     "@tailwindcss/postcss": "^4.3.4",
     "@types/node": "^26.6.6",
+    "@types/nodemailer": "^8.0.2",
     "@types/pg": "^8.23.1",
     "@types/react": "^19.3.0",
     "@types/react-dom": "^19.3.0",

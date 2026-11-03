@@ -8,6 +8,7 @@ import {
 } from "@/lib/domain";
 import { pool } from "@/lib/db";
 import { z } from "zod";
+import { mailConfiguration } from "@/lib/mail";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 async function handler(
@@ -33,17 +34,25 @@ async function handler(
         .parse(body);
       const inv = (
         await pool.query(
-          "UPDATE invitations SET registration_attempts=registration_attempts+1 WHERE token_hash=$1 AND status='pending' AND expires_at>now() AND registration_attempts<3 RETURNING email",
+          "UPDATE boss_private.invitations SET registration_attempts=registration_attempts+1 WHERE token_hash=$1 AND status='pending' AND expires_at>now() AND registration_attempts<3 RETURNING email",
           [digest(v.token)],
         )
       ).rows[0];
       if (!inv) throw new DomainError(400, "Convite inválido ou expirado");
+      mailConfiguration();
       // Constant public result prevents account enumeration; signup cannot alter existing credentials.
       try {
         await auth.api.signUpEmail({
           body: { name: v.name, email: inv.email, password: v.password },
         });
-      } catch {}
+      } catch (error) {
+        const code = (error as { body?: { code?: string } })?.body?.code;
+        if (code !== "USER_ALREADY_EXISTS_USE_ANOTHER_EMAIL")
+          throw new DomainError(
+            503,
+            "Não foi possível concluir o cadastro. Tente novamente mais tarde.",
+          );
+      }
       return Response.json({
         message:
           "Se necessário, confirme seu e-mail na mensagem de verificação. Depois entre para aceitar o convite.",

@@ -1,0 +1,9 @@
+[build]
+  command = "npm run build"
+  publish = ".next"
+
+[build.environment]
+  NODE_VERSION = "24"
+
+# Netlify detects Next.js and installs its supported OpenNext adapter.
+# No migrations, bootstrap, secrets or remote provisioning in build hooks.
