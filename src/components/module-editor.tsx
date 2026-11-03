@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useState } from "react";
+import { useEffect, useImperativeHandle, useState, type Ref } from "react";
 import { api } from "@/lib/client";
 import {
   moduleFields,
@@ -12,6 +12,8 @@ import { RichSummaryEditor, SummaryView } from "./rich-summary";
 import { SUMMARY_KEY, summaryFromLegacy } from "@/lib/rich-summary";
 import { printSummary } from "@/lib/print-summary";
 
+export type ModuleEditorHandle = { requestClose: () => boolean };
+
 export function ModuleEditor({
   org,
   projectId,
@@ -19,6 +21,8 @@ export function ModuleEditor({
   title,
   onClose,
   onSaved,
+  onCancelClose,
+  ref,
 }: {
   org: string;
   projectId: string;
@@ -26,6 +30,8 @@ export function ModuleEditor({
   title: string;
   onClose: () => void;
   onSaved: () => void;
+  onCancelClose?: () => void;
+  ref?: Ref<ModuleEditorHandle>;
 }) {
   const path = `module-content/${projectId}/${area}`;
   const [document, setDocument] = useState<ModuleDocument | null>(null);
@@ -87,6 +93,22 @@ export function ModuleEditor({
     window.addEventListener("beforeunload", warn);
     return () => window.removeEventListener("beforeunload", warn);
   }, [dirty]);
+  useImperativeHandle(
+    ref,
+    () => ({
+      requestClose: () => {
+        if (busy) return false;
+        setConfirmClose(true);
+        return true;
+      },
+    }),
+    [busy],
+  );
+  const cancelClose = () => {
+    if (busy) return;
+    setConfirmClose(false);
+    onCancelClose?.();
+  };
   const discard = () =>
     !dirty || confirm("Descartar as alterações ainda não salvas?");
   const close = () => {
@@ -145,61 +167,72 @@ export function ModuleEditor({
     }
   }
   return (
-    <Modal onClose={close}>
+    <>
       {confirmClose && (
-        <section
-          className="panel editor-close-prompt"
-          role="alertdialog"
-          aria-modal="true"
-          aria-labelledby="close-editor-title"
-        >
-          <h2 id="close-editor-title">Salvar antes de fechar?</h2>
-          <p>
-            {dirty
-              ? "Você pode salvar suas alterações ou fechar sem salvar. O conteúdo já salvo será preservado."
-              : "Não há alterações pendentes. O conteúdo já salvo será preservado."}
-          </p>
-          {message && (
-            <p role="alert" className="notice">
-              {message}
+        <Modal onClose={cancelClose}>
+          <section
+            className="panel editor-close-prompt"
+            role="alertdialog"
+            aria-modal="true"
+            aria-labelledby="close-editor-title"
+          >
+            <h2 id="close-editor-title">Salvar antes de fechar?</h2>
+            <p>
+              {dirty
+                ? "Você pode salvar suas alterações ou fechar sem salvar. O conteúdo já salvo será preservado."
+                : "Não há alterações pendentes. O conteúdo já salvo será preservado."}
             </p>
-          )}
-          {summaryInvalid && (
-            <p role="alert">
-              Corrija a formatação antes de salvar, ou escolha não salvar.
-            </p>
-          )}
-          <div className="row">
-            <button
-              className="btn"
-              disabled={busy || summaryInvalid}
-              onClick={() => save(true)}
-            >
-              {busy ? "Salvando…" : "Salvar e fechar"}
-            </button>
-            <button className="btn secondary" disabled={busy} onClick={onClose}>
-              Não salvar
-            </button>
-            <button
-              className="btn secondary"
-              disabled={busy}
-              autoFocus
-              onClick={() => setConfirmClose(false)}
-            >
-              Cancelar
-            </button>
-          </div>
-        </section>
+            {message && (
+              <p role="alert" className="notice">
+                {message}
+              </p>
+            )}
+            {summaryInvalid && (
+              <p role="alert">
+                Corrija a formatação antes de salvar, ou escolha não salvar.
+              </p>
+            )}
+            <div className="row">
+              <button
+                className="btn"
+                disabled={busy || summaryInvalid}
+                onClick={() => save(true)}
+              >
+                {busy ? "Salvando…" : "Salvar e fechar"}
+              </button>
+              <button
+                className="btn secondary"
+                disabled={busy}
+                onClick={onClose}
+              >
+                Não salvar
+              </button>
+              <button
+                className="btn secondary"
+                disabled={busy}
+                autoFocus
+                onClick={cancelClose}
+              >
+                Cancelar
+              </button>
+            </div>
+          </section>
+        </Modal>
       )}
       <section
-        hidden={confirmClose}
-        className="panel module-editor"
+        className="module-editor module-page"
         aria-label={`Área ${title}`}
+        onKeyDown={(event) => {
+          if (event.key === "Escape") {
+            event.preventDefault();
+            close();
+          }
+        }}
       >
         <div className="heading">
           <div>
             <div className="eyebrow">Business Plan</div>
-            <h2>{title}</h2>
+            <h2 tabIndex={-1}>{title}</h2>
           </div>
           <button type="button" className="btn secondary" onClick={close}>
             Fechar área
@@ -522,6 +555,6 @@ export function ModuleEditor({
           </>
         )}
       </section>
-    </Modal>
+    </>
   );
 }

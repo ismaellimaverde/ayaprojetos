@@ -127,7 +127,15 @@ test("shared UI surfaces remain usable across routes and responsive internal scr
         ),
       ).toBe(true);
     }
-    await page.getByRole("button", { name: "Projetos", exact: true }).click();
+    if (
+      (await page
+        .getByRole("button", { name: "Projetos", exact: true })
+        .getAttribute("aria-expanded")) !== "true"
+    )
+      await page.getByRole("button", { name: "Projetos", exact: true }).click();
+    await page
+      .getByRole("button", { name: "Todos os projetos", exact: true })
+      .click();
     await page
       .getByRole("button", { name: "Novo projeto", exact: true })
       .click();

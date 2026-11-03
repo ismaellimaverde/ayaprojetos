@@ -3,10 +3,13 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Modal } from "@/components/modal";
 import { ProjectLibrary } from "@/components/project-library";
-import { ModuleEditor } from "@/components/module-editor";
+import {
+  ModuleEditor,
+  type ModuleEditorHandle,
+} from "@/components/module-editor";
 import { Brand } from "@/components/brand";
 import { ProjectAffiliation } from "@/components/project-affiliation";
-import { useEffect, useState } from "react";
+import { Fragment, useEffect, useRef, useState } from "react";
 import {
   LayoutDashboard,
   Building2,
@@ -103,6 +106,26 @@ export default function Home() {
     area: string;
     title: string;
   } | null>(null);
+  const initialAddress = useRef<URLSearchParams | null>(null);
+  const addressReady = useRef(false);
+  const editorRef = useRef<ModuleEditorHandle>(null);
+  const pendingNavigation = useRef<(() => void) | null>(null);
+  const [projectsExpanded, setProjectsExpanded] = useState(false);
+  function navigate(action: () => void) {
+    if (editingArea && editorRef.current) {
+      if (editorRef.current.requestClose()) pendingNavigation.current = action;
+    } else {
+      pendingNavigation.current = null;
+      setEditingArea(null);
+      action();
+    }
+  }
+  function finishClose() {
+    const action = pendingNavigation.current;
+    pendingNavigation.current = null;
+    setEditingArea(null);
+    action?.();
+  }
   const [companyFilter, setCompanyFilter] = useState("");
   const [unitFilter, setUnitFilter] = useState("");
   const router = useRouter();
@@ -133,7 +156,17 @@ export default function Home() {
       .then((me) => {
         setName(me.user.name);
         setOrgs(me.organizations);
-        setOrg(me.organizations[0]?.id ?? "");
+        const address = new URLSearchParams(window.location.search);
+        const requestedOrg = address.get("workspace");
+        const available = me.organizations.some(
+          (o: Organization) => o.id === requestedOrg,
+        );
+        initialAddress.current = available ? address : null;
+        setOrg(available ? requestedOrg! : (me.organizations[0]?.id ?? ""));
+        if (requestedOrg && !available)
+          setMessage(
+            "O endereço solicitado não está disponível para este acesso.",
+          );
         setBusy(false);
       })
       .catch(() => router.replace("/login"));
@@ -149,12 +182,37 @@ export default function Home() {
       .then(([overview, people, audit]) => {
         if (!active) return;
         setData(overview);
-        setSelected((current) =>
-          current
-            ? (overview.projects.find((p: Project) => p.id === current.id) ??
-              null)
-            : null,
-        );
+        const address = initialAddress.current;
+        initialAddress.current = null;
+        addressReady.current = true;
+        if (address?.get("project")) {
+          const project = overview.projects.find(
+            (p: Project) => p.id === address.get("project"),
+          );
+          if (project) {
+            setSelected(project);
+            setProjectsExpanded(true);
+            setTab(address.get("view") === "library" ? "library" : "plan");
+            const area = modules.find(
+              (m) =>
+                m.id === address.get("area") && project.modules.includes(m.id),
+            );
+            if (area && address.get("view") !== "library")
+              setEditingArea({
+                projectId: project.id,
+                area: area.id,
+                title: area.name,
+              });
+            else if (address.get("area"))
+              setMessage("Área indisponível para este acesso.");
+          } else setMessage("Projeto indisponível para este acesso.");
+        } else
+          setSelected((current) =>
+            current
+              ? (overview.projects.find((p: Project) => p.id === current.id) ??
+                null)
+              : null,
+          );
         if (people) {
           setUsers(people.users);
           setInvites(people.invitations);
@@ -172,6 +230,26 @@ export default function Home() {
       active = false;
     };
   }, [org, tab, revision]);
+  useEffect(() => {
+    if (!addressReady.current || !org) return;
+    const address = new URLSearchParams();
+    address.set("workspace", org);
+    if (selected && ["plan", "library"].includes(tab)) {
+      address.set("project", selected.id);
+      if (tab === "library") address.set("view", "library");
+      else if (editingArea) address.set("area", editingArea.area);
+    }
+    window.history.replaceState(window.history.state, "", `/?${address}`);
+  }, [org, tab, selected, editingArea]);
+  useEffect(() => {
+    const heading = document.querySelector<HTMLElement>(
+      editingArea ? ".module-page .heading h2" : "main h1",
+    );
+    heading?.focus({ preventScroll: true });
+    document
+      .querySelector<HTMLElement>(".project-menu [aria-current='page']")
+      ?.scrollIntoView({ block: "nearest", inline: "nearest" });
+  }, [tab, selected?.id, editingArea]);
   async function run(path: string, method: string, body?: unknown) {
     setMessage("");
     try {
@@ -227,17 +305,18 @@ export default function Home() {
   };
   return (
     <div className={`shell ${dark ? "dark" : ""}`}>
-      {editingArea && (
-        <ModuleEditor
-          key={`${org}:${editingArea.projectId}:${editingArea.area}`}
-          org={org}
-          {...editingArea}
-          onClose={() => setEditingArea(null)}
-          onSaved={() => setRevision((v) => v + 1)}
-        />
-      )}
       <aside className="sidebar">
-        <Link href="/" aria-label="BOSS — AYA Projetos — início">
+        <Link
+          href="/"
+          aria-label="BOSS — AYA Projetos — início"
+          onClick={(e) => {
+            e.preventDefault();
+            navigate(() => {
+              setTab("portfolio");
+              setEditingArea(null);
+            });
+          }}
+        >
           <Brand />
         </Link>
         <nav>
@@ -260,23 +339,85 @@ export default function Home() {
                 ]
               : []),
           ].map((n) => (
-            <button
-              key={n.id}
-              className={tab === n.id ? "active" : ""}
-              onClick={() => {
-                setTab(n.id);
-                setMessage("");
-                setQuery("");
-              }}
-            >
-              <n.icon size={18} />
-              {n.name}
-            </button>
+            <Fragment key={n.id}>
+              <button
+                className={tab === n.id ? "active" : ""}
+                aria-expanded={
+                  n.id === "projects" ? projectsExpanded : undefined
+                }
+                aria-controls={
+                  n.id === "projects" ? "project-shortcuts" : undefined
+                }
+                onClick={() => {
+                  if (n.id === "projects") {
+                    setProjectsExpanded((v) => !v);
+                    return;
+                  }
+                  navigate(() => {
+                    setTab(n.id);
+                    setEditingArea(null);
+                    setMessage("");
+                    setQuery("");
+                  });
+                }}
+              >
+                <n.icon size={18} />
+                {n.name}
+                {n.id === "projects" && (
+                  <span aria-hidden="true">{projectsExpanded ? "−" : "+"}</span>
+                )}
+              </button>
+              {n.id === "projects" && projectsExpanded && (
+                <div id="project-shortcuts" className="project-shortcuts">
+                  <button
+                    onClick={() =>
+                      navigate(() => {
+                        setTab("projects");
+                        setEditingArea(null);
+                      })
+                    }
+                  >
+                    Todos os projetos
+                  </button>
+                  {data.projects.map((p) => (
+                    <button
+                      key={p.id}
+                      aria-current={
+                        selected?.id === p.id &&
+                        ["plan", "library"].includes(tab)
+                          ? "page"
+                          : undefined
+                      }
+                      onClick={() =>
+                        navigate(() => {
+                          setSelected(p);
+                          setEditingArea(null);
+                          setTab("plan");
+                        })
+                      }
+                    >
+                      {p.name}
+                      {p.status === "archived" ? " · Arquivado" : ""}
+                    </button>
+                  ))}
+                  {!data.projects.length && (
+                    <p className="subtle">Nenhum projeto disponível.</p>
+                  )}
+                </div>
+              )}
+            </Fragment>
           ))}
         </nav>
         <footer>
           <p className="subtle">Uma base para crescer com clareza.</p>
-          <Link className="row" href="/security">
+          <Link
+            className="row"
+            href="/security"
+            onClick={(e) => {
+              e.preventDefault();
+              navigate(() => router.push("/security"));
+            }}
+          >
             <ShieldCheck size={18} /> Perfil e segurança
           </Link>
         </footer>
@@ -289,13 +430,17 @@ export default function Home() {
               aria-label="Organização"
               value={org}
               onChange={(e) => {
-                setData(initial);
-                setBusy(true);
-                setOrg(e.target.value);
-                setCompanyFilter("");
-                setUnitFilter("");
-                setSelected(null);
-                setTab("portfolio");
+                const value = e.target.value;
+                navigate(() => {
+                  setEditingArea(null);
+                  setData(initial);
+                  setBusy(true);
+                  setOrg(value);
+                  setCompanyFilter("");
+                  setUnitFilter("");
+                  setSelected(null);
+                  setTab("portfolio");
+                });
               }}
             >
               {orgs.map((o) => (
@@ -309,7 +454,12 @@ export default function Home() {
             {data.admin && (
               <button
                 className="btn secondary"
-                onClick={() => setModal("organization")}
+                onClick={() =>
+                  navigate(() => {
+                    setEditingArea(null);
+                    setModal("organization");
+                  })
+                }
               >
                 Novo workspace
               </button>
@@ -321,28 +471,41 @@ export default function Home() {
             >
               {dark ? <Sun size={16} /> : <Moon size={16} />}
             </button>
-            <Link href="/security">{name}</Link>
+            <Link
+              href="/security"
+              onClick={(e) => {
+                e.preventDefault();
+                navigate(() => router.push("/security"));
+              }}
+            >
+              {name}
+            </Link>
             <button
               className="btn secondary"
               aria-label="Sair"
-              onClick={async () => {
-                await authClient.signOut();
-                router.push("/login");
-                router.refresh();
-              }}
+              onClick={() =>
+                navigate(() => {
+                  void authClient.signOut().then(() => {
+                    router.push("/login");
+                    router.refresh();
+                  });
+                })
+              }
             >
               <LogOut size={16} />
             </button>
           </div>
         </header>
-        <main className="content">
+        <main
+          className={`content ${selected && ["plan", "library"].includes(tab) ? "project-page" : ""}`}
+        >
           <div className="heading">
             <div style={{ minWidth: 0 }}>
               <div className="eyebrow">
                 {orgs.find((o) => o.id === org)?.name ?? "BEM-VINDO"} /{" "}
                 {tab === "users" ? "ADMINISTRAÇÃO" : "ESPAÇO DE GESTÃO"}
               </div>
-              <h1>{titles[tab]}</h1>
+              <h1 tabIndex={-1}>{titles[tab]}</h1>
               {["plan", "library"].includes(tab) ? (
                 selected?.description?.trim() ? (
                   <p className="muted module-text">{selected.description}</p>
@@ -384,19 +547,55 @@ export default function Home() {
           {selected && ["plan", "library"].includes(tab) && (
             <nav className="row project-menu" aria-label="Menu do projeto">
               <button
-                className={`btn ${tab === "plan" ? "" : "secondary"}`}
-                aria-current={tab === "plan" ? "page" : undefined}
-                onClick={() => setTab("plan")}
+                className={`btn ${tab === "plan" && !editingArea ? "" : "secondary"}`}
+                aria-current={
+                  tab === "plan" && !editingArea ? "page" : undefined
+                }
+                onClick={() =>
+                  navigate(() => {
+                    setEditingArea(null);
+                    setTab("plan");
+                  })
+                }
               >
                 Áreas do projeto
               </button>
               <button
                 className={`btn ${tab === "library" ? "" : "secondary"}`}
                 aria-current={tab === "library" ? "page" : undefined}
-                onClick={() => setTab("library")}
+                onClick={() =>
+                  navigate(() => {
+                    setEditingArea(null);
+                    setTab("library");
+                  })
+                }
               >
                 Biblioteca
               </button>
+              {modules
+                .filter((m) => selected.modules.includes(m.id))
+                .map((m) => (
+                  <button
+                    key={m.id}
+                    className={`btn ${editingArea?.area === m.id ? "" : "secondary"}`}
+                    aria-current={
+                      editingArea?.area === m.id ? "page" : undefined
+                    }
+                    onClick={() => {
+                      if (editingArea?.area === m.id) return;
+                      navigate(() => {
+                        setTab("plan");
+                        setEditingArea({
+                          projectId: selected.id,
+                          area: m.id,
+                          title: m.name,
+                        });
+                      });
+                    }}
+                  >
+                    {m.name}
+                  </button>
+                ))}
             </nav>
           )}
           {message && (
@@ -423,14 +622,14 @@ export default function Home() {
                 <>
                   <div className="grid stats">
                     <div className="panel stat">
-                      <span className="eyebrow">PROJETOS AUTORIZADOS</span>
+                      <span className="eyebrow">PROJETOS EM ANDAMENTO</span>
                       <strong>{active.length}</strong>
                       <span className="muted">Em atividade no seu espaço</span>
                     </div>
                     <div className="panel stat">
-                      <span className="eyebrow">TEMPLATE MESTRE</span>
+                      <span className="eyebrow">CATEGORIAS DO BP</span>
                       <strong>17 áreas</strong>
-                      <span className="muted">Business Plan · versão 1</span>
+                      <span className="muted">Business Plan · versão 1.0</span>
                     </div>
                     <div className="panel stat">
                       <span className="eyebrow">INDICADORES DE NEGÓCIO</span>
@@ -580,7 +779,7 @@ export default function Home() {
                   projectId={selected.id}
                 />
               )}
-              {tab === "plan" && selected && (
+              {tab === "plan" && selected && !editingArea && (
                 <>
                   <div className="panel" style={{ marginBottom: 24 }}>
                     <div className="heading">
@@ -601,22 +800,6 @@ export default function Home() {
                             }}
                           >
                             Editar projeto
-                          </button>
-                          <button
-                            className="btn secondary danger"
-                            onClick={async () => {
-                              if (
-                                confirm(
-                                  "Arquivar este projeto? Os dados serão preservados.",
-                                )
-                              )
-                                if (
-                                  await run(`projects/${selected.id}`, "DELETE")
-                                )
-                                  setTab("projects");
-                            }}
-                          >
-                            Arquivar
                           </button>
                         </div>
                       )}
@@ -653,6 +836,19 @@ export default function Home() {
                       ))}
                   </div>
                 </>
+              )}
+              {tab === "plan" && selected && editingArea && (
+                <ModuleEditor
+                  ref={editorRef}
+                  key={`${org}:${editingArea.projectId}:${editingArea.area}`}
+                  org={org}
+                  {...editingArea}
+                  onClose={finishClose}
+                  onCancelClose={() => {
+                    pendingNavigation.current = null;
+                  }}
+                  onSaved={() => setRevision((v) => v + 1)}
+                />
               )}
               {tab === "companies" && (
                 <div className="grid">

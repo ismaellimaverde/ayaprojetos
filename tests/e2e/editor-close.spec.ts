@@ -92,12 +92,12 @@ test("editor close always offers save, discard and cancel and waits for successf
   await expect(editor).toBeVisible();
   await expect(
     page
-      .getByRole("dialog")
+      .locator(".module-page")
       .getByRole("button", { name: "Recarregar", exact: true }),
   ).toHaveCount(0);
   await expect(
     page
-      .getByRole("dialog")
+      .locator(".module-page")
       .getByRole("button", { name: "Histórico", exact: true }),
   ).toHaveCount(0);
   await editor.fill("Rascunho descartável");

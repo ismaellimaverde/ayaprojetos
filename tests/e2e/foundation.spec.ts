@@ -75,7 +75,7 @@ test("real password-only admin access, optional MFA, project creation, invitatio
       exact: true,
     })
     .click();
-  const editorDialog = page.getByRole("dialog");
+  const editorDialog = page.locator(".module-page");
   await editorDialog
     .getByRole("button", { name: "Preencher informações" })
     .click();
@@ -98,7 +98,6 @@ test("real password-only admin access, optional MFA, project creation, invitatio
   await editorDialog.getByRole("button", { name: "Fechar área" }).click();
   await page.getByRole("button", { name: "Não salvar", exact: true }).click();
   await page.reload();
-  await page.getByRole("button", { name: "Abrir Business Plan" }).click();
   await page
     .getByRole("button", {
       name: "Acessar DNA, identidade e cultura",

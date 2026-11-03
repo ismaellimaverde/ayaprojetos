@@ -980,3 +980,93 @@ h3 {
     padding: 10px 12px;
   }
 }
+
+/* Project workspaces occupy the platform canvas; only confirmations use a dialog. */
+.content.project-page {
+  max-width: none;
+}
+.project-page > .heading {
+  margin-bottom: 18px;
+}
+.project-menu {
+  flex-wrap: nowrap;
+  overflow-x: auto;
+  padding: 4px 2px 12px;
+  gap: 8px;
+  max-width: 100%;
+}
+.project-menu .btn {
+  flex: 0 0 auto;
+  white-space: nowrap;
+  padding: 10px 16px;
+}
+.module-page {
+  max-height: none;
+  overflow: visible;
+  width: 100%;
+  min-width: 0;
+  padding: 0;
+}
+.module-page .module-field-card {
+  padding: 16px;
+}
+.module-page .summary-prose {
+  min-height: 52vh;
+}
+.module-page .summary-toolbar {
+  gap: 6px;
+  padding: 10px;
+}
+.module-page .summary-toolbar select {
+  max-width: 160px;
+}
+.project-shortcuts {
+  display: grid;
+  gap: 4px;
+  margin: 4px 0 12px 12px;
+  padding-left: 10px;
+  border-left: 2px solid var(--aya-coral);
+  max-height: 38vh;
+  overflow-y: auto;
+}
+.sidebar nav .project-shortcuts button {
+  font-family: "Archivo Variable", sans-serif;
+  font-size: 13px;
+  font-weight: 500;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  text-align: left;
+}
+.sidebar nav .project-shortcuts button[aria-current="page"] {
+  background: var(--field);
+  color: var(--ink);
+}
+@media (max-width: 650px) {
+  .sidebar nav {
+    flex-wrap: wrap;
+    overflow: visible;
+    gap: 4px;
+  }
+  .sidebar nav > button {
+    flex: 1 1 auto;
+  }
+  .project-shortcuts {
+    flex: 1 0 100%;
+    margin-left: 0;
+    max-height: 28vh;
+    box-sizing: border-box;
+  }
+  .project-page {
+    padding: 18px 14px;
+  }
+  .module-page .module-field-card {
+    padding: 10px;
+  }
+  .module-page .summary-toolbar {
+    gap: 4px;
+    padding: 8px;
+  }
+  .module-page .summary-toolbar select {
+    max-width: 130px;
+  }
+}
