@@ -3,7 +3,7 @@
 - Preserve requirements/original.txt and requirements/update.txt. The update overrides identity and access rules only.
 - Work in small executable phases. Do not label future modules implemented or fabricate business metrics.
 - TypeScript strict; Next.js App Router; PostgreSQL; Better Auth; Drizzle for identity; parameterized SQL for scoped application repositories.
-- Authorization belongs in src/lib/domain.ts and authenticated routes. Every query/mutation must explicitly scope the organization and project. No public signup. MFA is mandatory for administrative roles.
+- Authorization belongs in src/lib/domain.ts and authenticated routes. Every query/mutation must explicitly scope the organization and project. No public signup. MFA is optional by explicit user decision (2026-11-03); password, verified email, scoped RBAC and recent login requirements remain enforced.
 - Never expose local mailbox, database URLs, passwords, MFA secrets or session tokens in responses, screenshots, logs or commits.
 - Tests use dedicated boss_test and boss_e2e databases; never point destructive fixture setup at business data.
 - Commands: npm ci; npm run db:migrate; npm run dev; npm run lint; npm run typecheck; npm test; npm run test:e2e; npm run build.

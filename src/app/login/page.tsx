@@ -126,8 +126,8 @@ export default function Login() {
             <Link href="/recover">Primeiro acesso ou reenviar verificação</Link>
           </p>
           <p className="muted subtle">
-            O acesso é concedido por convite. Administradores utilizam
-            autenticação multifator.
+            O acesso é concedido por convite. Autenticação multifator é
+            opcional.
           </p>
         </div>
       </section>

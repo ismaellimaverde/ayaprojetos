@@ -22,7 +22,7 @@ const { profile, modules } = await import("../src/lib/catalog");
 let org: string, other: string, a: string, b: string;
 let ownerId: string, memberId: string, financeId: string, managerId: string;
 const password = randomBytes(24).toString("hex");
-const actor = (id: string, mfa = true) => ({
+const actor = (id: string, mfa = false) => ({
   userId: id,
   mfa,
   sessionCreatedAt: new Date(),
@@ -87,11 +87,15 @@ test("17 modules and versioned template persisted without fictional KPIs", async
   assert.equal(p.template_version, 1);
   assert.equal(p.modules.length, 17);
 });
-test("administrators blocked until MFA enrollment", async () => {
-  await assert.rejects(
-    () => execute(actor(ownerId, false), org, "GET", ["overview"], {}),
-    { status: 428 },
+test("administrators can use the application without MFA enrollment", async () => {
+  const result = await execute(
+    actor(ownerId, false),
+    org,
+    "GET",
+    ["overview"],
+    {},
   );
+  assert.ok(result);
 });
 test("project membership grants do not leak other areas, projects or aggregate counts", async () => {
   await execute(actor(ownerId), org, "POST", ["grants"], {

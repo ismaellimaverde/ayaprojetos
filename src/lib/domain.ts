@@ -109,16 +109,6 @@ export async function inOrg<T>(
     ).rows[0];
     if (!member) deny();
     const admin = ["owner", "admin"].includes(member.role);
-    const manager =
-      admin ||
-      !!(
-        await c.query(
-          "SELECT 1 FROM boss_private.grants WHERE org_id=$1 AND user_id=$2 AND status='active' AND role IN ('company_admin','project_manager','area_manager')",
-          [org, actor.userId],
-        )
-      ).rowCount;
-    if (manager && !actor.mfa)
-      throw new DomainError(428, "Ative MFA em Segurança para continuar");
     const result = await fn(c, admin);
     await c.query("COMMIT");
     return result;
@@ -171,14 +161,8 @@ function requireAdmin(admin: boolean) {
   if (!admin) deny();
 }
 function fresh(actor: Actor) {
-  if (
-    !actor.mfa ||
-    Date.now() - actor.sessionCreatedAt.getTime() > 10 * 60 * 1000
-  )
-    throw new DomainError(
-      428,
-      "Entre novamente com MFA para confirmar esta operação",
-    );
+  if (Date.now() - actor.sessionCreatedAt.getTime() > 10 * 60 * 1000)
+    throw new DomainError(428, "Entre novamente para confirmar esta operação");
 }
 export async function listOrganizations(userId: string) {
   return (

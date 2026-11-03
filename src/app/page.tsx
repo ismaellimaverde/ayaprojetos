@@ -328,11 +328,6 @@ export default function Home() {
           {message && (
             <div role="status" className="notice">
               {message}{" "}
-              {message.includes("MFA") && (
-                <Link href="/security">
-                  <u>Abrir segurança</u>
-                </Link>
-              )}
             </div>
           )}
           {busy ? (
@@ -615,7 +610,9 @@ export default function Home() {
                               <td>{roleLabels[u.role] ?? "Membro"}</td>
                               <td>{u.status}</td>
                               <td>
-                                {u.twoFactorEnabled ? "Ativo" : "Pendente"}
+                                {u.twoFactorEnabled
+                                  ? "Ativo"
+                                  : "Opcional, desativado"}
                               </td>
                               <td>
                                 <button

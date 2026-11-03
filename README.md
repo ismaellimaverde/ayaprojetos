@@ -17,7 +17,7 @@ Local application: http://localhost:3000 (inside the cloud environment). This is
 
 ## First owner
 
-There is no public administrative signup or hardcoded account. `npm run bootstrap` reads one JSON object from stdin with `name`, `email`, `password` (12+ characters). Use a private input mechanism; do not put a real password in shell history or source. Bootstrap refuses after a membership exists. It creates workspace/organization AYA Projetos and the first owner. Open the verification message in private `.data/mail`, verify the email, log in, and activate MFA under `/security` before administering data.
+There is no public administrative signup or hardcoded account. `npm run bootstrap` reads one JSON object from stdin with `name`, `email`, `password` (12+ characters). Use a private input mechanism; do not put a real password in shell history or source. Bootstrap refuses after a membership exists. It creates workspace/organization AYA Projetos and the first owner. Open the verification message in private `.data/mail`, verify the email, log in, and administer permitted data. MFA is optional under `/security` following the user decision of 2026-11-03.
 
 Do not bootstrap a real owner on behalf of someone without their chosen identity and authorization. Test suites use separate test databases and generated fixture identities, not the main application database.
 

@@ -27,7 +27,7 @@ export default function Security() {
           <h1>Perfil e segurança</h1>
           <p className="muted">
             {session?.user.email} · MFA{" "}
-            {session?.user.twoFactorEnabled ? "ativo" : "pendente"}
+            {session?.user.twoFactorEnabled ? "ativo" : "opcional, desativado"}
           </p>
         </div>
         <Link className="btn secondary" href="/">
@@ -43,7 +43,7 @@ export default function Security() {
         <section className="panel">
           <h2>Autenticação multifator</h2>
           <p>
-            Obrigatória para administradores. Configure um aplicativo
+            Opcional. Para proteção adicional, configure um aplicativo
             autenticador e guarde os códigos de recuperação em local seguro.
           </p>
           {!session?.user.twoFactorEnabled && !uri && (
@@ -94,9 +94,7 @@ export default function Security() {
                   else {
                     setUri("");
                     setCodes([]);
-                    setMessage(
-                      "MFA ativado. Seu acesso administrativo está liberado.",
-                    );
+                    setMessage("MFA ativado por sua escolha.");
                     window.location.reload();
                   }
                 }}
@@ -168,8 +166,8 @@ export default function Security() {
           <h2>Política da organização</h2>
           <p>
             Sessões de até 8 horas. Ações administrativas sensíveis exigem login
-            com MFA nos últimos 10 minutos. Convites expiram em 48 horas. Sem
-            cadastro público.
+            nos últimos 10 minutos. Convites expiram em 48 horas. Sem cadastro
+            público.
           </p>
           <p className="muted">
             A entrega de e-mail segue a configuração aprovada para este

@@ -7,7 +7,7 @@
 | Next.js/TS/React/Tailwind + PostgreSQL, modular monolith | Implemented reversible engineering choice | Follows original proposal; not a separately approved strategic vendor choice |
 | Better Auth + Drizzle for identity | Implemented engineering choice | Consolidated password/session/MFA implementation |
 | Explicit transactional SQL for domain queries | Implemented | Tenant filters and composite FKs visible and testable |
-| MFA for owner/admin and company/project/area managers | Implemented | Restrictive interpretation of administrator requirement |
+| Mandatory administrative MFA | Superseded by explicit user decision, 2026-11-03 | MFA is now optional for all BOSS roles; existing enrollments remain intact |
 | Eight-hour sessions; 10-minute sensitive-action freshness; 48-hour invites | Implemented defaults, policy review pending | No hidden permanent grants |
 | Explicit project grants; no company-to-project inheritance | Implemented | Least privilege; role templates never imply global access |
 | Existing grant versus new invitation = conflict | Implemented | Administrator review avoids silent privilege union |
@@ -25,3 +25,7 @@ Source provenance: requirements/original.txt is a textual copy from Library read
 - Approved direction: Netlify + Supabase Postgres, preserving Better Auth. Parent confirmed new separate Supabase BOSS `ubgabtgrfrixldstnqry` (sa-east-1, PostgreSQL 17); Netlify site remains unconfirmed. No remote service changes, new credentials, migrations, deployment or extra push authorized.
 - Implemented locally: private boss_private schema, schema-qualified SQL/Drizzle, RLS/API-role denial, serverless pool/TLS configuration, guarded operator commands, generic opt-in SMTP and Netlify build settings. See HOSTING.md.
 - Pending: destination IDs, runtime/operator roles and credentials, exact HTTPS origin, stable auth secret, authorized SMTP/sender, owner identity, approval of remote schema/grants and deployment. No unrelated connected Supabase project may be used.
+
+## User-approved optional MFA — 2026-11-03
+
+User explicitly requested no two-step authentication requirement. This supersedes the earlier prompt requirement for BOSS only. Remove administrative enrollment gates and MFA checks on sensitive actions; retain recent password login, verified email, RBAC, session controls and rate limits. Existing voluntarily enrolled users retain their TOTP challenge and data. Optional setup remains available without first-access redirection. No Netlify/Supabase/GitHub account security or visitor protection changes. Tradeoff accepted: a leaked password can provide access without a second factor for users who do not opt in.

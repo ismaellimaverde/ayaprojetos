@@ -9,7 +9,7 @@ import { migratePrivateDatabase } from "../scripts/database-setup";
 import { isLocalDatabase } from "../src/lib/runtime-config";
 nextEnv.loadEnvConfig(process.cwd());
 
-test("operator bootstrap preserves verification, password reset and admin MFA invariants", async () => {
+test("operator bootstrap preserves verification, password reset and optional MFA invariants", async () => {
   if (!isLocalDatabase(process.env.DATABASE_URL!))
     throw new Error("Local tests only");
   const admin = new Pool({ connectionString: process.env.DATABASE_URL });
@@ -119,14 +119,13 @@ test("operator bootstrap preserves verification, password reset and admin MFA in
       (await post("sign-in/email", { email, password })).status,
       200,
     );
-    await assert.rejects(
-      () =>
-        inOrg(
-          { userId: plan.userId, mfa: false, sessionCreatedAt: new Date() },
-          plan.orgId,
-          async () => true,
-        ),
-      { status: 428 },
+    assert.equal(
+      await inOrg(
+        { userId: plan.userId, mfa: false, sessionCreatedAt: new Date() },
+        plan.orgId,
+        async () => true,
+      ),
+      true,
     );
     assert.notEqual(
       (await post("reset-password", { token, newPassword: password })).status,

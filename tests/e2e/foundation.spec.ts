@@ -25,7 +25,7 @@ async function mail(to: string, kind: string) {
   }
   throw new Error("Mensagem não encontrada");
 }
-test("real login, MFA, project creation, invitation, isolation and session revocation", async ({
+test("real password-only admin access, optional MFA, project creation, invitation, isolation and session revocation", async ({
   page,
   browser,
 }) => {
@@ -34,7 +34,16 @@ test("real login, MFA, project creation, invitation, isolation and session revoc
   await page.getByLabel("E-mail", { exact: true }).fill(f.email);
   await page.getByLabel("Senha", { exact: true }).fill(f.password);
   await page.getByRole("button", { name: "Entrar no BOSS" }).click();
-  await expect(page.getByRole("status")).toContainText("Ative MFA");
+  await expect(
+    page.getByRole("button", { name: "Novo projeto" }),
+  ).toBeVisible();
+  expect(
+    (
+      await page.request.get("/api/boss/overview", {
+        headers: { "x-organization-id": f.org },
+      })
+    ).status(),
+  ).toBe(200);
   const oldContext = await browser.newContext({
     baseURL: "http://localhost:3100",
   });
@@ -46,6 +55,12 @@ test("real login, MFA, project creation, invitation, isolation and session revoc
       })
     ).status(),
   ).toBe(200);
+  await page.getByRole("button", { name: "Novo projeto" }).click();
+  await page.getByLabel("Nome do projeto").fill("Projeto A");
+  await page.getByRole("button", { name: "Salvar projeto" }).click();
+  await expect(
+    page.getByRole("heading", { name: "Projeto A", exact: true }),
+  ).toBeVisible();
   await page.goto("/security");
   await page.getByLabel("Confirme sua senha").fill(f.password);
   await page.getByRole("button", { name: "Configurar autenticador" }).click();
@@ -56,12 +71,6 @@ test("real login, MFA, project creation, invitation, isolation and session revoc
   expect((await oldContext.request.get("/api/boss/me")).status()).toBe(401);
   await oldContext.close();
   await page.goto("/");
-  await page.getByRole("button", { name: "Novo projeto" }).click();
-  await page.getByLabel("Nome do projeto").fill("Projeto A");
-  await page.getByRole("button", { name: "Salvar projeto" }).click();
-  await expect(
-    page.getByRole("heading", { name: "Projeto A", exact: true }),
-  ).toBeVisible();
   await page.getByRole("button", { name: "Novo projeto" }).click();
   await page.getByLabel("Nome do projeto").fill("Projeto B");
   await page.getByRole("button", { name: "Salvar projeto" }).click();
