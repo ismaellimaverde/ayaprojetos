@@ -844,8 +844,7 @@ export default function Home() {
                   </label>
                 </div>
                 <p className="muted">
-                  Selecione as áreas do template mestre v1. Nenhum dado
-                  existente será sobrescrito por atualizações futuras.
+                  Selecione as áreas competentes do novo projeto:
                 </p>
                 <div className="checkgrid">
                   {modules.map((m) => (
@@ -856,7 +855,7 @@ export default function Home() {
                         value={m.id}
                         defaultChecked={!edit || edit.modules.includes(m.id)}
                       />
-                      {m.letter}. {m.name}
+                      {m.name}
                     </label>
                   ))}
                 </div>
