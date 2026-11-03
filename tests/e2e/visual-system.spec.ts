@@ -73,6 +73,17 @@ test("shared UI surfaces remain usable across routes and responsive internal scr
     ]) {
       await page.goto(path);
       await expect(page.locator("body")).toBeVisible();
+      await page.evaluate(() => document.fonts.ready);
+      expect(
+        await page.evaluate(() =>
+          document.fonts.check('400 14px "Archivo Variable"'),
+        ),
+      ).toBe(true);
+      expect(
+        await page
+          .locator("body")
+          .evaluate((el) => getComputedStyle(el).fontFamily),
+      ).toContain("Archivo Variable");
       expect(
         await page.evaluate(
           () => document.documentElement.scrollWidth <= innerWidth,
@@ -125,7 +136,7 @@ test("shared UI surfaces remain usable across routes and responsive internal scr
       .getByRole("button", { name: "Abrir Business Plan", exact: true })
       .click();
     await page
-      .getByRole("button", { name: "Abrir Resumo executivo", exact: true })
+      .getByRole("button", { name: "Acessar Resumo executivo", exact: true })
       .click();
     await page
       .getByRole("button", { name: "Exportar PDF", exact: true })

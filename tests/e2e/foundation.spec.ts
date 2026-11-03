@@ -71,7 +71,7 @@ test("real password-only admin access, optional MFA, project creation, invitatio
   await page.getByRole("button", { name: "Abrir Business Plan" }).click();
   await page
     .getByRole("button", {
-      name: "Abrir DNA, identidade e cultura",
+      name: "Acessar DNA, identidade e cultura",
       exact: true,
     })
     .click();
@@ -100,7 +100,7 @@ test("real password-only admin access, optional MFA, project creation, invitatio
   await page.getByRole("button", { name: "Abrir Business Plan" }).click();
   await page
     .getByRole("button", {
-      name: "Abrir DNA, identidade e cultura",
+      name: "Acessar DNA, identidade e cultura",
       exact: true,
     })
     .click();
@@ -185,7 +185,7 @@ test("real password-only admin access, optional MFA, project creation, invitatio
     ).status(),
   ).toBe(200);
   await page
-    .getByRole("button", { name: "Abrir Resumo executivo", exact: true })
+    .getByRole("button", { name: "Acessar Resumo executivo", exact: true })
     .click();
   await expect(
     editorDialog.getByText("Legado preservado <img src=x onerror=alert(1)>", {
@@ -193,9 +193,9 @@ test("real password-only admin access, optional MFA, project creation, invitatio
     }),
   ).toBeVisible();
   await expect(editorDialog.locator(".summary-prose img")).toHaveCount(0);
-  await editorDialog
-    .getByRole("button", { name: "Editar informações" })
-    .click();
+  await expect(
+    editorDialog.getByRole("button", { name: "Preencher informações" }),
+  ).toHaveCount(0);
   const richBox = editorDialog.getByRole("textbox", {
     name: "Resumo executivo",
     exact: true,
@@ -278,6 +278,61 @@ test("real password-only admin access, optional MFA, project creation, invitatio
   ).toBe(true);
   await page.screenshot({ path: "/tmp/boss-summary-mobile.png" });
   await editorDialog.getByRole("button", { name: "Fechar área" }).click();
+  await page.setViewportSize({ width: 1280, height: 720 });
+  await page.getByRole("button", { name: "Biblioteca", exact: true }).click();
+  await expect(
+    page.getByRole("heading", { name: "Biblioteca", exact: true }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("button", {
+      name: "Ler documento Resumo executivo",
+      exact: true,
+    }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("button", {
+      name: "Ler documento DNA, identidade e cultura",
+      exact: true,
+    }),
+  ).toBeVisible();
+  await page
+    .getByRole("button", { name: "Ler Business Plan", exact: true })
+    .click();
+  const consolidated = page.locator(".library-document");
+  await expect(consolidated).toContainText("estratégia e operação");
+  await expect(consolidated).toContainText("Concurrent saved content");
+  expect(
+    await consolidated.locator(".summary-prose > h1").allTextContents(),
+  ).toEqual(["Resumo executivo", "DNA, identidade e cultura"]);
+  await page
+    .getByRole("button", { name: "Exportar Business Plan em PDF", exact: true })
+    .click();
+  await expect
+    .poll(async () =>
+      page
+        .locator("iframe[data-boss-print]")
+        .evaluate(
+          (el) => (el as HTMLIFrameElement).contentDocument!.body.textContent,
+        ),
+    )
+    .toContain("Concurrent saved content");
+  const exported = await page
+    .locator("iframe[data-boss-print]")
+    .evaluate(
+      (el) => (el as HTMLIFrameElement).contentDocument!.body.textContent,
+    );
+  expect(exported).toContain("Concurrent saved content");
+  expect(exported).toContain("estratégia e operação");
+  await page.setViewportSize({ width: 390, height: 844 });
+  expect(
+    await page.evaluate(
+      () => document.documentElement.scrollWidth <= innerWidth,
+    ),
+  ).toBe(true);
+  await page.screenshot({
+    path: "/tmp/boss-library-mobile.png",
+    fullPage: true,
+  });
   await page.setViewportSize({ width: 1280, height: 720 });
 
   await page.goto("/security");

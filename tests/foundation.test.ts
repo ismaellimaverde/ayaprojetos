@@ -737,3 +737,128 @@ test("executive rich saves preserve legacy data, reject XSS, and enforce export 
     "Original business",
   );
 });
+
+test("project library derives ordered documents without leaking restricted areas or allowing ungranted exports", async () => {
+  const project = await execute(actor(ownerId), org, "POST", ["projects"], {
+    name: "Library test",
+    modules: ["executive", "dna", "finance", "risks"],
+  });
+  for (const [area, fields] of [
+    ["finance", { premises: "Private finance" }],
+    ["dna", { purpose: "Visible purpose" }],
+    ["executive", { business: "Visible summary" }],
+  ] as const) {
+    // Use the actual configured field ID for finance, whose contents must stay private.
+    const { moduleFields } = await import("../src/lib/module-fields");
+    const values =
+      area === "finance"
+        ? { [moduleFields.finance[0].id]: "Private finance" }
+        : fields;
+    await execute(
+      actor(ownerId),
+      org,
+      "POST",
+      ["module-content", project.id, area],
+      { revision: 0, fields: values, items: [] },
+    );
+  }
+  await execute(
+    actor(ownerId),
+    org,
+    "POST",
+    ["module-content", project.id, "risks"],
+    { revision: 0, fields: {}, items: [] },
+  );
+  const reader = await makeUser("library-reader@example.test");
+  await pool.query(
+    "INSERT INTO boss_private.members(id,org_id,user_id,role) VALUES($1,$2,$3,'member')",
+    [randomUUID(), org, reader],
+  );
+  const grant = randomUUID();
+  await pool.query(
+    "INSERT INTO boss_private.grants(id,org_id,project_id,user_id,role,permissions,source) VALUES($1,$2,$3,$4,'viewer',$5,'test')",
+    [
+      grant,
+      org,
+      project.id,
+      reader,
+      JSON.stringify({ executive: ["view", "export"], dna: ["view"] }),
+    ],
+  );
+  const list = await execute(
+    actor(reader),
+    org,
+    "GET",
+    ["project-library", project.id],
+    undefined,
+  );
+  assert.deepEqual(
+    list.documents.map((d: { area: string }) => d.area),
+    ["executive", "dna"],
+  );
+  assert.ok(!JSON.stringify(list).includes("Visible summary"));
+  const combined = await execute(
+    actor(reader),
+    org,
+    "GET",
+    ["project-library", project.id, "complete"],
+    undefined,
+  );
+  assert.ok(JSON.stringify(combined).includes("Visible summary"));
+  assert.ok(!JSON.stringify(combined).includes("Private finance"));
+  await assert.rejects(
+    execute(
+      actor(reader),
+      org,
+      "GET",
+      ["project-library", project.id, "complete", "export"],
+      undefined,
+    ),
+    /Acesso/,
+  );
+  const owner = await execute(
+    actor(ownerId),
+    org,
+    "GET",
+    ["project-library", project.id, "complete", "export"],
+    undefined,
+  );
+  assert.deepEqual(
+    owner.documents.map((d: { area: string }) => d.area),
+    ["executive", "dna", "finance"],
+  );
+  await assert.rejects(
+    execute(
+      actor(reader),
+      other,
+      "GET",
+      ["project-library", project.id, "complete"],
+      undefined,
+    ),
+    /Acesso|encontrado/,
+  );
+  await assert.rejects(
+    execute(
+      actor(reader),
+      org,
+      "GET",
+      ["project-library", b, "complete"],
+      undefined,
+    ),
+    /Acesso/,
+  );
+  await pool.query(
+    "UPDATE boss_private.grants SET status='revoked' WHERE id=$1",
+    [grant],
+  );
+  await assert.rejects(
+    execute(
+      actor(reader),
+      org,
+      "GET",
+      ["project-library", project.id, "complete"],
+      undefined,
+    ),
+    /Acesso/,
+  );
+});

@@ -57,6 +57,22 @@ export function ModuleEditor({
           setDocument(r.document);
           setPermissions(r.permissions);
           setArchived(r.archived);
+          if (
+            area === "executive" &&
+            !r.archived &&
+            r.permissions.includes(r.document.revision ? "edit" : "create")
+          ) {
+            setDocument({
+              ...r.document,
+              fields: {
+                ...r.document.fields,
+                [SUMMARY_KEY]: JSON.stringify(
+                  summaryFromLegacy(r.document.fields, r.document.items),
+                ),
+              },
+            });
+            setEditing(true);
+          }
         }
       })
       .catch((e) => {
@@ -65,7 +81,7 @@ export function ModuleEditor({
     return () => {
       active = false;
     };
-  }, [path, org]);
+  }, [path, org, area]);
   useEffect(() => {
     if (!dirty) return;
     const warn = (e: BeforeUnloadEvent) => {
@@ -190,7 +206,7 @@ export function ModuleEditor({
             {area === "executive" &&
               permissions.includes("export") &&
               document.revision > 0 &&
-              !editing && (
+              (!editing || !dirty) && (
                 <div className="summary-export">
                   <button
                     type="button"

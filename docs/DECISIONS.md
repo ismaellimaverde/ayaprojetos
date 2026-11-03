@@ -140,3 +140,29 @@ Legacy executive fields and information items are combined into the initial edit
 PDF export checks both view and export permissions against the current session, project and area through the API. It prints the selected saved revision in an isolated document using only validated nodes and fixed CSS. The browser's dialog provides Save as PDF; this is not an automatic file download and destination labels vary by browser/mobile OS. Unsaved drafts are not exported. No real data, account, email, service or deployment action was performed for this increment.
 
 Publication authorization: user approved publishing the tested coral/black UI and rich executive summary with browser PDF export. This release requires no migration or environment/configuration changes. The unrelated login-error diagnostic remains local and excluded. Production completion must be verified against the pushed SHA separately.
+
+## Project heading description — local, publication pending
+
+User requested the saved project description directly below the project name instead of the generic introductory sentence. The Business Plan heading now reads existing `selected.description` from the authorized overview response; blank/whitespace-only descriptions render no subtitle. Other page headings retain their existing copy. No data update, migration, permission change or production action is needed. Long text and line breaks wrap within the header.
+
+Validation: lint and TypeScript passed; both targeted project E2E tests passed, including the saved description below the title, omission for whitespace-only descriptions, and 390px layout with a long unbroken string. Existing project/card descriptions also wrap safely. No publication performed.
+
+Same pending release: all 17 Business Plan cards now use distinct area definitions from the static catalog instead of the repeated editing instruction. These descriptions explain the subject of each area; they do not claim CRM, ledger or automatic indicators are operational. Module IDs, template version, selections, permissions and saved content are unchanged. The project-heading description still comes from the project's saved data, not this catalog.
+
+Combined validation after the area-copy update: lint, TypeScript and both targeted E2E cases passed, including specific executive/finance definitions, removal of repeated card copy, saved/blank project descriptions and mobile wrapping. Publication remains pending.
+
+Same pending UI release: each area card now has one visible “Acessar” action, an accessible label identifying its area, and a coral-to-peach gradient with black text. Flex layout separates the status badge from the action by at least 18px and aligns actions across cards. Existing editor-opening behavior, enabled-area filtering and server permissions remain unchanged. Global font remains unchanged pending the user's choice.
+
+Validation after the card-action update: lint, TypeScript and three targeted browser tests passed. Checked one visible action per card, separation from the status, opening the executive editor/PDF through the renamed action, project descriptions, company/unit behavior, and 1440px/390px layouts. No publication performed.
+
+## Direct executive editing, project library and Archivo — local, not published
+
+User requested direct access to the executive editor: opening that area now starts in edit mode when create/edit permission permits and the project is active; read-only users still see the document. History, reload, explicit save and discard protection remain available. Opening a legacy document does not save/convert it automatically.
+
+The project menu now has Áreas do projeto and Biblioteca. The library derives one document per nonempty saved area; it does not create duplicate database records. The consolidated Business Plan follows the existing A–Q catalog order, promotes area names to section headings and includes revision/author/date. It includes only enabled areas the current user can view; the UI explicitly describes this authorized view. Empty areas are omitted. Every read/export rechecks membership and project/area access. Consolidated export requires export permission for every included document, rather than silently exporting unauthorized content. Archived information remains labeled, and original history is unchanged. Documents reflect the current saved revisions when opened, not unsaved drafts or immutable publication editions. No schema migration is required.
+
+User selected Archivo for the full interface. Installed the pinned @fontsource-variable/archivo package and self-hosted its CSS/font assets through the application, with 400 body and 600 heading/button weights. Logos are untouched; explicit font choices within authored rich text/PDF remain content formatting. License is retained at public/licenses/Archivo-OFL.txt. This supersedes the earlier pending global-font choice. No remote font service, account, credential or paid integration is needed.
+
+User additionally requested removing the peach introductory “Fundação do seu Business OS” notice from the portfolio. Removed only that static block; data and capability state are unchanged. Included in the same unpublished release.
+
+Publication authorization received for the complete tested project-copy/card-action/direct-editor/library/Archivo/notice-removal release. No database migration or configuration change is required. The separate login-error diagnostic remains excluded. Remote commit and production deployment must be verified independently.

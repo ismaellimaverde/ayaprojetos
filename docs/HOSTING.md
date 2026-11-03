@@ -102,3 +102,5 @@ Migration `003_module_content.sql` has only been applied to isolated local test 
 Update: migration 003 was explicitly authorized and applied to BOSS on 2026-11-03 before code publication, through the authenticated Supabase migration tool. Private tables, RLS and existing server-role grants were verified; no business records were rewritten. The immutable-revision function has a fixed pg_catalog search path.
 
 Pending rich-editor/UI release needs no new environment variables or migrations. Tiptap packages are pinned and client-rendered; PDF uses the browser's print/Save as PDF facility. No external converter, uploaded font or paid service is introduced. Publish only after explicit approval of this release.
+
+Pending library/Archivo release also needs no database migration or new environment variables. Biblioteca reads existing private module_content rows through the authenticated BOSS API. Archivo 5.3.0 is bundled through Fontsource and served as local Next assets; no browser request to Google Fonts is required. Its license is included at /licenses/Archivo-OFL.txt. Publication remains unauthorized for this increment.

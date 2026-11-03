@@ -2,6 +2,7 @@
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Modal } from "@/components/modal";
+import { ProjectLibrary } from "@/components/project-library";
 import { ModuleEditor } from "@/components/module-editor";
 import { Brand } from "@/components/brand";
 import { ProjectAffiliation } from "@/components/project-affiliation";
@@ -222,6 +223,7 @@ export default function Home() {
     users: "Usuários e acessos",
     audit: "Histórico de alterações",
     plan: selected?.name ?? "Business Plan",
+    library: selected?.name ?? "Biblioteca",
   };
   return (
     <div className={`shell ${dark ? "dark" : ""}`}>
@@ -335,15 +337,21 @@ export default function Home() {
         </header>
         <main className="content">
           <div className="heading">
-            <div>
+            <div style={{ minWidth: 0 }}>
               <div className="eyebrow">
                 {orgs.find((o) => o.id === org)?.name ?? "BEM-VINDO"} /{" "}
                 {tab === "users" ? "ADMINISTRAÇÃO" : "ESPAÇO DE GESTÃO"}
               </div>
               <h1>{titles[tab]}</h1>
-              <p className="muted">
-                Estruture hoje. Acompanhe a evolução a cada etapa.
-              </p>
+              {["plan", "library"].includes(tab) ? (
+                selected?.description?.trim() ? (
+                  <p className="muted module-text">{selected.description}</p>
+                ) : null
+              ) : (
+                <p className="muted">
+                  Estruture hoje. Acompanhe a evolução a cada etapa.
+                </p>
+              )}
             </div>
             {data.admin && ["portfolio", "projects"].includes(tab) && (
               <button
@@ -373,6 +381,24 @@ export default function Home() {
               </button>
             )}
           </div>
+          {selected && ["plan", "library"].includes(tab) && (
+            <nav className="row project-menu" aria-label="Menu do projeto">
+              <button
+                className={`btn ${tab === "plan" ? "" : "secondary"}`}
+                aria-current={tab === "plan" ? "page" : undefined}
+                onClick={() => setTab("plan")}
+              >
+                Áreas do projeto
+              </button>
+              <button
+                className={`btn ${tab === "library" ? "" : "secondary"}`}
+                aria-current={tab === "library" ? "page" : undefined}
+                onClick={() => setTab("library")}
+              >
+                Biblioteca
+              </button>
+            </nav>
+          )}
           {message && (
             <div role="status" className="notice">
               {message}{" "}
@@ -413,12 +439,6 @@ export default function Home() {
                         Disponíveis nas próximas fases
                       </span>
                     </div>
-                  </div>
-                  <div className="notice">
-                    <strong>Fundação do seu Business OS.</strong> Organize
-                    empresas, crie projetos e convide sua equipe. Módulos
-                    operacionais e indicadores serão entregues nas fases
-                    seguintes, com dados reais.
                   </div>
                 </>
               )}
@@ -532,7 +552,7 @@ export default function Home() {
                                     : "Projeto geral da organização")}
                               {p.company_kind === "brand" ? " (Marca)" : ""}
                             </p>
-                            <p className="muted">
+                            <p className="muted module-text">
                               {p.description ||
                                 "Seu Business Plan está pronto para ganhar forma."}
                             </p>
@@ -555,13 +575,20 @@ export default function Home() {
                   )}
                 </>
               )}
+              {tab === "library" && selected && (
+                <ProjectLibrary
+                  key={`${org}:${selected.id}`}
+                  org={org}
+                  projectId={selected.id}
+                />
+              )}
               {tab === "plan" && selected && (
                 <>
                   <div className="panel" style={{ marginBottom: 24 }}>
                     <div className="heading">
-                      <div>
+                      <div style={{ minWidth: 0 }}>
                         <h2>Business Plan</h2>
-                        <p className="muted">
+                        <p className="muted module-text">
                           {selected.description ||
                             "Uma estrutura viva para construir o negócio."}
                         </p>
@@ -603,10 +630,7 @@ export default function Home() {
                       .map((m) => (
                         <section className="panel module" key={m.id}>
                           <h3>{m.name}</h3>
-                          <p className="muted subtle">
-                            Preencha o planejamento, registre informações e
-                            acompanhe o histórico desta área.
-                          </p>
+                          <p className="muted subtle">{m.description}</p>
                           <span className="tag">
                             {selected.module_summaries?.find(
                               (s) => s.area === m.id,
@@ -615,7 +639,8 @@ export default function Home() {
                               : "Ainda não preenchido"}
                           </span>
                           <button
-                            className="btn secondary"
+                            className="btn module-access"
+                            aria-label={`Acessar ${m.name}`}
                             onClick={() =>
                               setEditingArea({
                                 projectId: selected.id,
@@ -624,7 +649,7 @@ export default function Home() {
                               })
                             }
                           >
-                            Abrir {m.name}
+                            Acessar
                           </button>
                         </section>
                       ))}

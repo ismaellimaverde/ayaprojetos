@@ -11,6 +11,7 @@ import {
 import { z } from "zod";
 import { moduleFields, type ModuleItem } from "./module-fields";
 import { SUMMARY_KEY, parseSummary } from "./rich-summary";
+import { hasPlanningContent } from "./planning-document";
 import { deliver, deliveryStatus } from "./mail";
 export class DomainError extends Error {
   constructor(
@@ -199,6 +200,42 @@ export async function execute(
 ) {
   return inOrg(actor, org, async (c, admin) => {
     const [resource, id, sub] = path;
+    if (resource === "project-library") {
+      if (
+        method !== "GET" ||
+        !id ||
+        (sub && sub !== "complete") ||
+        path.length > 4 ||
+        (path[3] && path[3] !== "export")
+      )
+        throw new DomainError(404, "Documento não encontrado");
+      const project = await projectAccess(c, actor, org, id, admin);
+      const rows = (
+        await c.query(
+          `SELECT m.area,m.revision,m.fields,m.items,m.updated_at,u.name AS author_name
+        FROM boss_private.module_content m JOIN boss_private."user" u ON u.id=m.updated_by
+        WHERE m.org_id=$1 AND m.project_id=$2 AND m.area=ANY($3::text[])`,
+          [org, id, project.modules],
+        )
+      ).rows;
+      const documents = modules.flatMap((module) => {
+        const row = rows.find((r) => r.area === module.id);
+        if (!row || !hasPlanningContent(module.id, row)) return [];
+        return [
+          {
+            area: row.area,
+            revision: row.revision,
+            updated_at: row.updated_at,
+            author_name: row.author_name,
+            can_export:
+              project.permissions[row.area]?.includes("export") ?? false,
+            ...(sub === "complete" ? { document: row } : {}),
+          },
+        ];
+      });
+      if (path[3] === "export" && documents.some((d) => !d.can_export)) deny();
+      return { project_name: project.name, documents };
+    }
     if (resource === "module-content") {
       if (!id || !sub || !Object.hasOwn(moduleFields, sub))
         throw new DomainError(404, "Área não encontrada");

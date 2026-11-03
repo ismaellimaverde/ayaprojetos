@@ -6,11 +6,11 @@ test("project form hides technical settings and preserves nondefault values on e
   const project = {
     id: "existing-project",
     name: "Existing project",
-    description: "",
+    description: "Descrição cadastrada do projeto.\n" + "TextoLongo".repeat(40),
     company_id: null,
     currency: "USD",
     timezone: "America/New_York",
-    modules: ["finance"],
+    modules: ["executive", "finance"],
     status: "active",
     template_version: 1,
   };
@@ -42,6 +42,9 @@ test("project form hides technical settings and preserves nondefault values on e
     });
   });
   await page.goto("/");
+  await expect(
+    page.getByText("Fundação do seu Business OS.", { exact: true }),
+  ).toHaveCount(0);
   await page.getByRole("button", { name: "Novo projeto", exact: true }).click();
   await expect(page.getByLabel("Moeda", { exact: true })).toHaveCount(0);
   await expect(page.getByLabel("Timezone", { exact: true })).toHaveCount(0);
@@ -51,6 +54,43 @@ test("project form hides technical settings and preserves nondefault values on e
   expect(writes[0].currency).toBe("BRL");
   expect(writes[0].timezone).toBe("America/Fortaleza");
   await page.getByRole("button", { name: "Abrir Business Plan" }).click();
+  const heading = page.locator("main.content > .heading");
+  await expect(heading.locator("p")).toHaveText(project.description);
+  await expect(heading).not.toContainText("Estruture hoje");
+  await expect(
+    page.getByText(
+      "Síntese do negócio, da proposta de valor e dos objetivos que orientam o projeto.",
+      { exact: true },
+    ),
+  ).toBeVisible();
+  await expect(
+    page.getByText(
+      "Premissas financeiras, receitas, custos, orçamento e critérios de controle que sustentam as decisões do negócio.",
+      { exact: true },
+    ),
+  ).toBeVisible();
+  await expect(
+    page.getByText(
+      "Preencha o planejamento, registre informações e acompanhe o histórico desta área.",
+      { exact: true },
+    ),
+  ).toHaveCount(0);
+  const cards = page.locator(".panel.module");
+  await expect(cards).toHaveCount(2);
+  for (const card of await cards.all()) {
+    await expect(card.getByRole("button")).toHaveCount(1);
+    await expect(card.getByRole("button")).toHaveText("Acessar");
+    const status = await card.locator(".tag").boundingBox();
+    const button = await card.getByRole("button").boundingBox();
+    expect(button!.y - status!.y - status!.height).toBeGreaterThanOrEqual(16);
+  }
+  await page.setViewportSize({ width: 390, height: 844 });
+  expect(
+    await page.evaluate(
+      () => document.documentElement.scrollWidth <= innerWidth,
+    ),
+  ).toBe(true);
+  await page.setViewportSize({ width: 1280, height: 720 });
   await page.getByRole("button", { name: "Editar projeto" }).click();
   await expect(page.getByLabel("Moeda", { exact: true })).toHaveCount(0);
   await expect(page.getByLabel("Timezone", { exact: true })).toHaveCount(0);
@@ -59,6 +99,10 @@ test("project form hides technical settings and preserves nondefault values on e
   await expect.poll(() => writes.length).toBe(2);
   expect(writes[1].currency).toBe("USD");
   expect(writes[1].timezone).toBe("America/New_York");
+  project.description = "   ";
+  await page.reload();
+  await page.getByRole("button", { name: "Abrir Business Plan" }).click();
+  await expect(heading.locator("p")).toHaveCount(0);
 });
 
 test("company selection scopes units, stores one link, and preserves a legacy brand", async ({
@@ -149,15 +193,31 @@ test("company selection scopes units, stores one link, and preserves a legacy br
   await page.getByRole("button", { name: "Novo projeto", exact: true }).click();
   await page.setViewportSize({ width: 390, height: 844 });
   await page.getByLabel("Nome do projeto").fill("New unit project");
-  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
-  await page.getByRole("combobox", { name: "Empresa", exact: true }).selectOption("c1");
+  expect(
+    await page.evaluate(
+      () => document.documentElement.scrollWidth <= innerWidth,
+    ),
+  ).toBe(true);
+  await page
+    .getByRole("combobox", { name: "Empresa", exact: true })
+    .selectOption("c1");
   await expect(
-    page.getByRole("combobox", { name: "Unidade (opcional)", exact: true }).locator("option"),
+    page
+      .getByRole("combobox", { name: "Unidade (opcional)", exact: true })
+      .locator("option"),
   ).toHaveText(["Sem unidade específica", "Unit One"]);
-  await page.getByRole("combobox", { name: "Unidade (opcional)", exact: true }).selectOption("u1");
-  await page.getByRole("combobox", { name: "Empresa", exact: true }).selectOption("c2");
-  await expect(page.getByRole("combobox", { name: "Unidade (opcional)", exact: true })).toHaveValue("");
-  await page.getByRole("combobox", { name: "Unidade (opcional)", exact: true }).selectOption("u2");
+  await page
+    .getByRole("combobox", { name: "Unidade (opcional)", exact: true })
+    .selectOption("u1");
+  await page
+    .getByRole("combobox", { name: "Empresa", exact: true })
+    .selectOption("c2");
+  await expect(
+    page.getByRole("combobox", { name: "Unidade (opcional)", exact: true }),
+  ).toHaveValue("");
+  await page
+    .getByRole("combobox", { name: "Unidade (opcional)", exact: true })
+    .selectOption("u2");
   await page.getByRole("button", { name: "Salvar projeto" }).click();
   await expect.poll(() => writes.length).toBe(1);
   expect(writes[0].company_id).toBe("u2");
@@ -166,9 +226,9 @@ test("company selection scopes units, stores one link, and preserves a legacy br
     .selectOption("brand");
   await page.getByRole("button", { name: "Abrir Business Plan" }).click();
   await page.getByRole("button", { name: "Editar projeto" }).click();
-  await expect(page.getByRole("combobox", { name: "Empresa", exact: true })).toHaveValue(
-    "preserve-current",
-  );
+  await expect(
+    page.getByRole("combobox", { name: "Empresa", exact: true }),
+  ).toHaveValue("preserve-current");
   await page.getByRole("button", { name: "Salvar projeto" }).click();
   await expect.poll(() => writes.length).toBe(2);
   expect(writes[1].company_id).toBe("brand");
