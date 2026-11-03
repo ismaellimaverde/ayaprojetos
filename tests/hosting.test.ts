@@ -2,6 +2,8 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import nextEnv from "@next/env";
 import { Pool } from "pg";
+import { X509Certificate } from "node:crypto";
+import { rootCertificates, createSecureContext } from "node:tls";
 import {
   databaseConfig,
   assertHostedIdentity,
@@ -11,16 +13,24 @@ import {
 import { mailConfiguration } from "../src/lib/mail";
 import { migratePrivateDatabase } from "../scripts/database-setup";
 nextEnv.loadEnvConfig(process.cwd());
+const testCA = rootCertificates.find((pem) => {
+  const c = new X509Certificate(pem);
+  return (
+    c.ca &&
+    Date.parse(c.validFrom) <= Date.now() &&
+    Date.parse(c.validTo) > Date.now()
+  );
+})!;
 test("serverless pool is bounded, TLS verified, URL cannot override TLS policy", () => {
   const cfg = databaseConfig({
     NETLIFY: "true",
     DATABASE_URL:
       "postgresql://boss_app.project:test-only@pooler.example.test:6543/postgres?ssl=false&sslmode=no-verify",
-    DATABASE_SSL_CA: "test-only-ca",
+    DATABASE_SSL_CA: testCA,
   });
   assert.equal(cfg.max, 1);
   assert.equal(cfg.connectionTimeoutMillis, 10000);
-  assert.deepEqual(cfg.ssl, { rejectUnauthorized: true, ca: "test-only-ca" });
+  assert.deepEqual(cfg.ssl, { rejectUnauthorized: true, ca: testCA.trim() });
   assert.ok(!cfg.connectionString!.includes("sslmode"));
   assert.ok(!cfg.connectionString!.includes("ssl="));
   assert.equal(cfg.options, undefined);
@@ -191,4 +201,42 @@ test("private schema denies Data API roles and permits only the server role, wit
     for (const role of created) await admin.query(`DROP ROLE "${role}"`);
     await admin.end();
   }
+});
+
+test("database CA validates PEM, newline encoding and optional verified fingerprint without weakening TLS", () => {
+  const cert = new X509Certificate(testCA);
+  const env = {
+    DATABASE_URL:
+      "postgresql://boss_app:test-only@pooler.example.test:6543/postgres",
+    DATABASE_SSL_CA: testCA.replaceAll("\n", "\\n"),
+    DATABASE_SSL_CA_SHA256: cert.fingerprint256,
+  };
+  const cfg = databaseConfig(env);
+  assert.ok(cfg.ssl && typeof cfg.ssl === "object");
+  if (cfg.ssl && typeof cfg.ssl === "object") {
+    assert.equal(cfg.ssl.rejectUnauthorized, true);
+    assert.equal(cfg.ssl.checkServerIdentity, undefined);
+    assert.equal(cfg.ssl.ca, testCA.trim());
+    assert.doesNotThrow(() => createSecureContext(cfg.ssl as object));
+  }
+  assert.throws(
+    () => databaseConfig({ ...env, DATABASE_SSL_CA: "invalid" }),
+    /PEM/,
+  );
+  assert.throws(
+    () => databaseConfig({ ...env, DATABASE_SSL_CA_SHA256: "00".repeat(32) }),
+    /fingerprint/,
+  );
+  assert.throws(
+    () => databaseConfig({ ...env, DATABASE_SSL_CA: "" }),
+    /required/,
+  );
+  assert.throws(
+    () =>
+      databaseConfig({
+        ...env,
+        DATABASE_SSL_CA: testCA + "\n-----BEGIN PRIVATE KEY-----",
+      }),
+    /PEM/,
+  );
 });

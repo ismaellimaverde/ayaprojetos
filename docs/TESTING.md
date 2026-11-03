@@ -42,3 +42,7 @@ Production read-only diagnosis after the reported recovery attempt: zero verific
 ## Optional MFA — 2026-11-03
 
 User explicitly removed mandatory two-step authentication for BOSS. All 16 service/configuration tests passed with foundation actors defaulting to MFA disabled. Verified administration, permission changes, isolation, revocation, verified-email gate, recent-login checks, reset and rate limiting remain covered. Both Chromium scenarios passed (45.2s total): first-access error/resend UI, and password-only administrator login and project creation followed by voluntary MFA enrollment, session invalidation, subsequent TOTP challenge, invitations, isolation and recovery. MFA data for existing users is not changed. External accounts, Netlify visitor protection and preview secret scopes are outside this change.
+
+## Explicit database CA validation — 2026-11-03
+
+17/17 integration/configuration tests passed, including valid PEM with escaped newlines, optional SHA-256 match, rejection of malformed PEM/private-key contamination and wrong/missing fingerprint configuration, and preservation of rejectUnauthorized=true/default hostname checks. Both E2E scenarios passed (25.4s total), plus lint, TypeScript and production build. The real Supabase TLS handshake is pending native's official CA environment configuration and deployment; local parser tests do not claim to validate the provider chain. No activation/recovery email was sent by this executor.

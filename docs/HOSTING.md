@@ -69,3 +69,14 @@ Local verification: all 16 tests passed, including repeated-bootstrap rejection,
 ## Optional MFA decision — 2026-11-03
 
 The explicit user request supersedes the mandatory-MFA requirement described in earlier verification checkpoints. BOSS now permits verified administrators to use password-only login, including sensitive operations with a login less than ten minutes old. Existing optional MFA enrollment and challenges remain intact. No visitor protection, preview secrets or external account security is changed.
+
+## Verified TLS incident and remediation — 2026-11-03
+
+Parent/native correlated the production error `self-signed certificate in certificate chain` with the first Better Auth rateLimit SELECT. This failure occurs before reset-token creation and SMTP. The BOSS dashboard's Database Settings → SSL configuration → Download certificate was observed to link to:
+https://supabase-downloads.s3-ap-southeast-1.amazonaws.com/prod/ssl/prod-ca-2021.crt
+Dashboard source: https://supabase.com/dashboard/project/ubgabtgrfrixldstnqry/database/settings
+Official instructions: https://supabase.com/docs/guides/database/psql and https://supabase.com/docs/guides/platform/ssl-enforcement .
+
+Native owns certificate download, independent fingerprint/validity verification and Netlify production environment configuration. Set DATABASE_SSL_CA to that complete PEM (actual newline or literal \n encoding), DATABASE_SSL_MODE=verify-full and optionally DATABASE_SSL_CA_SHA256 to its verified SHA-256 fingerprint (colon-separated or plain hex). Use Build + Functions scopes. The code already supports explicit pg CA trust; this change adds strict single-PEM, X.509 CA/validity and optional fingerprint validation. Invalid configuration fails closed. rejectUnauthorized remains true and Node's default hostname check is unchanged. No global trust-store edit, NODE_TLS_REJECT_UNAUTHORIZED override, private key or credential rotation is needed. The executor could not download this artifact through its outbound proxy; the independently verified certificate fingerprint must be supplied/recorded by native, not invented here. Tests use a valid CA from Node's bundled trust store only as a parser fixture, not as a substitute Supabase CA.
+
+IP warning is separate from TLS. Current official Netlify Functions API documents context.ip/getContext(), while Better Auth requires a trusted single-IP header or verified proxy chain. No spoof-resistant guarantee for the exact Next/OpenNext header path was established here, so no arbitrary forwarded header or broad trusted-proxy range is enabled. The shared fallback rate-limit bucket remains restrictive. References: https://docs.netlify.com/build/functions/api/ ; https://better-auth.com/docs/concepts/rate-limit . Validate the deployed adapter/context path before a separate IP attribution change.

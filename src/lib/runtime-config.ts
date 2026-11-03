@@ -1,10 +1,51 @@
 import type { PoolConfig } from "pg";
+import { X509Certificate } from "node:crypto";
 export type Environment = Record<string, string | undefined>;
 export const isHosted = (env: Environment) =>
   env.NETLIFY === "true" || env.BOSS_HOSTED === "true";
 export function isLocalDatabase(value: string) {
   const u = new URL(value);
   return ["localhost", "127.0.0.1", "[::1]"].includes(u.hostname);
+}
+export function databaseCA(env: Environment): string | undefined {
+  if (!env.DATABASE_SSL_CA) {
+    if (env.DATABASE_SSL_CA_SHA256)
+      throw new Error(
+        "DATABASE_SSL_CA is required when a fingerprint is configured",
+      );
+    return undefined;
+  }
+  const pem = env.DATABASE_SSL_CA.replace(/\\n/g, "\n").trim();
+  if (
+    !/^-----BEGIN CERTIFICATE-----\s+[A-Za-z0-9+/=\s]+-----END CERTIFICATE-----$/.test(
+      pem,
+    )
+  )
+    throw new Error("DATABASE_SSL_CA must contain one PEM CA certificate");
+  let cert: X509Certificate;
+  try {
+    cert = new X509Certificate(pem);
+  } catch {
+    throw new Error("DATABASE_SSL_CA is not a valid X.509 certificate");
+  }
+  if (
+    !cert.ca ||
+    Date.now() < Date.parse(cert.validFrom) ||
+    Date.now() > Date.parse(cert.validTo)
+  )
+    throw new Error("DATABASE_SSL_CA must be a currently valid CA certificate");
+  if (env.DATABASE_SSL_CA_SHA256) {
+    const expected = env.DATABASE_SSL_CA_SHA256.replaceAll(
+      ":",
+      "",
+    ).toLowerCase();
+    if (
+      !/^[a-f0-9]{64}$/.test(expected) ||
+      expected !== cert.fingerprint256.replaceAll(":", "").toLowerCase()
+    )
+      throw new Error("DATABASE_SSL_CA fingerprint mismatch");
+  }
+  return pem;
 }
 export function databaseConfig(
   env: Environment = process.env,
@@ -24,6 +65,7 @@ export function databaseConfig(
     (!local && tls !== "verify-full")
   )
     throw new Error("Remote database requires verified TLS");
+  const ca = databaseCA(env);
   // URL SSL options override pg's ssl object. Remove them so certificate validation cannot be weakened.
   for (const key of ["ssl", "sslmode", "sslcert", "sslkey", "sslrootcert"])
     url.searchParams.delete(key);
@@ -52,9 +94,7 @@ export function databaseConfig(
         ? false
         : {
             rejectUnauthorized: true,
-            ...(env.DATABASE_SSL_CA
-              ? { ca: env.DATABASE_SSL_CA.replace(/\\n/g, "\n") }
-              : {}),
+            ...(ca ? { ca } : {}),
           },
   };
 }
