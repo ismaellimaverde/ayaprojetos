@@ -37,3 +37,32 @@ User explicitly requested no two-step authentication requirement. This supersede
 - Runtime database SCRAM verifier changed from 16384 to compatible 4096 iterations for the same existing high-entropy password; no credential rotation, role/grant change or application-user hash change. See [Supavisor #1222](https://github.com/supabase/supavisor/pull/1222). Custom iteration support must be confirmed for the actual deployed pooler before use.
 - Owner recovery and verification messages: both reported Delivered by the exact BOSS Resend key. User completion of verification, password choice and first login remains unconfirmed. MFA stays optional.
 - This checkpoint is documentation-only and committed locally; no push or new deployment is authorized by this documentation task.
+
+## Brand assets — local preparation, original asset transfer blocked
+
+User requested the supplied BOSS logo on login and inside the application, with “Business Operation Sales System” immediately below. This exact expansion comes from requirements/update.txt section 1; the original prompt uses the broader Business Operating System description. Preserve the update's official product name.
+
+Library identifies two PNG inputs: libfile_59dc70b136d4819185fd8baad711622b (813×539, logo) and libfile_25425b6eea888191b6ec699b5b2df2bb (1320×1310, login illustration). Automated descriptions suggest a black BOSS wordmark with a tie-shaped negative space and a blue/purple login illustration; actual pixels were not available in this executor after both authorized downloads failed. No logo redraw or asset substitution was made. A shared Brand component now provides the approved textual hierarchy on login (including mobile) and the authenticated application shell: AYA Projetos is the platform brand; BOSS is the system name, followed by Business Operation Sales System. This is local preparation, not a substitute logo or a completed visual design.
+
+User additionally selected https://www.ayaprojetos.com.br/ as the source for AYA's logo and palette inspiration. Public page text is readable and identifies AYA PROJETOS / Experiências & Inteligência de Negócios. Both header/footer image links resolve to the same Wix media asset, https://static.wixstatic.com/media/56e356_4384de01f67f4675a76e0028b9fe7430~mv2.png (page label fav-icon.png). Asset pixels and site CSS could not be fetched here (executor proxy 403; web image fetch unavailable), so neither final logo suitability nor exact colors are verified. Do not invent hex colors from text. The final login reference was subsequently received as libfile_c835fb47645481919f14ba56df6e8d88 (1320×1307). Its authorized Library materialization also returned `library file transfer failed: download failed`. Metadata/automated captions are readable but actual pixels are unavailable. Native/browser inspection and transfer of the original assets into this checkout remain necessary before faithful visual completion and publication. No palette changes or publication were made.
+
+
+## Temporary text identity — approved 2026-11-03
+
+User instructed AYA Projetos to appear as text pending its future logo replacement, and stopped image transfers. BOSS also remains plain text because its original bytes are unavailable; no approximation is used. Implemented locally: shared AYA/platform and BOSS/system hierarchy, full acronym below BOSS, light turquoise login background, white rounded access card and rounded controls inspired by the parent-inspected references. Illustration is omitted until an appropriate asset is available.
+
+Parent verified AYA website CSS palette: #069AA1, #D4EDEE, #A7D1D4, #096266, #063638, #1D1E21, #FFFFFF, #D5D8E0, #787C88, #EF9C83. Dark turquoise is used for small text/buttons to preserve legibility; the lighter primary turquoise is not used for white small-text buttons. Internal navigation shares the palette. No authentication behavior, secrets, external services or publication changed. Current remote is https://github.com/ismaellimaverde/ayaprojetos.git; branch feat/boss-foundation-phase-1. Do not treat this as a private branch: no upload is currently authorized.
+
+Validation: lint, TypeScript, production build and both existing Playwright E2E flows passed. Desktop (1440 px) and mobile (390 px) login captures reviewed locally; no mobile horizontal overflow. A screenshot capture during hydration emitted a caret-style mismatch warning; no application flow failed. Screenshots are internal review artifacts only. Changes remain local, uncommitted and unpublished.
+
+## Original logos integrated locally — 2026-11-03
+
+Later explicit approval covers both logos in the confirmed public repository. Retrieved only the two PNG blobs from transfer commit 584812bc6731ff4bdd32343a58b9c0184d002939, without merging its branch or overwriting local work. Inspected both originals. SHA-256: BOSS `0f87116e2f033301d4b9876f207ae041103da491f4012c7ed9b4457df0bbb70d` (44736 bytes); AYA `5b34b297fd0e395cd2ba6637bce9564394f1ba726e0f214a093838c80421e0ed` (51210 bytes). Files live in public/brand with original filenames.
+
+Shared identity now uses original AYA mark with AYA Projetos text, followed by original BOSS logo and full system name. A white identity panel preserves the black originals on both light login and dark navigation. CSS frames the BOSS logo's wide blank margins without altering image bytes, recoloring or redrawing either mark. Both are local imports; no external image fetch at runtime. Previous text-only state is superseded. No login reference screenshots are included. No push or deployment authorized by this integration instruction.
+
+Original-logo validation: lint, TypeScript, production build and 2 existing E2E tests passed. Desktop 1440px and mobile 390px screenshots visually reviewed, visible images loaded, no horizontal overflow. Initial screenshot helper incorrectly waited for hidden lazy-loaded images and timed out; corrected to wait for visible images, then succeeded. Original PNG bytes and hashes preserved. Implementation remains local and unpublished.
+
+## Visual release authorization — 2026-11-03
+
+User explicitly approved publishing the tested visual version with both original logos to BOSS. This supersedes the earlier local-only publication restriction for this change. Preserve existing production configuration and all unrelated projects. Production confirmation follows the linked branch deployment; do not infer success from a Git push alone.

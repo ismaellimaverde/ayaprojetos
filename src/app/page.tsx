@@ -2,6 +2,7 @@
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Modal } from "@/components/modal";
+import { Brand } from "@/components/brand";
 import { useEffect, useState } from "react";
 import {
   LayoutDashboard,
@@ -184,14 +185,9 @@ export default function Home() {
   return (
     <div className={`shell ${dark ? "dark" : ""}`}>
       <aside className="sidebar">
-        <Link href="/" className="brand">
-          BOSS<span>AYA PROJETOS</span>
+        <Link href="/" aria-label="BOSS — AYA Projetos — início">
+          <Brand />
         </Link>
-        <small>
-          BUSINESS OPERATION
-          <br />
-          SALES SYSTEM
-        </small>
         <nav>
           {[
             {

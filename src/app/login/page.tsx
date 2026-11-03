@@ -3,6 +3,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useState } from "react";
 import { authClient } from "@/lib/client";
+import { Brand } from "@/components/brand";
 export default function Login() {
   const router = useRouter();
   const [message, setMessage] = useState("");
@@ -11,9 +12,7 @@ export default function Login() {
   return (
     <div className="auth">
       <section className="authstory">
-        <div className="brand">
-          BOSS<span>AYA PROJETOS</span>
-        </div>
+        <Brand />
         <div>
           <div className="eyebrow">VISÃO CLARA. EXECUÇÃO CONECTADA.</div>
           <h1>
@@ -26,10 +25,11 @@ export default function Login() {
             evoluir seus projetos.
           </p>
         </div>
-        <small>Business Operation Sales System · Fundação 01</small>
+        <small>Uma plataforma AYA Projetos</small>
       </section>
       <section className="authform">
         <div>
+          <Brand className="login-mobile-identity" />
           <div className="eyebrow">SEU ESPAÇO DE GESTÃO</div>
           <h1>{mfa ? "Verifique sua identidade" : "Bem-vindo ao BOSS"}</h1>
           <p className="muted">

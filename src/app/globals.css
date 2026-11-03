@@ -1,12 +1,17 @@
 @import "tailwindcss";
 :root {
-  --bg: #f6f7f9;
+  --bg: #f4f9f9;
   --surface: #fff;
-  --ink: #172133;
-  --muted: #637084;
-  --line: #e1e6ed;
-  --accent: #126951;
-  --soft: #e7f4ed;
+  --ink: #1d1e21;
+  --muted: #5b606c;
+  --line: #d5d8e0;
+  --accent: #096266;
+  --aya-turquoise: #069aa1;
+  --aya-light: #d4edee;
+  --aya-soft: #a7d1d4;
+  --aya-deep: #063638;
+  --aya-coral: #ef9c83;
+  --soft: #d4edee;
 }
 * {
   box-sizing: border-box;
@@ -24,7 +29,8 @@ body:has(.dark) {
   --ink: #e9edf3;
   --muted: #a3b0bf;
   --line: #354252;
-  --soft: #1e3d35;
+  --soft: #063638;
+  --accent: #a7d1d4;
 }
 button,
 input,
@@ -76,7 +82,7 @@ form {
   border: 0;
   border-radius: 8px;
   padding: 11px 17px;
-  background: var(--accent);
+  background: #096266;
   color: white;
   font-weight: 600;
   display: inline-flex;
@@ -124,9 +130,9 @@ p {
   grid-template-columns: 246px 1fr;
 }
 .sidebar {
-  background: #142b27;
-  color: #d7e6e0;
-  padding: 30px 20px;
+  background: var(--aya-deep);
+  color: #d4edee;
+  padding: 30px 16px;
   display: flex;
   flex-direction: column;
   gap: 26px;
@@ -143,7 +149,51 @@ p {
   display: block;
   font-weight: 400;
   margin-top: 5px;
-  color: #90b2a6;
+  color: #a7d1d4;
+}
+.product-identity {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+  color: #1d1e21;
+  background: #fff;
+  border-radius: 16px;
+  padding: 16px;
+  width: fit-content;
+  max-width: 100%;
+}
+.product-identity .platform-name {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+}
+.system-logo {
+  position: relative;
+  display: block;
+  width: 180px;
+  height: 66px;
+  overflow: hidden;
+  max-width: 100%;
+}
+.system-logo img {
+  position: absolute;
+  width: 280px;
+  max-width: none;
+  height: auto;
+  left: -52px;
+  top: -62px;
+}
+.product-identity .system-description {
+  max-width: 24ch;
+  font-size: 12px;
+  line-height: 1.5;
+}
+.login-mobile-identity {
+  display: none;
 }
 .sidebar button {
   width: 100%;
@@ -159,11 +209,11 @@ p {
 }
 .sidebar button.active,
 .sidebar button:hover {
-  background: #28463d;
+  background: #096266;
   color: white;
 }
 .sidebar small {
-  color: #a4b9b1;
+  color: #a7d1d4;
 }
 .sidebar footer {
   margin-top: auto;
@@ -296,12 +346,16 @@ td input[type="checkbox"] {
 .auth {
   min-height: 100vh;
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: 1.1fr 1fr;
+  padding: clamp(20px, 4vw, 64px);
+  gap: clamp(24px, 4vw, 64px);
+  background: radial-gradient(ellipse at 12% 85%, #a7d1d4 0, transparent 48%), #d4edee;
 }
 .authstory {
-  background: #142b27;
-  color: #fff;
-  padding: 60px;
+  background: transparent;
+  color: var(--aya-deep);
+  padding: 32px 16px;
+  min-height: 600px;
   display: flex;
   flex-direction: column;
   justify-content: space-between;
@@ -312,14 +366,31 @@ td input[type="checkbox"] {
   line-height: 1.12;
 }
 .authstory p {
-  color: #adcbc0;
+  color: #096266;
   max-width: 440px;
 }
 .authform {
   display: flex;
   justify-content: center;
   align-items: center;
-  padding: 40px;
+  padding: clamp(24px, 4vw, 56px);
+  background: #fff;
+  border: 1px solid #ffffff;
+  border-radius: 32px;
+  box-shadow: 0 24px 70px #06363812;
+  align-self: center;
+}
+.authform input {
+  border-radius: 14px;
+  padding: 15px 16px;
+  background: #f4f9f9;
+}
+.authform .btn {
+  border-radius: 14px;
+  min-height: 50px;
+}
+.authform a:hover {
+  color: #096266;
 }
 .authform > div {
   width: 100%;
@@ -385,7 +456,7 @@ td input[type="checkbox"] {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
   .shell {
-    grid-template-columns: 190px 1fr;
+    grid-template-columns: 246px 1fr;
   }
   .content {
     padding: 24px;
@@ -423,6 +494,10 @@ td input[type="checkbox"] {
   }
   .authstory {
     display: none;
+  }
+  .login-mobile-identity {
+    display: flex;
+    margin-bottom: 28px;
   }
   .topbar {
     padding: 16px;
