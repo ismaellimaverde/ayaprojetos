@@ -342,6 +342,7 @@ export default function Home() {
             <Fragment key={n.id}>
               <button
                 className={tab === n.id ? "active" : ""}
+                aria-current={tab === n.id ? "page" : undefined}
                 aria-expanded={
                   n.id === "projects" ? projectsExpanded : undefined
                 }

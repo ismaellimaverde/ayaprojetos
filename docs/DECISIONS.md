@@ -204,3 +204,9 @@ Project pages have direct query addresses on the existing platform route: worksp
 The project deletion retention-policy decision and proposed duplication remain pending as recorded above. This navigation work does not implement either operation.
 
 Publication approved for full-width project navigation, authorized project shortcuts, guarded editor transitions, direct query addresses, portfolio block names and removal of the visible archive button. Duplication/deletion remain proposals only, with no new operation or migration in this release. The separate older login-error diagnostic remains excluded.
+
+## Distinct navigation states — local, publication pending
+
+User identified adjacent portfolio/projects entries sharing the same coral selected/hover background. Sidebar navigation now separates button hit targets by 4px and draws the highlight 5px inset vertically, keeping at least a 44px clickable target. Selected remains #EF9C83; unselected hover uses #FBE5DD; selected hover stays selected. Text on both highlights is #1D1E21 (computed contrast 7.74:1 and 13.77:1 respectively). Keyboard focus uses a separate 2px outline. Main navigation exposes its current page via aria-current, consistent with project shortcuts. Fonts, links, permissions and data are unchanged. No publication authorized yet.
+
+Publication approved specifically for the tested sidebar selected/hover separation. The later request for collapsible dual navigation and bounded editor scrolling is not part of this release.

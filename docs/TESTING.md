@@ -96,3 +96,9 @@ Navigation checks cover expandable authorized shortcuts, archived read-only acce
 An intermediate visual test still expected the former Projects button to navigate directly; its expectation was updated to expand the list and choose Todos os projetos. An intermediate lint process overlapped Playwright deleting its output directory and hit ENOENT; final checks are run sequentially. No production data, email, migration, push or deployment was performed.
 
 Final sequential lint (no warnings), TypeScript and production build passed. git diff --check passed. No database migration is required for this navigation increment.
+
+## Sidebar selected/hover separation (local, publication pending)
+
+Targeted browser test passed at 1440px and 390px: selected and hovered adjacent items have distinct computed colors; selected hover remains coral; desktop hit targets have at least 4px separation and the painted backgrounds are inset by 5px vertically; targets remain at least 44px tall. Keyboard Tab focus has its own 2px solid outline. Dark-theme highlight/text colors are also verified. Desktop/mobile screenshots were inspected, with no page overflow. Lint and TypeScript passed. No data or service changes, commit, push or deployment were performed.
+
+Final production build and git diff --check also passed for the sidebar-state adjustment.

@@ -208,11 +208,6 @@ p {
   align-items: center;
   gap: 10px;
 }
-.sidebar button.active,
-.sidebar button:hover {
-  background: var(--aya-primary);
-  color: #1d1e21;
-}
 .sidebar small {
   color: #ef9c83;
 }
@@ -1037,10 +1032,6 @@ h3 {
   overflow-wrap: anywhere;
   text-align: left;
 }
-.sidebar nav .project-shortcuts button[aria-current="page"] {
-  background: var(--field);
-  color: var(--ink);
-}
 @media (max-width: 650px) {
   .sidebar nav {
     flex-wrap: wrap;
@@ -1068,5 +1059,51 @@ h3 {
   }
   .module-page .summary-toolbar select {
     max-width: 130px;
+  }
+}
+
+/* Keep a generous hit target while separating the slimmer navigation highlights. */
+.sidebar nav {
+  display: grid;
+  gap: 4px;
+}
+.sidebar nav button {
+  position: relative;
+  isolation: isolate;
+  background: transparent;
+  min-height: 44px;
+  padding: 10px 12px;
+  border-radius: 12px;
+}
+.sidebar nav button::before {
+  content: "";
+  position: absolute;
+  inset: 5px 0;
+  border-radius: 10px;
+  background: transparent;
+  z-index: -1;
+  pointer-events: none;
+}
+.sidebar nav button:hover {
+  color: #1d1e21;
+}
+.sidebar nav button:hover::before {
+  background: #fbe5dd;
+}
+.sidebar nav button.active,
+.sidebar nav button[aria-current="page"] {
+  color: #1d1e21;
+}
+.sidebar nav button.active::before,
+.sidebar nav button[aria-current="page"]::before {
+  background: #ef9c83;
+}
+.sidebar nav button:focus-visible {
+  outline: 2px solid var(--ink);
+  outline-offset: 2px;
+}
+@media (max-width: 650px) {
+  .sidebar nav {
+    display: flex;
   }
 }
