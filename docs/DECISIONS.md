@@ -66,3 +66,11 @@ Original-logo validation: lint, TypeScript, production build and 2 existing E2E 
 ## Visual release authorization — 2026-11-03
 
 User explicitly approved publishing the tested visual version with both original logos to BOSS. This supersedes the earlier local-only publication restriction for this change. Preserve existing production configuration and all unrelated projects. Production confirmation follows the linked branch deployment; do not infer success from a Git push alone.
+
+## Login refinement and coral direction — local only
+
+User requested left optical alignment of AYA, BOSS B and system expansion; keep full expansion on one responsive line. Adjusted the original-image CSS framing without modifying PNGs and used a container-relative subtitle size. Login copy now reads “Entre com sua conta para acessar os projetos.” Only the spaced button-style password recovery link remains below sign-in; first-access link and invitation/MFA footer removed from login. Recovery and verification backend and /recover remain unchanged. Existing access E2E now enters through the retained recovery link.
+
+User rejected teal and selected the final AYA contact section instead. Parent confirmed contact-section CSS: coral #EF9C83 (--color_42), graphite #1D1E21 and peach fields #FFD5BB. Coral now drives login and system colors; login submit uses approved optional graphite with white text; fields use peach. Neutral warm shades support contrast. Publication requires new explicit authorization; no push/deploy for this refinement. No screenshot attachment was available directly to this executor; reviewed locally generated desktop/mobile screenshots instead.
+
+User subsequently authorized publication of the tested coral/login refinement by voice (“Pode”). Lint, TypeScript, build and both E2E tests passed; desktop and 320/390px mobile checked without horizontal overflow. Publication authorization is limited to this BOSS version and preserves hosting configuration.

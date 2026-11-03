@@ -5,7 +5,7 @@ test("first access shows failures honestly and offers generic verification resen
 }) => {
   await page.goto("/login");
   await page
-    .getByRole("link", { name: "Primeiro acesso ou reenviar verificação" })
+    .getByRole("link", { name: "Esqueceu sua senha?" })
     .click();
   await page.waitForURL("**/recover");
   await page

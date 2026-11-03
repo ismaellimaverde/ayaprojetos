@@ -1,17 +1,17 @@
 @import "tailwindcss";
 :root {
-  --bg: #f4f9f9;
+  --bg: #fcf5f2;
   --surface: #fff;
   --ink: #1d1e21;
   --muted: #5b606c;
   --line: #d5d8e0;
-  --accent: #096266;
-  --aya-turquoise: #069aa1;
-  --aya-light: #d4edee;
-  --aya-soft: #a7d1d4;
-  --aya-deep: #063638;
+  --accent: #85422f;
+  --aya-primary: #ef9c83;
+  --aya-light: #f9e2d9;
+  --aya-soft: #ef9c83;
+  --aya-deep: #452b26;
   --aya-coral: #ef9c83;
-  --soft: #d4edee;
+  --soft: #f9e2d9;
 }
 * {
   box-sizing: border-box;
@@ -29,8 +29,8 @@ body:has(.dark) {
   --ink: #e9edf3;
   --muted: #a3b0bf;
   --line: #354252;
-  --soft: #063638;
-  --accent: #a7d1d4;
+  --soft: #452b26;
+  --accent: #ef9c83;
 }
 button,
 input,
@@ -82,8 +82,8 @@ form {
   border: 0;
   border-radius: 8px;
   padding: 11px 17px;
-  background: #096266;
-  color: white;
+  background: var(--aya-primary);
+  color: #452b26;
   font-weight: 600;
   display: inline-flex;
   align-items: center;
@@ -131,7 +131,7 @@ p {
 }
 .sidebar {
   background: var(--aya-deep);
-  color: #d4edee;
+  color: #f9e2d9;
   padding: 30px 16px;
   display: flex;
   flex-direction: column;
@@ -149,7 +149,7 @@ p {
   display: block;
   font-weight: 400;
   margin-top: 5px;
-  color: #a7d1d4;
+  color: #ef9c83;
 }
 .product-identity {
   display: flex;
@@ -160,8 +160,9 @@ p {
   background: #fff;
   border-radius: 16px;
   padding: 16px;
-  width: fit-content;
+  width: 244px;
   max-width: 100%;
+  container-type: inline-size;
 }
 .product-identity .platform-name {
   display: flex;
@@ -184,12 +185,12 @@ p {
   width: 280px;
   max-width: none;
   height: auto;
-  left: -52px;
+  left: -63px;
   top: -62px;
 }
 .product-identity .system-description {
-  max-width: 24ch;
-  font-size: 12px;
+  white-space: nowrap;
+  font-size: clamp(8px, 5.4cqw, 12px);
   line-height: 1.5;
 }
 .login-mobile-identity {
@@ -209,11 +210,11 @@ p {
 }
 .sidebar button.active,
 .sidebar button:hover {
-  background: #096266;
-  color: white;
+  background: var(--aya-primary);
+  color: #452b26;
 }
 .sidebar small {
-  color: #a7d1d4;
+  color: #ef9c83;
 }
 .sidebar footer {
   margin-top: auto;
@@ -349,7 +350,7 @@ td input[type="checkbox"] {
   grid-template-columns: 1.1fr 1fr;
   padding: clamp(20px, 4vw, 64px);
   gap: clamp(24px, 4vw, 64px);
-  background: radial-gradient(ellipse at 12% 85%, #a7d1d4 0, transparent 48%), #d4edee;
+  background: radial-gradient(ellipse at 12% 85%, #ef9c83 0, transparent 48%), #f9e2d9;
 }
 .authstory {
   background: transparent;
@@ -366,7 +367,7 @@ td input[type="checkbox"] {
   line-height: 1.12;
 }
 .authstory p {
-  color: #096266;
+  color: #85422f;
   max-width: 440px;
 }
 .authform {
@@ -377,20 +378,24 @@ td input[type="checkbox"] {
   background: #fff;
   border: 1px solid #ffffff;
   border-radius: 32px;
-  box-shadow: 0 24px 70px #06363812;
+  box-shadow: 0 24px 70px #452b2612;
   align-self: center;
 }
 .authform input {
   border-radius: 14px;
   padding: 15px 16px;
-  background: #f4f9f9;
+  background: #ffd5bb;
+}
+.authform form .btn {
+  background: #1d1e21;
+  color: #fff;
 }
 .authform .btn {
   border-radius: 14px;
   min-height: 50px;
 }
 .authform a:hover {
-  color: #096266;
+  color: #85422f;
 }
 .authform > div {
   width: 100%;
@@ -533,4 +538,10 @@ td input[type="checkbox"] {
 }
 .boss-dialog > .panel {
   overflow: auto;
+}
+
+.authform .recovery-action {
+  margin-top: 20px;
+  width: 100%;
+  text-decoration: none;
 }

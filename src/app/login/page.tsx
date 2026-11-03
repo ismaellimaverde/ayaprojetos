@@ -35,7 +35,7 @@ export default function Login() {
           <p className="muted">
             {mfa
               ? "Digite o código do aplicativo autenticador."
-              : "Entre com sua conta para acessar os projetos autorizados."}
+              : "Entre com sua conta para acessar os projetos."}
           </p>
           {message && (
             <p role="alert" className="notice error">
@@ -119,16 +119,9 @@ export default function Login() {
                   : "Entrar no BOSS →"}
             </button>
           </form>
-          <p>
-            <Link href="/recover">Esqueceu sua senha?</Link>
-          </p>
-          <p>
-            <Link href="/recover">Primeiro acesso ou reenviar verificação</Link>
-          </p>
-          <p className="muted subtle">
-            O acesso é concedido por convite. Autenticação multifator é
-            opcional.
-          </p>
+          <Link href="/recover" className="btn secondary recovery-action">
+            Esqueceu sua senha?
+          </Link>
         </div>
       </section>
     </div>
