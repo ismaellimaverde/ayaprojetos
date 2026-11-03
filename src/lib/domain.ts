@@ -9,6 +9,7 @@ import {
   type Permissions,
 } from "./catalog";
 import { z } from "zod";
+import { moduleFields, type ModuleItem } from "./module-fields";
 import { deliver, deliveryStatus } from "./mail";
 export class DomainError extends Error {
   constructor(
@@ -131,7 +132,13 @@ export async function projectAccess(
   idSchema.parse(id);
   const p = (
     await c.query(
-      "SELECT * FROM boss_private.projects WHERE id=$1 AND org_id=$2",
+      `SELECT p.*,c.name AS company_name,c.kind AS company_kind,
+      CASE WHEN c.kind='unit' AND parent.kind='company' THEN parent.id END AS parent_company_id,
+      CASE WHEN c.kind='unit' AND parent.kind='company' THEN parent.name END AS parent_company_name
+      FROM boss_private.projects p
+      LEFT JOIN boss_private.companies c ON c.id=p.company_id AND c.org_id=p.org_id
+      LEFT JOIN boss_private.companies parent ON parent.id=c.parent_id AND parent.org_id=p.org_id
+      WHERE p.id=$1 AND p.org_id=$2`,
       [id, org],
     )
   ).rows[0];
@@ -151,10 +158,20 @@ export async function projectAccess(
       : !Object.values(permissions).some((a) => a.includes("view"))
   )
     deny();
+  const summaries = (
+    await c.query(
+      "SELECT area,revision,updated_at FROM boss_private.module_content WHERE org_id=$1 AND project_id=$2",
+      [org, id],
+    )
+  ).rows.filter(
+    (row) =>
+      p.modules.includes(row.area) && permissions[row.area]?.includes("view"),
+  );
   return {
     ...p,
     modules: p.modules.filter((m: string) => permissions[m]?.includes("view")),
     permissions,
+    module_summaries: summaries,
   };
 }
 function requireAdmin(admin: boolean) {
@@ -181,6 +198,156 @@ export async function execute(
 ) {
   return inOrg(actor, org, async (c, admin) => {
     const [resource, id, sub] = path;
+    if (resource === "module-content") {
+      if (!id || !sub || !Object.hasOwn(moduleFields, sub))
+        throw new DomainError(404, "Área não encontrada");
+      const project = await projectAccess(
+        c,
+        actor,
+        org,
+        id,
+        admin,
+        sub,
+        "view",
+      );
+      const allowed: string[] = project.permissions[sub] ?? [];
+      if (method === "GET") {
+        if (path[3] === "history") {
+          if (path[4]) {
+            const revision = z.coerce.number().int().positive().parse(path[4]);
+            const row = (
+              await c.query(
+                `SELECT r.revision,r.fields,r.items,r.created_at AS updated_at,u.name AS author_name
+               FROM boss_private.module_revisions r JOIN boss_private."user" u ON u.id=r.author_id
+               WHERE r.org_id=$1 AND r.project_id=$2 AND r.area=$3 AND r.revision=$4`,
+                [org, id, sub, revision],
+              )
+            ).rows[0];
+            if (!row) notFound();
+            return row;
+          }
+          return (
+            await c.query(
+              `SELECT r.revision,r.created_at,u.name AS author_name
+             FROM boss_private.module_revisions r JOIN boss_private."user" u ON u.id=r.author_id
+             WHERE r.org_id=$1 AND r.project_id=$2 AND r.area=$3 ORDER BY r.revision DESC LIMIT 50`,
+              [org, id, sub],
+            )
+          ).rows;
+        }
+        const row = (
+          await c.query(
+            `SELECT m.revision,m.fields,m.items,m.updated_at,u.name AS author_name
+           FROM boss_private.module_content m JOIN boss_private."user" u ON u.id=m.updated_by
+           WHERE m.org_id=$1 AND m.project_id=$2 AND m.area=$3`,
+            [org, id, sub],
+          )
+        ).rows[0];
+        return {
+          document: row ?? { revision: 0, fields: {}, items: [] },
+          permissions: allowed,
+          archived: project.status !== "active",
+        };
+      }
+      if (method !== "POST" || path.length !== 3)
+        throw new DomainError(405, "Operação não permitida");
+      if (project.status !== "active")
+        throw new DomainError(
+          409,
+          "Projeto arquivado: conteúdo somente para leitura",
+        );
+      const itemSchema = z
+        .object({
+          id: z.uuid(),
+          title: z.string().trim().min(1).max(160),
+          text: z.string().max(10000),
+          source: z.string().max(500),
+          period: z.string().max(100),
+          responsible: z.string().max(160),
+          archived: z.boolean(),
+        })
+        .strict();
+      const v = z
+        .object({
+          revision: z.number().int().min(0),
+          fields: z.record(z.string(), z.string().max(10000)),
+          items: z.array(itemSchema).max(50),
+        })
+        .strict()
+        .parse(body);
+      const fieldIds = new Set(moduleFields[sub].map((f) => f.id));
+      if (
+        Object.keys(v.fields).some((k) => !fieldIds.has(k)) ||
+        new Set(v.items.map((i) => i.id)).size !== v.items.length
+      )
+        throw new DomainError(
+          400,
+          "Campos ou identificadores de itens inválidos",
+        );
+      const old = (
+        await c.query(
+          "SELECT revision,items FROM boss_private.module_content WHERE org_id=$1 AND project_id=$2 AND area=$3 FOR UPDATE",
+          [org, id, sub],
+        )
+      ).rows[0];
+      if (!allowed.includes(old ? "edit" : "create")) deny();
+      if ((old?.revision ?? 0) !== v.revision)
+        throw new DomainError(
+          409,
+          "Outra pessoa atualizou esta área. Recarregue antes de salvar; suas alterações ainda estão no formulário.",
+        );
+      const previous: ModuleItem[] = old?.items ?? [];
+      if (previous.some((i) => !v.items.some((n) => n.id === i.id)))
+        throw new DomainError(
+          400,
+          "Arquive os itens em vez de removê-los do histórico",
+        );
+      if (
+        v.items.some((i) => !previous.some((p) => p.id === i.id)) &&
+        !allowed.includes("create")
+      )
+        deny();
+      if (
+        v.items.some(
+          (i) => i.archived && !previous.find((p) => p.id === i.id)?.archived,
+        ) &&
+        !allowed.includes("delete")
+      )
+        deny();
+      const revision = v.revision + 1;
+      await c.query(
+        `INSERT INTO boss_private.module_content(org_id,project_id,area,revision,fields,items,updated_by)
+         VALUES($1,$2,$3,$4,$5,$6,$7) ON CONFLICT(org_id,project_id,area)
+         DO UPDATE SET revision=EXCLUDED.revision,fields=EXCLUDED.fields,items=EXCLUDED.items,updated_by=EXCLUDED.updated_by,updated_at=now()`,
+        [
+          org,
+          id,
+          sub,
+          revision,
+          JSON.stringify(v.fields),
+          JSON.stringify(v.items),
+          actor.userId,
+        ],
+      );
+      await c.query(
+        `INSERT INTO boss_private.module_revisions(org_id,project_id,area,revision,schema_version,fields,items,author_id)
+         VALUES($1,$2,$3,$4,1,$5,$6,$7)`,
+        [
+          org,
+          id,
+          sub,
+          revision,
+          JSON.stringify(v.fields),
+          JSON.stringify(v.items),
+          actor.userId,
+        ],
+      );
+      await audit(c, org, actor.userId, "module.saved", id, {
+        area: sub,
+        revision,
+      });
+      return { revision };
+    }
     if (resource === "organizations" && method === "POST") {
       requireAdmin(admin);
       fresh(actor);

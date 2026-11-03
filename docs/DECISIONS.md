@@ -98,3 +98,33 @@ User explicitly approved reducing minimum length from 12 to 8 across BOSS after 
 Combined validation: lint, TypeScript and 3 E2E tests passed, including keyboard visibility toggle, server/network error handling, seven-character reset rejection and eight-character acceptance, isolation and session revocation. Desktop/mobile 320px login and recovery reviewed without horizontal overflow. Live owner diagnosis was read-only; no account modification or email send occurred.
 
 User explicitly authorized publishing the combined tested changes and, after publication, sending one new confirmation email through the normal BOSS flow to the approved owner. This does not authorize marking the account verified or claiming login success. Production verification and mail outcome must be checked separately from Git push.
+
+## Local reset/login diagnosis
+
+Extended isolated E2E coverage reads only boss_e2e credential data in memory: real reset endpoint saves a hash that verifies the new eight-character password and rejects the former password. Browser login with the former password returns 401; new password returns 200, creates one active session, and grants authenticated /api/boss/me access. No real-user credential was read or tested.
+
+Found a separate UX defect: login displayed the credential/verification message even for HTTP 429. Local UI now distinguishes rate limiting and server errors without revealing account existence. This does not establish the production incident cause. Additional test logins share one local IP; the final MFA check waits for the unchanged rate window, rather than weakening limits. No production modification or publication.
+
+Validation completed: lint, TypeScript and all 4 E2E tests passed. Production login cause remains unproven; local reset/hash/new-login/session flow succeeds.
+
+## Confirmation versus password reset redirect diagnosis
+
+Extended local E2E to request an actual local verification email with callbackURL=/recover, follow only that test message, and assert exact /recover URL with no token parameter, “Recuperar acesso” heading and no new-password input. Installed Better Auth confirmation redirects directly to callbackURL; password-reset callback separately adds its reset token after checking the verification table. The normal confirmation flow does not copy its JWT into the reset form. Production screenshots alone do not establish the post-click URL or token origin; no real token was opened, decoded or logged.
+
+## Company and optional unit selection — local implementation
+
+Approved UX: select a company and optionally one of its direct units; show the affiliation on cards and filter visible projects by company/unit. Existing project.company_id remains the single link (company or selected unit); no migration, data reassignment or permission change. Read responses include only the linked entity and its same-organization company parent, after existing project authorization. Filter choices derive from authorized projects. General organization projects remain supported.
+
+Legacy brand, orphan/nested unit and missing-record links are preserved on editing through an explicit keep-current option. Brands are not silently reclassified as companies or offered as new company choices; defining new brand hierarchies is a separate decision. Archived current links can be retained; other archived entries are excluded from selectors. Changing company clears unit selection.
+
+Combined pending UI cleanup removes currency/timezone inputs, the Business Plan metadata line and area-letter labels while preserving internal values and IDs. Local tests cover creation defaults, nondefault settings on edit, unit scoping and clearing, legacy brand preservation, filter behavior and project/tenant denial. No remote data changes or publication.
+
+## Editable module planning content — local implementation
+
+User explicitly requested working module editing/persistence. Implemented contextual planning fields for all 17 areas, custom information items (title, text, source, period, responsible), archive/restore, explicit save, read-only history, author/time and optimistic version conflict handling. New content is manual planning information, not operational ledger/CRM/task/KPI data. Fields are bounded plain text and rendered escaped. Disabled areas retain data but deny access; archived projects are read-only. Area permissions and membership/session checks remain authoritative.
+
+Migration 003 creates private content/revision tables; revisions are append-only through a database trigger. Changes have only run on isolated local databases. Previously prepared company/unit and UI cleanup remain local alongside this increment; do not include unrelated login diagnostics in a narrowly authorized publication. See HOSTING.md for migration-before-code deployment prerequisite.
+
+## Approved combined release
+
+User subsequently approved company/unit UI, visual cleanup, editable module planning and migration 003. Applied the additive migration transactionally to the dedicated BOSS database with advisory lock, private-schema RLS, existing boss_app policy/grants and Data API denial. Existing project/member counts remained one each; new content/revision tables are empty. Login diagnostic UI changes remain outside this release.

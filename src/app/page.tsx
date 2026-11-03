@@ -2,7 +2,9 @@
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Modal } from "@/components/modal";
+import { ModuleEditor } from "@/components/module-editor";
 import { Brand } from "@/components/brand";
+import { ProjectAffiliation } from "@/components/project-affiliation";
 import { useEffect, useState } from "react";
 import {
   LayoutDashboard,
@@ -38,13 +40,28 @@ type Project = {
   name: string;
   description: string;
   company_id: string | null;
+  company_name?: string;
+  company_kind?: string;
+  parent_company_id?: string;
+  parent_company_name?: string;
   currency: string;
   timezone: string;
   modules: string[];
   status: string;
   template_version: number;
+  module_summaries?: Array<{
+    area: string;
+    revision: number;
+    updated_at: string;
+  }>;
 };
-type Company = { id: string; name: string; kind: string; status: string };
+type Company = {
+  id: string;
+  name: string;
+  kind: string;
+  status: string;
+  parent_id?: string | null;
+};
 type User = {
   user_id: string;
   name: string;
@@ -80,6 +97,13 @@ type Audit = {
 type Overview = { projects: Project[]; companies: Company[]; admin: boolean };
 const initial: Overview = { projects: [], companies: [], admin: false };
 export default function Home() {
+  const [editingArea, setEditingArea] = useState<{
+    projectId: string;
+    area: string;
+    title: string;
+  } | null>(null);
+  const [companyFilter, setCompanyFilter] = useState("");
+  const [unitFilter, setUnitFilter] = useState("");
   const router = useRouter();
   const [orgs, setOrgs] = useState<Organization[]>([]),
     [org, setOrg] = useState(""),
@@ -173,6 +197,23 @@ export default function Home() {
     setTarget("");
     setModal("invite");
   }
+  const affiliations = data.projects.map((p) => ({
+    project: p,
+    companyId: p.parent_company_id || p.company_id || "general",
+    companyName:
+      p.parent_company_name ||
+      p.company_name ||
+      (p.company_id ? "Vínculo existente" : "Projeto geral da organização"),
+  }));
+  const companyOptions = [
+    ...new Map(affiliations.map((a) => [a.companyId, a.companyName])).entries(),
+  ];
+  const unitOptions = data.projects.filter(
+    (p) =>
+      p.company_kind === "unit" &&
+      (!companyFilter ||
+        (p.parent_company_id || p.company_id) === companyFilter),
+  );
   const active = data.projects.filter((p) => p.status === "active");
   const titles: Record<string, string> = {
     portfolio: "Seu portfólio, em perspectiva.",
@@ -184,6 +225,15 @@ export default function Home() {
   };
   return (
     <div className={`shell ${dark ? "dark" : ""}`}>
+      {editingArea && (
+        <ModuleEditor
+          key={`${org}:${editingArea.projectId}:${editingArea.area}`}
+          org={org}
+          {...editingArea}
+          onClose={() => setEditingArea(null)}
+          onSaved={() => setRevision((v) => v + 1)}
+        />
+      )}
       <aside className="sidebar">
         <Link href="/" aria-label="BOSS — AYA Projetos — início">
           <Brand />
@@ -240,6 +290,8 @@ export default function Home() {
                 setData(initial);
                 setBusy(true);
                 setOrg(e.target.value);
+                setCompanyFilter("");
+                setUnitFilter("");
                 setSelected(null);
                 setTab("portfolio");
               }}
@@ -382,6 +434,46 @@ export default function Home() {
                       onChange={(e) => setQuery(e.target.value)}
                     />
                   </div>
+                  <div className="row" style={{ marginBottom: 20 }}>
+                    <label>
+                      Filtrar por empresa
+                      <select
+                        value={companyFilter}
+                        onChange={(e) => {
+                          setCompanyFilter(e.target.value);
+                          setUnitFilter("");
+                        }}
+                      >
+                        <option value="">Todas as empresas</option>
+                        {companyOptions.map(([id, name]) => (
+                          <option key={id} value={id}>
+                            {name}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                    <label>
+                      Filtrar por unidade
+                      <select
+                        value={unitFilter}
+                        onChange={(e) => setUnitFilter(e.target.value)}
+                      >
+                        <option value="">Todas as unidades</option>
+                        {[
+                          ...new Map(
+                            unitOptions.map((p) => [
+                              p.company_id!,
+                              p.company_name ?? "Unidade",
+                            ]),
+                          ).entries(),
+                        ].map(([id, name]) => (
+                          <option key={id} value={id}>
+                            {name}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                  </div>
                   {!data.projects.length ? (
                     <section className="panel empty">
                       <FolderKanban
@@ -409,8 +501,16 @@ export default function Home() {
                   ) : (
                     <div className="grid">
                       {data.projects
-                        .filter((p) =>
-                          p.name.toLowerCase().includes(query.toLowerCase()),
+                        .filter(
+                          (p) =>
+                            p.name
+                              .toLowerCase()
+                              .includes(query.toLowerCase()) &&
+                            (!companyFilter ||
+                              (p.parent_company_id ||
+                                p.company_id ||
+                                "general") === companyFilter) &&
+                            (!unitFilter || p.company_id === unitFilter),
                         )
                         .map((p) => (
                           <article className="panel project" key={p.id}>
@@ -423,6 +523,15 @@ export default function Home() {
                               <span className="muted subtle">{p.currency}</span>
                             </div>
                             <h2>{p.name}</h2>
+                            <p className="subtle">
+                              {p.parent_company_name
+                                ? `${p.parent_company_name} · ${p.company_name}`
+                                : p.company_name ||
+                                  (p.company_id
+                                    ? "Vínculo existente"
+                                    : "Projeto geral da organização")}
+                              {p.company_kind === "brand" ? " (Marca)" : ""}
+                            </p>
                             <p className="muted">
                               {p.description ||
                                 "Seu Business Plan está pronto para ganhar forma."}
@@ -487,25 +596,36 @@ export default function Home() {
                         </div>
                       )}
                     </div>
-                    <span className="tag">
-                      Template v{selected.template_version}
-                    </span>{" "}
-                    <span className="muted">
-                      {selected.timezone} · {selected.currency}
-                    </span>
                   </div>
                   <div className="grid">
                     {modules
                       .filter((m) => selected.modules.includes(m.id))
                       .map((m) => (
                         <section className="panel module" key={m.id}>
-                          <b>ÁREA {m.letter}</b>
                           <h3>{m.name}</h3>
                           <p className="muted subtle">
-                            Estrutura disponível. Operações e indicadores desta
-                            área serão implementados na fase correspondente.
+                            Preencha o planejamento, registre informações e
+                            acompanhe o histórico desta área.
                           </p>
-                          <span className="tag">Sem dados operacionais</span>
+                          <span className="tag">
+                            {selected.module_summaries?.find(
+                              (s) => s.area === m.id,
+                            )
+                              ? `Informações salvas · revisão ${selected.module_summaries.find((s) => s.area === m.id)!.revision}`
+                              : "Ainda não preenchido"}
+                          </span>
+                          <button
+                            className="btn secondary"
+                            onClick={() =>
+                              setEditingArea({
+                                projectId: selected.id,
+                                area: m.id,
+                                title: m.name,
+                              })
+                            }
+                          >
+                            Abrir {m.name}
+                          </button>
                         </section>
                       ))}
                   </div>
@@ -757,6 +877,8 @@ export default function Home() {
                     setOrgs(me.organizations);
                     setData(initial);
                     setOrg(r.id);
+                    setCompanyFilter("");
+                    setUnitFilter("");
                     setTab("portfolio");
                     setModal("");
                   } catch (err) {
@@ -787,8 +909,8 @@ export default function Home() {
                       name: f.get("name"),
                       description: f.get("description"),
                       company_id: f.get("company_id") || null,
-                      currency: f.get("currency"),
-                      timezone: f.get("timezone"),
+                      currency: edit?.currency ?? "BRL",
+                      timezone: edit?.timezone ?? "America/Fortaleza",
                       modules: f.getAll("modules"),
                     },
                   );
@@ -810,39 +932,11 @@ export default function Home() {
                     defaultValue={edit?.description}
                   />
                 </label>
-                <label>
-                  Vincular à empresa
-                  <select
-                    name="company_id"
-                    defaultValue={edit?.company_id ?? ""}
-                  >
-                    <option value="">Diretamente à AYA / organização</option>
-                    {data.companies.map((c) => (
-                      <option key={c.id} value={c.id}>
-                        {c.name}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-                <div className="grid two">
-                  <label>
-                    Moeda
-                    <input
-                      name="currency"
-                      defaultValue={edit?.currency ?? "BRL"}
-                      pattern="[A-Z]{3}"
-                      required
-                    />
-                  </label>
-                  <label>
-                    Timezone
-                    <input
-                      name="timezone"
-                      defaultValue={edit?.timezone ?? "America/Fortaleza"}
-                      required
-                    />
-                  </label>
-                </div>
+                <ProjectAffiliation
+                  key={edit?.id ?? "new"}
+                  companies={data.companies}
+                  current={edit?.company_id ?? null}
+                />
                 <p className="muted">
                   Selecione as áreas competentes do novo projeto:
                 </p>

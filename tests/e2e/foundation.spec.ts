@@ -1,6 +1,10 @@
 import { test, expect } from "@playwright/test";
 import { readFile, readdir } from "node:fs/promises";
 import { createHmac } from "node:crypto";
+import { verifyPassword } from "better-auth/crypto";
+import { Pool } from "pg";
+import nextEnv from "@next/env";
+import { isLocalDatabase } from "../../src/lib/runtime-config";
 function totp(uri: string) {
   const secret = new URL(uri).searchParams.get("secret")!;
   const alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ234567";
@@ -29,6 +33,7 @@ test("real password-only admin access, optional MFA, project creation, invitatio
   page,
   browser,
 }) => {
+  test.setTimeout(180000);
   const f = JSON.parse(await readFile(".data/e2e.json", "utf8"));
   await page.goto("/login");
   await page.getByLabel("E-mail", { exact: true }).fill(f.email);
@@ -61,6 +66,98 @@ test("real password-only admin access, optional MFA, project creation, invitatio
   await expect(
     page.getByRole("heading", { name: "Projeto A", exact: true }),
   ).toBeVisible();
+  // Real planning editor: save, reload, history, and a competing writer.
+  await page.getByRole("button", { name: "Abrir Business Plan" }).click();
+  await page
+    .getByRole("button", { name: "Abrir Resumo executivo", exact: true })
+    .click();
+  const editorDialog = page.getByRole("dialog");
+  await editorDialog
+    .getByRole("button", { name: "Preencher informações" })
+    .click();
+  await editorDialog
+    .getByRole("textbox", { name: /^Visão do negócio/ })
+    .fill("Planning persisted by E2E");
+  await editorDialog.getByRole("button", { name: "Adicionar item" }).click();
+  await editorDialog
+    .getByLabel("Título do item", { exact: true })
+    .fill("Research evidence");
+  await editorDialog
+    .getByLabel("Descrição do item", { exact: true })
+    .fill("Documented customer interviews");
+  await editorDialog
+    .getByRole("button", { name: "Salvar informações" })
+    .click();
+  await expect(editorDialog.getByRole("status")).toContainText(
+    "Informações salvas",
+  );
+  await editorDialog.getByRole("button", { name: "Fechar área" }).click();
+  await page.reload();
+  await page.getByRole("button", { name: "Abrir Business Plan" }).click();
+  await page
+    .getByRole("button", { name: "Abrir Resumo executivo", exact: true })
+    .click();
+  await expect(
+    editorDialog.getByText("Planning persisted by E2E", { exact: true }),
+  ).toBeVisible();
+  await editorDialog
+    .getByRole("button", { name: "Histórico", exact: true })
+    .click();
+  await editorDialog.getByRole("button", { name: /^Revisão 1/ }).click();
+  await expect(
+    editorDialog.getByText("Research evidence", { exact: true }),
+  ).toBeVisible();
+  await editorDialog
+    .getByRole("button", { name: "Editar informações" })
+    .click();
+  await editorDialog
+    .getByRole("textbox", { name: /^Visão do negócio/ })
+    .fill("Unsaved local draft");
+  const planOverview = await (
+    await page.request.get("/api/boss/overview", {
+      headers: { "x-organization-id": f.org },
+    })
+  ).json();
+  const planProject = planOverview.projects.find(
+    (p: { name: string }) => p.name === "Projeto A",
+  );
+  const contentURL = `/api/boss/module-content/${planProject.id}/executive`;
+  const saved = (
+    await (
+      await page.request.get(contentURL, {
+        headers: { "x-organization-id": f.org },
+      })
+    ).json()
+  ).document;
+  const concurrentWrite = await page.request.post(contentURL, {
+    headers: { origin: "http://localhost:3100", "x-organization-id": f.org },
+    data: {
+      revision: saved.revision,
+      fields: { business: "Concurrent saved content" },
+      items: saved.items,
+    },
+  });
+  expect(concurrentWrite.status()).toBe(200);
+  await editorDialog
+    .getByRole("button", { name: "Salvar informações" })
+    .click();
+  await expect(editorDialog.getByRole("status")).toContainText(
+    "Outra pessoa atualizou",
+  );
+  await expect(
+    editorDialog.getByRole("textbox", { name: /^Visão do negócio/ }),
+  ).toHaveValue("Unsaved local draft");
+  await page.setViewportSize({ width: 390, height: 844 });
+  expect(
+    await editorDialog.evaluate((el) => el.scrollWidth <= el.clientWidth),
+  ).toBe(true);
+  page.once("dialog", (dialog) => dialog.accept());
+  await editorDialog.getByRole("button", { name: "Cancelar edição" }).click();
+  await expect(
+    editorDialog.getByText("Concurrent saved content", { exact: true }),
+  ).toBeVisible();
+  await editorDialog.getByRole("button", { name: "Fechar área" }).click();
+  await page.setViewportSize({ width: 1280, height: 720 });
   await page.goto("/security");
   await page.getByLabel("Confirme sua senha").fill(f.password);
   await page.getByRole("button", { name: "Configurar autenticador" }).click();
@@ -112,8 +209,23 @@ test("real password-only admin access, optional MFA, project creation, invitatio
   await guest.getByLabel("Crie uma senha").fill(f.password);
   await guest.getByRole("button", { name: "Criar conta pelo convite" }).click();
   await expect(guest.getByRole("status")).toContainText("confirme seu e-mail");
+  const confirmationRequest = await guest.request.post(
+    "/api/auth/send-verification-email",
+    {
+      headers: { origin: "http://localhost:3100" },
+      data: { email: "e2e-guest@example.test", callbackURL: "/recover" },
+    },
+  );
+  expect(confirmationRequest.status()).toBe(200);
   const verification = await mail("e2e-guest@example.test", "verification");
+  // Follow only the isolated local fixture's real confirmation email.
   await guest.goto(verification.url);
+  await guest.waitForURL("http://localhost:3100/recover");
+  expect(new URL(guest.url()).searchParams.has("token")).toBe(false);
+  await expect(
+    guest.getByRole("heading", { name: "Recuperar acesso", exact: true }),
+  ).toBeVisible();
+  await expect(guest.getByLabel("Nova senha", { exact: true })).toHaveCount(0);
   await guest.goto("/login");
   await guest
     .getByLabel("E-mail", { exact: true })
@@ -185,13 +297,71 @@ test("real password-only admin access, optional MFA, project creation, invitatio
   await guest.goto(reset.url);
   const tooShort = await guest.request.post("/api/auth/reset-password", {
     headers: { origin: "http://localhost:3100" },
-    data: { token: new URL(reset.url).searchParams.get("token"), newPassword: "Short7!" },
+    data: {
+      token: new URL(reset.url).searchParams.get("token"),
+      newPassword: "Short7!",
+    },
   });
   expect(tooShort.status()).toBe(400);
   await guest.getByLabel("Nova senha").fill("Eight8!x");
   await guest.getByRole("button", { name: "Salvar nova senha" }).click();
   await expect(guest.getByRole("status")).toContainText("Senha alterada");
   expect((await guest.request.get("/api/boss/me")).status()).toBe(401);
+  // Diagnose the complete reset -> hash -> login -> session chain using test data only.
+  nextEnv.loadEnvConfig(process.cwd());
+  if (!isLocalDatabase(process.env.DATABASE_URL!))
+    throw new Error("Local test database required");
+  const databaseURL = new URL(process.env.DATABASE_URL!);
+  databaseURL.pathname = "/boss_e2e";
+  const diagnosticPool = new Pool({ connectionString: databaseURL.toString() });
+  try {
+    const { rows } = await diagnosticPool.query(
+      `SELECT a.password, u.id, u."emailVerified" FROM boss_private.account a
+       JOIN boss_private."user" u ON a."userId"=u.id
+       WHERE u.email=$1 AND a."providerId"='credential'`,
+      ["e2e-guest@example.test"],
+    );
+    expect(rows.length).toBe(1);
+    expect(rows[0].emailVerified).toBe(true);
+    // Assert booleans only: never include the hash in assertion output.
+    expect(
+      await verifyPassword({ hash: rows[0].password, password: "Eight8!x" }),
+    ).toBe(true);
+    expect(
+      await verifyPassword({ hash: rows[0].password, password: f.password }),
+    ).toBe(false);
+    await guest.goto("/login");
+    await guest
+      .getByLabel("E-mail", { exact: true })
+      .fill("e2e-guest@example.test");
+    await guest.getByLabel("Senha", { exact: true }).fill(f.password);
+    const oldResponse = guest.waitForResponse((r) =>
+      r.url().endsWith("/api/auth/sign-in/email"),
+    );
+    await guest.getByRole("button", { name: "Entrar no BOSS" }).click();
+    expect((await oldResponse).status()).toBe(401);
+    await expect(guest.locator(".notice[role=alert]")).toContainText(
+      "Não foi possível entrar",
+    );
+    await guest.getByLabel("Senha", { exact: true }).fill("Eight8!x");
+    const newResponse = guest.waitForResponse((r) =>
+      r.url().endsWith("/api/auth/sign-in/email"),
+    );
+    await guest.getByRole("button", { name: "Entrar no BOSS" }).click();
+    expect((await newResponse).status()).toBe(200);
+    await guest.waitForURL("http://localhost:3100/");
+    expect((await guest.request.get("/api/boss/me")).status()).toBe(200);
+    const sessions = await diagnosticPool.query(
+      `SELECT count(*)::int AS count FROM boss_private.session WHERE "userId"=$1 AND "expiresAt">now()`,
+      [rows[0].id],
+    );
+    expect(sessions.rows[0].count).toBe(1);
+  } finally {
+    await diagnosticPool.end();
+  }
+  // The added real login probes share localhost's IP. Let the production-rate
+  // window expire rather than disabling rate limiting for the MFA check.
+  await page.waitForTimeout(61000);
   // A returning administrator must complete the second factor, not just the password.
   await page.getByRole("button", { name: "Sair", exact: true }).click();
   await page.getByLabel("E-mail", { exact: true }).fill(f.email);

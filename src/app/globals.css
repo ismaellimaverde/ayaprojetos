@@ -580,3 +580,9 @@ td input[type="checkbox"] {
   color: #1d1e21;
   font-size: 12px;
 }
+
+.module-editor { max-height: 88vh; overflow: auto; }
+.module-editor form { margin-top: 20px; }
+.module-text { white-space: pre-wrap; overflow-wrap: anywhere; }
+.module-item { display: grid; gap: 14px; min-width: 0; }
+.module-item p { overflow-wrap: anywhere; }

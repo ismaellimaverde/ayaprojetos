@@ -58,3 +58,9 @@ Evidence supplied by the parent/native and Resend workers; not new requests from
 - Production public / previews private verified with explicit authorization. Application verification and RBAC remain enabled; MFA optional.
 
 Earlier failed attempts and absent metadata are historical, not the final outcome. No user-completed verification, permanent-password change or first login has yet been confirmed. Delivery is not evidence of those actions. No tests, account mutations or emails were rerun for this documentation-only update; prior 17-test, two-E2E, lint/typecheck/build results remain the code validation baseline.
+
+## Local editable planning increment (2026-11-03, not published)
+
+Lint, TypeScript, production build and 19 backend/unit/integration tests passed. The full six-test browser suite passed (test-results last-run: passed, no failed tests). Browser coverage includes persisted module fields/items after reload, revision history, concurrent-edit rejection with the local draft retained, and mobile dialog overflow; existing authentication, reset, invitation and session-revocation coverage remains included. Backend negatives cover read-only access, different areas/projects/tenants, revoked grants, disabled areas, archived projects, item archival permissions and immutable revision rows.
+
+Inspected desktop 1440px and mobile 390px editor screenshots using synthetic test content. Company/unit selectors and legacy links are covered separately by two browser cases. Migration 003 was applied only to dedicated local test databases. No production migration, data mutation, email, push or deployment was performed for this increment. These results do not claim operational CRM, financial ledger or calculated KPIs are implemented.

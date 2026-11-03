@@ -317,3 +317,308 @@ test("Better Auth persists hashes and verifies actual password sessions", async 
     }),
   );
 });
+
+test("project affiliation exposes only scoped company/unit metadata without changing grants", async () => {
+  const company = await execute(actor(ownerId), org, "POST", ["companies"], {
+    name: "Parent company",
+    kind: "company",
+  });
+  const unit = await execute(actor(ownerId), org, "POST", ["companies"], {
+    name: "Branch unit",
+    kind: "unit",
+    parent_id: company.id,
+  });
+  const project = await execute(actor(ownerId), org, "POST", ["projects"], {
+    name: "Unit-linked project",
+    company_id: unit.id,
+  });
+  const read = await execute(
+    actor(ownerId),
+    org,
+    "GET",
+    ["projects", project.id],
+    undefined,
+  );
+  assert.equal(read.company_id, unit.id);
+  assert.equal(read.company_name, "Branch unit");
+  assert.equal(read.parent_company_id, company.id);
+  assert.equal(read.parent_company_name, "Parent company");
+  await assert.rejects(
+    execute(actor(memberId), org, "GET", ["projects", project.id], undefined),
+  );
+  await assert.rejects(
+    execute(actor(ownerId), other, "GET", ["projects", project.id], undefined),
+  );
+});
+
+test("module content persists contextual fields and items with history, conflict checks and scoped permissions", async () => {
+  const project = await execute(actor(ownerId), org, "POST", ["projects"], {
+    name: "Editable plan",
+    modules: ["executive", "finance"],
+  });
+  const itemId = randomUUID();
+  const first = {
+    revision: 0,
+    fields: { business: "A real planning description" },
+    items: [
+      {
+        id: itemId,
+        title: "Evidence",
+        text: "Interview notes",
+        source: "Team interview",
+        period: "2026-11",
+        responsible: "Project team",
+        archived: false,
+      },
+    ],
+  };
+  assert.equal(
+    (
+      await execute(
+        actor(ownerId),
+        org,
+        "POST",
+        ["module-content", project.id, "executive"],
+        first,
+      )
+    ).revision,
+    1,
+  );
+  const loaded = await execute(
+    actor(ownerId),
+    org,
+    "GET",
+    ["module-content", project.id, "executive"],
+    undefined,
+  );
+  assert.equal(loaded.document.fields.business, first.fields.business);
+  assert.equal(loaded.document.items[0].id, itemId);
+  assert.equal(loaded.document.revision, 1);
+  const reader = await makeUser("module-reader@example.test");
+  const editor = await makeUser("module-editor@example.test");
+  for (const id of [reader, editor])
+    await pool.query(
+      "INSERT INTO boss_private.members(id,org_id,user_id,role) VALUES($1,$2,$3,'member')",
+      [randomUUID(), org, id],
+    );
+  for (const [user, permissions] of [
+    [reader, { executive: ["view"] }],
+    [editor, { executive: ["view", "edit", "create"] }],
+  ] as const)
+    await pool.query(
+      "INSERT INTO boss_private.grants(id,org_id,project_id,user_id,role,permissions,source) VALUES($1,$2,$3,$4,'viewer',$5,'test')",
+      [randomUUID(), org, project.id, user, JSON.stringify(permissions)],
+    );
+  assert.equal(
+    (
+      await execute(
+        actor(reader),
+        org,
+        "GET",
+        ["module-content", project.id, "executive"],
+        undefined,
+      )
+    ).document.revision,
+    1,
+  );
+  await assert.rejects(
+    execute(
+      actor(reader),
+      org,
+      "POST",
+      ["module-content", project.id, "executive"],
+      { ...first, revision: 1 },
+    ),
+    /Acesso/,
+  );
+  await assert.rejects(
+    execute(
+      actor(reader),
+      org,
+      "GET",
+      ["module-content", project.id, "finance"],
+      undefined,
+    ),
+    /Acesso/,
+  );
+  await assert.rejects(
+    execute(
+      actor(reader),
+      org,
+      "GET",
+      ["module-content", a, "executive"],
+      undefined,
+    ),
+  );
+  await assert.rejects(
+    execute(
+      actor(ownerId),
+      other,
+      "GET",
+      ["module-content", project.id, "executive"],
+      undefined,
+    ),
+  );
+  await assert.rejects(
+    execute(
+      actor(editor),
+      org,
+      "POST",
+      ["module-content", project.id, "executive"],
+      { ...first, revision: 1, items: [{ ...first.items[0], archived: true }] },
+    ),
+    /Acesso/,
+  );
+  await assert.rejects(
+    execute(
+      actor(ownerId),
+      org,
+      "POST",
+      ["module-content", project.id, "executive"],
+      { ...first, revision: 1, items: [] },
+    ),
+    /Arquive/,
+  );
+  await assert.rejects(
+    execute(
+      actor(ownerId),
+      org,
+      "POST",
+      ["module-content", project.id, "executive"],
+      { ...first, revision: 1, fields: { unknown: "No" } },
+    ),
+    /Campos/,
+  );
+  const concurrent = await Promise.allSettled(
+    ["First writer", "Second writer"].map((business) =>
+      execute(
+        actor(editor),
+        org,
+        "POST",
+        ["module-content", project.id, "executive"],
+        { ...first, revision: 1, fields: { business } },
+      ),
+    ),
+  );
+  assert.equal(concurrent.filter((r) => r.status === "fulfilled").length, 1);
+  assert.equal(
+    concurrent.filter((r) => r.status === "rejected" && r.reason.status === 409)
+      .length,
+    1,
+  );
+  const history = await execute(
+    actor(reader),
+    org,
+    "GET",
+    ["module-content", project.id, "executive", "history"],
+    undefined,
+  );
+  assert.equal(history.length, 2);
+  const snapshot = await execute(
+    actor(reader),
+    org,
+    "GET",
+    ["module-content", project.id, "executive", "history", "1"],
+    undefined,
+  );
+  assert.equal(snapshot.fields.business, first.fields.business);
+  await assert.rejects(
+    pool.query(
+      "UPDATE boss_private.module_revisions SET fields='{}' WHERE project_id=$1",
+      [project.id],
+    ),
+    /append-only/,
+  );
+  const current = await execute(
+    actor(ownerId),
+    org,
+    "GET",
+    ["module-content", project.id, "executive"],
+    undefined,
+  );
+  await execute(
+    actor(ownerId),
+    org,
+    "POST",
+    ["module-content", project.id, "executive"],
+    {
+      ...first,
+      revision: 2,
+      fields: current.document.fields,
+      items: [{ ...first.items[0], archived: true }],
+    },
+  );
+  assert.equal(
+    (
+      await execute(
+        actor(ownerId),
+        org,
+        "GET",
+        ["module-content", project.id, "executive"],
+        undefined,
+      )
+    ).document.items[0].archived,
+    true,
+  );
+  await execute(actor(ownerId), org, "PATCH", ["projects", project.id], {
+    name: "Editable plan",
+    modules: ["finance"],
+  });
+  await assert.rejects(
+    execute(
+      actor(ownerId),
+      org,
+      "GET",
+      ["module-content", project.id, "executive"],
+      undefined,
+    ),
+    /Acesso/,
+  );
+  await execute(actor(ownerId), org, "PATCH", ["projects", project.id], {
+    name: "Editable plan",
+    modules: ["executive", "finance"],
+  });
+  assert.equal(
+    (
+      await execute(
+        actor(ownerId),
+        org,
+        "GET",
+        ["module-content", project.id, "executive"],
+        undefined,
+      )
+    ).document.revision,
+    3,
+  );
+  await pool.query(
+    "UPDATE boss_private.grants SET status='revoked' WHERE project_id=$1 AND user_id=$2",
+    [project.id, reader],
+  );
+  await assert.rejects(
+    execute(
+      actor(reader),
+      org,
+      "GET",
+      ["module-content", project.id, "executive", "history"],
+      undefined,
+    ),
+    /Acesso/,
+  );
+  await execute(
+    actor(ownerId),
+    org,
+    "DELETE",
+    ["projects", project.id],
+    undefined,
+  );
+  await assert.rejects(
+    execute(
+      actor(ownerId),
+      org,
+      "POST",
+      ["module-content", project.id, "executive"],
+      { ...first, revision: 3 },
+    ),
+    /arquivado/,
+  );
+});

@@ -18,7 +18,10 @@ export function Modal({
       ref={ref}
       className="boss-dialog"
       aria-label="Editar configuração"
-      onCancel={onClose}
+      onCancel={(event) => {
+        event.preventDefault();
+        onClose();
+      }}
     >
       {children}
     </dialog>
