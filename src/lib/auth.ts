@@ -43,6 +43,7 @@ export const auth = betterAuth({
     customRules: {
       "/sign-in/email": { window: 60, max: 5 },
       "/request-password-reset": { window: 60, max: 3 },
+      "/send-verification-email": { window: 60, max: 3 },
     },
   },
   plugins: [twoFactor({ issuer: "BOSS — AYA Projetos" })],

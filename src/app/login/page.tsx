@@ -122,6 +122,9 @@ export default function Login() {
           <p>
             <Link href="/recover">Esqueceu sua senha?</Link>
           </p>
+          <p>
+            <Link href="/recover">Primeiro acesso ou reenviar verificação</Link>
+          </p>
           <p className="muted subtle">
             O acesso é concedido por convite. Administradores utilizam
             autenticação multifator.

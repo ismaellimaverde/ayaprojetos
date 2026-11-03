@@ -30,3 +30,11 @@ Not run / not available: financial calculation suites, import idempotency, exter
 - Not executed: actual Supavisor connection/TLS handshake, Netlify adapter deployment, SMTP delivery, remote migrations/grants, and remote owner bootstrap. The bootstrap CLI's new cross-connection lock/target check has been reviewed but not exercised as a full CLI flow. No remote credential or service mutation was performed.
 
 The original local development database remains in its legacy public schema; migrations explicitly refuse to silently duplicate or move it. The compatibility tests use fresh private-schema databases. A deliberate local data move or a separately selected fresh development database is needed before using the updated branch interactively against that original database.
+
+## First-access UX correction — 2026-11-03
+
+Recovery previously ignored the Better Auth client's error result and showed generic success on HTTP failures. The page now distinguishes server/transport failures and rate limiting, disables buttons while sending, and offers verification resend using the existing endpoint. Login links to that first-access flow. Successful requests remain generic and do not reveal account existence or promise inbox delivery. Verification resend is limited to three requests per minute by Better Auth's database rate limiter.
+
+Validation: 16 integration/configuration tests passed; the operator bootstrap test additionally verifies actual verification-endpoint rate limiting with nonexistent addresses (no external sends). The complete existing Chromium auth/MFA flow passed. The new browser scenario passed for recovery HTTP 500, resend 429, generic success and network failure. Its first run raced client navigation; an explicit URL wait and filled-value assertion fixed the test. No production owner/email action was repeated.
+
+Production read-only diagnosis after the reported recovery attempt: zero verification/reset/rate-limit rows and zero sessions. This does not identify the underlying transport failure or prove SMTP failure. Browser network status and matching Netlify function logs are required for the next authorized attempt; the old generic UI message was insufficient evidence.

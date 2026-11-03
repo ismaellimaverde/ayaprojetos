@@ -132,6 +132,26 @@ test("operator bootstrap preserves verification, password reset and admin MFA in
       (await post("reset-password", { token, newPassword: password })).status,
       200,
     );
+    // First verification request above consumed one of three allowed attempts.
+    for (let i = 0; i < 2; i++)
+      assert.equal(
+        (
+          await post("send-verification-email", {
+            email: "nonexistent-access@example.test",
+            callbackURL: `${origin}/recover`,
+          })
+        ).status,
+        200,
+      );
+    assert.equal(
+      (
+        await post("send-verification-email", {
+          email: "nonexistent-access@example.test",
+          callbackURL: `${origin}/recover`,
+        })
+      ).status,
+      429,
+    );
   } finally {
     await pool.end();
     await admin.query(
