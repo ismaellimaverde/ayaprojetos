@@ -1,6 +1,6 @@
-# Netlify + Supabase Postgres — preparation, not deployment
+# Netlify + Supabase Postgres — preparation and provisioning status
 
-User selected this hosting direction on 2026-11-03. Parent confirmed the new separate Supabase project BOSS (`ubgabtgrfrixldstnqry`, `sa-east-1`, PostgreSQL 17, ACTIVE_HEALTHY), with public initially empty. Netlify site selection/login remains pending. Neither Arpoador Experience nor Agenda Parental is authorized for BOSS. No remote query/migration, role or credential creation, environment-variable mutation, email delivery or deploy has been performed.
+User selected this hosting direction on 2026-11-03. Parent confirmed the new separate Supabase project BOSS (`ubgabtgrfrixldstnqry`, `sa-east-1`, PostgreSQL 17, ACTIVE_HEALTHY), with public initially empty. Netlify site selection/login remains pending. Neither Arpoador Experience nor Agenda Parental is authorized for BOSS. At the initial preparation checkpoint no remote changes had been performed. The authorized database provisioning checkpoint below supersedes that initial status; there is still no deployment or email delivery by this executor.
 
 ## Runtime
 
@@ -45,3 +45,23 @@ Operator only: DATABASE_MIGRATION_URL, DATABASE_OPERATOR_URL, DATABASE_RUNTIME_R
 - https://node-postgres.com/features/ssl ; https://node-postgres.com/features/queries ; https://nodemailer.com/smtp
 
 The requested changelog.md endpoint could not be read (web tool: unsupported text/markdown; executor fetch: proxy 403). The official HTML index and relevant linked changelog entries were read successfully instead. No remote project access was needed.
+
+## Authorized database checkpoint — 2026-11-03 00:48 UTC
+
+Applied Supabase migration `20261103004742_boss_private_foundation` exclusively to BOSS `ubgabtgrfrixldstnqry`, through the existing authenticated Supabase connector. It wraps the existing 001 and 002 application migrations in boss_private, records both application versions, applies the revokes/RLS/server policy described above, and prepares boss_app with NOLOGIN, NOSUPERUSER, NOCREATEDB, NOCREATEROLE, NOINHERIT, NOREPLICATION and NOBYPASSRLS. No password was generated or set; no account-level grant/token was created. This is a staged role, not a usable runtime credential.
+
+Verified remotely: 17 private tables and 17 with RLS; public has zero tables; zero users, members or projects; zero role memberships for boss_app; no schema access or auth-table SELECT for anon/authenticated/service_role; runtime DML allowed but schema CREATE and migration-history SELECT denied. Migration history confirmed. Advisor reports one INFO: schema_migrations has RLS without a policy, intentional because only the owning operator manages it. No policy is added just to silence that finding.
+
+An attempted SET LOCAL ROLE boss_app test was denied with PostgreSQL 42501 (operator is not authorized to assume the role). No membership was added to bypass this. Actual runtime login/TLS/pooler and end-to-end remote checks remain pending. SQL-visible pgrst.db_schemas settings returned no configured value; the management/dashboard exposed-schema setting must still be confirmed. The migration does not add boss_private to exposed schemas and explicitly denies API-role access.
+
+Credential handoff blocker: this executor has authenticated Supabase SQL tools but no Netlify connector/browser or protected cross-worker secret-transfer mechanism. Therefore boss_app password and stable BETTER_AUTH_SECRET were not generated. The Netlify worker must establish an approved protected route before generating/provisioning them; do not exchange plaintext in chat, PRs, tool outputs or migration text. Site/credential setup, SMTP and real owner remain pending.
+
+Resend SMTP is compatible with the existing Nodemailer transport: SMTP_HOST=smtp.resend.com, SMTP_PORT=465 (TLS) or 587 (required STARTTLS), SMTP_USER=resend, SMTP_PASSWORD supplied from an authorized Resend API key, MAIL_FROM from a verified sender domain. The registered user's email is the recipient, never the sender identity. Domain/key/sender approval and an authorized delivery test remain pending. Better Auth remains the identity provider and requires email verification. Source checked: https://resend.com/docs/send-with-smtp . No Resend API key or email was created/sent.
+
+## First owner operator fallback — 2026-11-03
+
+After explicit owner authorization, an operator-only SQL plan was tested against the installed Better Auth 1.7.15 behavior. `scripts/owner-bootstrap-plan.ts` uses the library's password hash function on a private random password, creates an unverified identity and credential account, and atomically creates the initial organization/owner/audit under advisory lock 827342. It refuses any existing identity/account/workspace/organization/membership state. Generated SQL contains a sensitive password hash and must never be logged, committed or saved as an artifact. There is no web bootstrap route.
+
+The authorized production transaction was applied once through authenticated Supabase MCP. Metadata confirmed exactly one active owner, one credential account, one owner audit, no session, and email/MFA still unverified/disabled. No password, token or hash is recorded here. The initial activation request from this executor failed at its outbound proxy; a read-only probe confirmed `Tunnel connection failed: 403 Forbidden`. No reset request was attempted and no retry was performed. A worker with the existing supported HTTPS route must check mail/request logs and send activation/reset via the existing hosted endpoints. Provider acceptance and inbox delivery remain unconfirmed.
+
+Local verification: all 16 tests passed, including repeated-bootstrap rejection, real hosted-handler verification/reset behavior against local PostgreSQL/mail, rejection of login before verification, reset-token replay rejection and mandatory admin MFA (428). TypeScript/lint passed. No production email verification or MFA bypass was performed.
