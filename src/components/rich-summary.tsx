@@ -256,7 +256,12 @@ export function RichSummaryEditor({
 }
 export function SummaryView({ value }: { value: SummaryDocument }) {
   return (
-    <div className="summary-prose">
+    <div
+      className="summary-prose"
+      tabIndex={0}
+      role="region"
+      aria-label="Conteúdo do documento"
+    >
       {value.content.map((block, i) => {
         const content = block.content?.map((node, j) => {
           if (node.type === "hardBreak") return <br key={j} />;

@@ -9,8 +9,16 @@ import {
 } from "@/components/module-editor";
 import { Brand } from "@/components/brand";
 import { ProjectAffiliation } from "@/components/project-affiliation";
-import { Fragment, useEffect, useRef, useState } from "react";
 import {
+  Fragment,
+  useEffect,
+  useRef,
+  useState,
+  useSyncExternalStore,
+} from "react";
+import {
+  PanelLeftClose,
+  PanelLeftOpen,
   LayoutDashboard,
   Building2,
   FolderKanban,
@@ -100,7 +108,27 @@ type Audit = {
 };
 type Overview = { projects: Project[]; companies: Company[]; admin: boolean };
 const initial: Overview = { projects: [], companies: [], admin: false };
+const compactQuery = "(max-width: 900px)";
+function subscribeCompact(callback: () => void) {
+  const media = window.matchMedia(compactQuery);
+  media.addEventListener("change", callback);
+  return () => media.removeEventListener("change", callback);
+}
 export default function Home() {
+  const compact = useSyncExternalStore(
+    subscribeCompact,
+    () => window.matchMedia(compactQuery).matches,
+    () => false,
+  );
+  const [mainCollapseChoice, setMainCollapseChoice] = useState<boolean | null>(
+    null,
+  );
+  const [areaCollapseChoice, setAreaCollapseChoice] = useState<boolean | null>(
+    null,
+  );
+  const mainCollapsed = mainCollapseChoice ?? compact;
+  const areasCollapsed = areaCollapseChoice ?? compact;
+
   const [editingArea, setEditingArea] = useState<{
     projectId: string;
     area: string;
@@ -247,9 +275,22 @@ export default function Home() {
     );
     heading?.focus({ preventScroll: true });
     document
-      .querySelector<HTMLElement>(".project-menu [aria-current='page']")
+      .querySelector<HTMLElement>(
+        "#area-navigation:not([hidden]) [aria-current='page']",
+      )
       ?.scrollIntoView({ block: "nearest", inline: "nearest" });
   }, [tab, selected?.id, editingArea]);
+  useEffect(() => {
+    if (areasCollapsed && document.activeElement?.closest("#area-navigation"))
+      document.getElementById("area-menu-toggle")?.focus();
+    if (
+      mainCollapsed &&
+      document.activeElement?.closest(
+        ".project-shortcuts, .brand-home, .primary-sidebar footer",
+      )
+    )
+      document.getElementById("main-menu-toggle")?.focus();
+  }, [areasCollapsed, mainCollapsed]);
   async function run(path: string, method: string, body?: unknown) {
     setMessage("");
     try {
@@ -304,10 +345,37 @@ export default function Home() {
     library: selected?.name ?? "Biblioteca",
   };
   return (
-    <div className={`shell ${dark ? "dark" : ""}`}>
-      <aside className="sidebar">
+    <div
+      className={`shell workspace-shell ${dark ? "dark" : ""} ${mainCollapsed ? "main-collapsed" : ""} ${selected && ["plan", "library"].includes(tab) ? "has-project" : ""} ${areasCollapsed ? "areas-collapsed" : ""}`}
+    >
+      <aside className="sidebar primary-sidebar" aria-label="Menu principal">
+        <button
+          id="main-menu-toggle"
+          className="menu-collapse"
+          aria-label={
+            mainCollapsed
+              ? "Expandir menu principal"
+              : "Recolher menu principal"
+          }
+          aria-expanded={!mainCollapsed}
+          aria-controls="primary-navigation"
+          onClick={() => setMainCollapseChoice(!mainCollapsed)}
+          title={
+            mainCollapsed
+              ? "Expandir menu principal"
+              : "Recolher menu principal"
+          }
+        >
+          {mainCollapsed ? (
+            <PanelLeftOpen size={20} />
+          ) : (
+            <PanelLeftClose size={20} />
+          )}
+          <span className="collapse-label">Menu principal</span>
+        </button>
         <Link
           href="/"
+          className="brand-home"
           aria-label="BOSS — AYA Projetos — início"
           onClick={(e) => {
             e.preventDefault();
@@ -319,7 +387,7 @@ export default function Home() {
         >
           <Brand />
         </Link>
-        <nav>
+        <nav id="primary-navigation" aria-label="Navegação principal">
           {[
             {
               id: "portfolio",
@@ -341,17 +409,24 @@ export default function Home() {
           ].map((n) => (
             <Fragment key={n.id}>
               <button
+                aria-label={n.name}
+                title={mainCollapsed ? n.name : undefined}
                 className={tab === n.id ? "active" : ""}
                 aria-current={tab === n.id ? "page" : undefined}
                 aria-expanded={
-                  n.id === "projects" ? projectsExpanded : undefined
+                  n.id === "projects"
+                    ? projectsExpanded && !mainCollapsed
+                    : undefined
                 }
                 aria-controls={
                   n.id === "projects" ? "project-shortcuts" : undefined
                 }
                 onClick={() => {
                   if (n.id === "projects") {
-                    setProjectsExpanded((v) => !v);
+                    if (mainCollapsed) {
+                      setMainCollapseChoice(false);
+                      setProjectsExpanded(true);
+                    } else setProjectsExpanded((v) => !v);
                     return;
                   }
                   navigate(() => {
@@ -363,12 +438,14 @@ export default function Home() {
                 }}
               >
                 <n.icon size={18} />
-                {n.name}
+                <span className="nav-label">{n.name}</span>
                 {n.id === "projects" && (
-                  <span aria-hidden="true">{projectsExpanded ? "−" : "+"}</span>
+                  <span className="nav-label" aria-hidden="true">
+                    {projectsExpanded ? "−" : "+"}
+                  </span>
                 )}
               </button>
-              {n.id === "projects" && projectsExpanded && (
+              {n.id === "projects" && projectsExpanded && !mainCollapsed && (
                 <div id="project-shortcuts" className="project-shortcuts">
                   <button
                     onClick={() =>
@@ -423,6 +500,86 @@ export default function Home() {
           </Link>
         </footer>
       </aside>
+      {selected && ["plan", "library"].includes(tab) && (
+        <aside
+          className="sidebar area-sidebar"
+          aria-label="Navegação das áreas"
+        >
+          <button
+            id="area-menu-toggle"
+            className="menu-collapse"
+            aria-label={
+              areasCollapsed
+                ? "Expandir menu de áreas"
+                : "Recolher menu de áreas"
+            }
+            aria-expanded={!areasCollapsed}
+            aria-controls="area-navigation"
+            onClick={() => setAreaCollapseChoice(!areasCollapsed)}
+            title={areasCollapsed ? "Expandir áreas" : "Recolher áreas"}
+          >
+            {areasCollapsed ? (
+              <PanelLeftOpen size={20} />
+            ) : (
+              <PanelLeftClose size={20} />
+            )}
+            <span className="collapse-label">Áreas do BP</span>
+          </button>
+          <nav
+            id="area-navigation"
+            hidden={areasCollapsed}
+            aria-label="Menu do projeto"
+          >
+            <button
+              className={`btn ${tab === "plan" && !editingArea ? "" : "secondary"}`}
+              aria-current={tab === "plan" && !editingArea ? "page" : undefined}
+              onClick={() =>
+                navigate(() => {
+                  setEditingArea(null);
+                  setTab("plan");
+                })
+              }
+            >
+              Áreas do projeto
+            </button>
+            <button
+              className={`btn ${tab === "library" ? "" : "secondary"}`}
+              aria-current={tab === "library" ? "page" : undefined}
+              onClick={() =>
+                navigate(() => {
+                  setEditingArea(null);
+                  setTab("library");
+                })
+              }
+            >
+              Biblioteca
+            </button>
+            {modules
+              .filter((m) => selected.modules.includes(m.id))
+              .sort((a, b) => a.name.localeCompare(b.name, "pt-BR"))
+              .map((m) => (
+                <button
+                  key={m.id}
+                  className={`btn ${editingArea?.area === m.id ? "" : "secondary"}`}
+                  aria-current={editingArea?.area === m.id ? "page" : undefined}
+                  onClick={() => {
+                    if (editingArea?.area === m.id) return;
+                    navigate(() => {
+                      setTab("plan");
+                      setEditingArea({
+                        projectId: selected.id,
+                        area: m.id,
+                        title: m.name,
+                      });
+                    });
+                  }}
+                >
+                  {m.name}
+                </button>
+              ))}
+          </nav>
+        </aside>
+      )}
       <div className="main">
         <header className="topbar">
           <label className="row">
@@ -545,60 +702,6 @@ export default function Home() {
               </button>
             )}
           </div>
-          {selected && ["plan", "library"].includes(tab) && (
-            <nav className="row project-menu" aria-label="Menu do projeto">
-              <button
-                className={`btn ${tab === "plan" && !editingArea ? "" : "secondary"}`}
-                aria-current={
-                  tab === "plan" && !editingArea ? "page" : undefined
-                }
-                onClick={() =>
-                  navigate(() => {
-                    setEditingArea(null);
-                    setTab("plan");
-                  })
-                }
-              >
-                Áreas do projeto
-              </button>
-              <button
-                className={`btn ${tab === "library" ? "" : "secondary"}`}
-                aria-current={tab === "library" ? "page" : undefined}
-                onClick={() =>
-                  navigate(() => {
-                    setEditingArea(null);
-                    setTab("library");
-                  })
-                }
-              >
-                Biblioteca
-              </button>
-              {modules
-                .filter((m) => selected.modules.includes(m.id))
-                .map((m) => (
-                  <button
-                    key={m.id}
-                    className={`btn ${editingArea?.area === m.id ? "" : "secondary"}`}
-                    aria-current={
-                      editingArea?.area === m.id ? "page" : undefined
-                    }
-                    onClick={() => {
-                      if (editingArea?.area === m.id) return;
-                      navigate(() => {
-                        setTab("plan");
-                        setEditingArea({
-                          projectId: selected.id,
-                          area: m.id,
-                          title: m.name,
-                        });
-                      });
-                    }}
-                  >
-                    {m.name}
-                  </button>
-                ))}
-            </nav>
-          )}
           {message && (
             <div role="status" className="notice">
               {message}{" "}

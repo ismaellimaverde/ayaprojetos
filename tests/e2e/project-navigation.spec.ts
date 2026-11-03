@@ -156,6 +156,12 @@ test("project pages expose authorized shortcuts and guard area, library and work
   }
   await editor.fill("Não transferir rascunho");
   await page
+    .getByRole("button", { name: "Expandir menu principal", exact: true })
+    .click();
+  await page
+    .getByRole("button", { name: "Expandir menu de áreas", exact: true })
+    .click();
+  await page
     .locator("#project-shortcuts")
     .getByRole("button", { name: "Projeto Dois · Arquivado", exact: true })
     .click();

@@ -147,5 +147,23 @@ test("editor close always offers save, discard and cancel and waits for successf
     .getByRole("button", { name: "Salvar e fechar", exact: true })
     .click();
   await expect(page.getByRole("dialog")).toHaveCount(0);
+  await open();
+  await editor.fill("Rascunho cancelado sem tela intermediária");
+  await page
+    .getByRole("button", { name: "Cancelar edição", exact: true })
+    .click();
+  await expect(page.getByRole("alertdialog")).toBeVisible();
+  await page.getByRole("button", { name: "Cancelar", exact: true }).click();
+  await expect(editor).toHaveText("Rascunho cancelado sem tela intermediária");
+  await page
+    .getByRole("button", { name: "Cancelar edição", exact: true })
+    .click();
+  await page.getByRole("button", { name: "Não salvar", exact: true }).click();
+  await expect(page.locator(".module-page")).toHaveCount(0);
+  await expect(
+    page.getByRole("button", { name: "Preencher informações", exact: true }),
+  ).toHaveCount(0);
+  await open();
+  await expect(editor).toHaveText("Salvar antes de fechar");
   expect(posts).toBe(2);
 });

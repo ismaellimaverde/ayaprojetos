@@ -102,3 +102,15 @@ Final sequential lint (no warnings), TypeScript and production build passed. git
 Targeted browser test passed at 1440px and 390px: selected and hovered adjacent items have distinct computed colors; selected hover remains coral; desktop hit targets have at least 4px separation and the painted backgrounds are inset by 5px vertically; targets remain at least 44px tall. Keyboard Tab focus has its own 2px solid outline. Dark-theme highlight/text colors are also verified. Desktop/mobile screenshots were inspected, with no page overflow. Lint and TypeScript passed. No data or service changes, commit, push or deployment were performed.
 
 Final production build and git diff --check also passed for the sidebar-state adjustment.
+
+## Dual menus and executive text frame (local, publication pending)
+
+24 backend/unit/integration tests passed. Eleven browser cases passed in the complete suite; the remaining editor-frame case exposed a test timing race while hydration switched to compact mobile defaults. The test now waits for the ready editor and asserts the compact controls rather than clicking a label that is changing. The corrected frame case and both navigation cases passed in a final three-case rerun (12 distinct browser scenarios with successful results overall).
+
+With 120 synthetic paragraphs, increasing editor text did not increase document-page height; the text frame had internal overflow and a working scroll position. Collapsing/expanding either menu preserved the draft without opening the exit prompt. The vertical menu follows pt-BR alphabetical order and its collapse control remains available while scrolling. Desktop/mobile screenshots were inspected; compact menus and editor have no page-width overflow. Existing close/cancel, failed-save, Library, archived read-only and revoked-access cases remain covered.
+
+The authorized PDF flow generated an actual multipage A4 PDF; pdftotext confirmed the final paragraph, proving the editor's visual height limit does not truncate export. Read-only content is keyboard-focusable, and native print removes the frame limit. No real projects, accounts, email, migrations or remote services were modified by this layout work. The separately approved coral-state release was pushed as 1edc19b716243fbf0c41d732dc8f52ba527e617d; this subsequent layout remains unpublished.
+
+Executive cancellation follow-up: four affected browser cases passed after the final change (editor-close, editor-frame, and both navigation cases). Cancelling the cancellation preserves the draft; confirming Não salvar closes the area without showing Preencher informações; reopening retains previously saved text and creates no extra write. A successful save keeps the authorized executive editor open with the complete saved text; its full multipage PDF still includes the last paragraph. Read-only/archived and revoked-access coverage remains passing.
+
+Final lint, TypeScript, production build and git diff --check passed after the executive-cancellation follow-up. This layout/cancellation increment remains local and uncommitted, awaiting publication approval.

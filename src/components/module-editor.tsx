@@ -50,7 +50,11 @@ export function ModuleEditor({
     setArchived(r.archived);
     setDirty(false);
     setSummaryInvalid(false);
-    setEditing(false);
+    setEditing(
+      area === "executive" &&
+        !r.archived &&
+        r.permissions.includes(r.document.revision ? "edit" : "create"),
+    );
   }
   useEffect(() => {
     let active = true;
@@ -344,6 +348,7 @@ export function ModuleEditor({
                   <section className="module-field-card">
                     {editing ? (
                       <RichSummaryEditor
+                        key={document.revision}
                         initial={summary}
                         onValidity={(valid) => {
                           setSummaryInvalid(!valid);
@@ -532,6 +537,10 @@ export function ModuleEditor({
                         className="btn secondary"
                         disabled={busy}
                         onClick={async () => {
+                          if (area === "executive") {
+                            close();
+                            return;
+                          }
                           if (discard())
                             try {
                               await reload();
