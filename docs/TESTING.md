@@ -46,3 +46,15 @@ User explicitly removed mandatory two-step authentication for BOSS. All 16 servi
 ## Explicit database CA validation — 2026-11-03
 
 17/17 integration/configuration tests passed, including valid PEM with escaped newlines, optional SHA-256 match, rejection of malformed PEM/private-key contamination and wrong/missing fingerprint configuration, and preservation of rejectUnauthorized=true/default hostname checks. Both E2E scenarios passed (25.4s total), plus lint, TypeScript and production build. The real Supabase TLS handshake is pending native's official CA environment configuration and deployment; local parser tests do not claim to validate the provider chain. No activation/recovery email was sent by this executor.
+
+## Production reconciliation — 2026-11-03 03:10:55 UTC
+
+Evidence supplied by the parent/native and Resend workers; not new requests from this documentation task. Application SHA 9361e04 was published at 02:52:41 UTC. Native verified the official CA/pin with strict TLS and corrected the runtime SCRAM iteration mismatch using 4096 iterations for the same password (roles/grants unchanged). Official explanation: [Supavisor #1222](https://github.com/supabase/supavisor/pull/1222).
+
+- GET /api/auth/get-session: 200; rateLimit database metadata confirms runtime database access.
+- Recovery POST: 200 at 03:10:03.468 UTC.
+- Verification POST: 200 at 03:10:10.860 UTC.
+- Resend exact BOSS key: both messages Delivered to the approved owner, confirmed at 03:10:55 UTC. No tokens or message bodies recorded.
+- Production public / previews private verified with explicit authorization. Application verification and RBAC remain enabled; MFA optional.
+
+Earlier failed attempts and absent metadata are historical, not the final outcome. No user-completed verification, permanent-password change or first login has yet been confirmed. Delivery is not evidence of those actions. No tests, account mutations or emails were rerun for this documentation-only update; prior 17-test, two-E2E, lint/typecheck/build results remain the code validation baseline.
