@@ -1,6 +1,6 @@
 import { test, expect } from "@playwright/test";
 
-test("first access shows failures honestly and offers generic verification resend", async ({
+test("recovery reports server and connection failures honestly", async ({
   page,
 }) => {
   await page.goto("/login");
@@ -26,35 +26,6 @@ test("first access shows failures honestly and offers generic verification resen
     "Não foi possível processar",
   );
   await expect(page.getByRole("status")).not.toContainText("serão enviadas");
-  await page.route("**/api/auth/send-verification-email", async (route) => {
-    expect(route.request().postDataJSON()).toEqual({
-      email: "access-test@example.test",
-      callbackURL: "/recover",
-    });
-    await route.fulfill({
-      status: 429,
-      contentType: "application/json",
-      body: JSON.stringify({ message: "Rate limited" }),
-    });
-  });
-  await page
-    .getByRole("button", { name: "Reenviar verificação de e-mail" })
-    .click();
-  await expect(page.getByRole("status")).toContainText("Muitas tentativas");
-  await page.unroute("**/api/auth/send-verification-email");
-  await page.route("**/api/auth/send-verification-email", (route) =>
-    route.fulfill({
-      status: 200,
-      contentType: "application/json",
-      body: '{"status":true}',
-    }),
-  );
-  await page
-    .getByRole("button", { name: "Reenviar verificação de e-mail" })
-    .click();
-  await expect(page.getByRole("status")).toContainText(
-    "Se houver uma conta elegível",
-  );
   await page.unroute("**/api/auth/request-password-reset");
   await page.route("**/api/auth/request-password-reset", (route) =>
     route.abort("failed"),
@@ -64,4 +35,19 @@ test("first access shows failures honestly and offers generic verification resen
   await expect(
     page.getByRole("button", { name: "Solicitar recuperação" }),
   ).toBeEnabled();
+});
+
+test("login password visibility can be toggled by keyboard without submitting", async ({ page }) => {
+  await page.goto("/login");
+  const password = page.locator('#login-password');
+  await password.fill("Visibility-only-example");
+  await expect(password).toHaveAttribute("type", "password");
+  const show = page.getByRole("button", { name: "Mostrar senha", exact: true });
+  await show.focus();
+  await page.keyboard.press("Enter");
+  await expect(password).toHaveAttribute("type", "text");
+  await expect(password).toHaveValue("Visibility-only-example");
+  await page.getByRole("button", { name: "Ocultar senha", exact: true }).press("Space");
+  await expect(password).toHaveAttribute("type", "password");
+  await expect(page).toHaveURL(/\/login$/);
 });

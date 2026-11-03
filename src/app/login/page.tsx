@@ -9,6 +9,7 @@ export default function Login() {
   const [message, setMessage] = useState("");
   const [mfa, setMfa] = useState(false);
   const [busy, setBusy] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
   return (
     <div className="auth">
       <section className="authstory">
@@ -100,15 +101,26 @@ export default function Login() {
                     required
                   />
                 </label>
-                <label>
-                  Senha
-                  <input
-                    name="password"
-                    type="password"
-                    autoComplete="current-password"
-                    required
-                  />
-                </label>
+                <div className="password-control">
+                  <label htmlFor="login-password">Senha</label>
+                  <span className="password-control">
+                    <input
+                      id="login-password"
+                      name="password"
+                      type={showPassword ? "text" : "password"}
+                      autoComplete="current-password"
+                      required
+                    />
+                    <button
+                      type="button"
+                      className="password-toggle"
+                      aria-controls="login-password"
+                      onClick={() => setShowPassword((visible) => !visible)}
+                    >
+                      {showPassword ? "Ocultar senha" : "Mostrar senha"}
+                    </button>
+                  </span>
+                </div>
               </>
             )}
             <button className="btn" disabled={busy}>

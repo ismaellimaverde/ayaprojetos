@@ -1,6 +1,7 @@
 "use client";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { Brand } from "@/components/brand";
 import { useState } from "react";
 import { authClient } from "@/lib/client";
 type SessionItem = {
@@ -19,8 +20,8 @@ export default function Security() {
   const [sessions, setSessions] = useState<SessionItem[]>([]);
   return (
     <main className="content" style={{ maxWidth: 850 }}>
-      <Link className="brand" href="/">
-        BOSS
+      <Link href="/" aria-label="BOSS — início">
+        <Brand showPlatform={false} />
       </Link>
       <div className="heading">
         <div>

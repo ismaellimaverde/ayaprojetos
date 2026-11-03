@@ -1,5 +1,6 @@
 "use client";
 import Link from "next/link";
+import { Brand } from "@/components/brand";
 import { useState, Suspense } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { api, authClient } from "@/lib/client";
@@ -11,7 +12,7 @@ function InviteContent() {
   return (
     <main className="authform" style={{ minHeight: "100vh" }}>
       <div>
-        <div className="brand">BOSS</div>
+        <Brand showPlatform={false} />
         <h1>Seu próximo projeto começa aqui.</h1>
         <p className="muted">
           O convite concede somente os acessos definidos pelo administrador.
@@ -63,7 +64,7 @@ function InviteContent() {
                 <input
                   name="password"
                   type="password"
-                  minLength={12}
+                  minLength={8}
                   required
                   autoComplete="new-password"
                 />

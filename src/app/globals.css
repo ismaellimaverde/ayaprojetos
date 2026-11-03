@@ -553,3 +553,30 @@ td input[type="checkbox"] {
   border-radius: 8px;
   text-decoration: none;
 }
+
+.product-identity.system-identity {
+  padding: 0;
+  width: 212px;
+  margin-bottom: 20px;
+}
+.authform .recovery-notice {
+  margin-top: 20px;
+}
+
+.authform .identity-link {
+  text-decoration: none;
+}
+.password-control {
+  display: grid;
+  gap: 6px;
+}
+.password-toggle {
+  justify-self: end;
+  min-height: 36px;
+  padding: 6px 10px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fff;
+  color: #1d1e21;
+  font-size: 12px;
+}

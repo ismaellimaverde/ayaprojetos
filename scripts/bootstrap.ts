@@ -17,7 +17,7 @@ const input = z
   .object({
     name: z.string().trim().min(2).max(120),
     email: z.email().transform((s) => s.toLowerCase()),
-    password: z.string().min(12).max(128),
+    password: z.string().min(8).max(128),
   })
   .parse(JSON.parse(readFileSync(0, "utf8")));
 // Separate direct/session-mode connection holds a cluster-wide lock throughout signup.

@@ -1,7 +1,6 @@
 "use client";
 import Link from "next/link";
-import Image from "next/image";
-import bossLogo from "../../../public/brand/boss-logo-original.png";
+import { Brand } from "@/components/brand";
 import { useState, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import { authClient } from "@/lib/client";
@@ -12,8 +11,8 @@ function RecoverContent() {
   return (
     <main className="authform" style={{ minHeight: "100vh" }}>
       <div>
-        <Link className="system-logo" href="/login" aria-label="BOSS — login">
-          <Image src={bossLogo} alt="BOSS" sizes="280px" />
+        <Link className="identity-link" href="/login" aria-label="BOSS — login">
+          <Brand showPlatform={false} />
         </Link>
         <h1>{token ? "Redefinir senha" : "Recuperar acesso"}</h1>
         <form
@@ -72,7 +71,7 @@ function RecoverContent() {
               <input
                 name="password"
                 type="password"
-                minLength={12}
+                minLength={8}
                 required
                 autoComplete="new-password"
               />
@@ -86,14 +85,10 @@ function RecoverContent() {
           <button className="btn" disabled={busy} value="reset">
             {token ? "Salvar nova senha" : "Solicitar recuperação"}
           </button>
-          {!token && (
-            <button className="btn" disabled={busy} value="verify">
-              Reenviar verificação de e-mail
-            </button>
-          )}
+
         </form>
         {message && (
-          <p role="status" className="notice">
+          <p role="status" className="notice recovery-notice">
             {message}
           </p>
         )}
@@ -103,9 +98,8 @@ function RecoverContent() {
           </Link>
         </p>
         <p className="muted subtle">
-          No primeiro acesso, confirme seu e-mail e defina sua senha. Se já
-          definiu a senha, mas ainda não confirmou o e-mail, solicite a
-          verificação acima.
+          No primeiro acesso, confirme seu e-mail pelo link de ativação recebido
+          e defina sua senha. Confira também a pasta de spam.
         </p>
       </div>
     </main>

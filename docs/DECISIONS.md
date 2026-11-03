@@ -80,3 +80,21 @@ User subsequently authorized publication of the tested coral/login refinement by
 User confirmed the target is password recovery. Replaced the plain BOSS heading link with the original local BOSS PNG using existing CSS framing; both recovery and token-based password reset share this screen. “Voltar ao login” is now a small secondary button-style link. No handlers, API calls, messages or authentication rules changed. No publication authorization for this increment.
 
 User subsequently explicitly authorized publishing this recovery refinement (“Yes”). Validation: lint, TypeScript, 2 E2E tests, desktop/mobile 320px visual review without horizontal overflow, and return-to-login navigation passed. Scope remains BOSS only; hosting configuration and recovery handlers are unchanged.
+
+## Recovery spacing and complete brand expansion — local only
+
+Based on parent-inspected screenshot, added 20px above the recovery status notice, separating it from the preceding verification button. This is layout only; screenshot does not establish email delivery. Shared original-logo component now includes the one-line Business Operation Sales System expansion on recovery/reset, invitation and profile/security, complementing existing login and main shell usage. Recovery layout checked with intercepted test response, no real email or account action. Publication awaits explicit approval.
+
+Validation: lint and TypeScript passed; both existing E2E flows passed. Desktop/mobile 320px recovery shows exactly 20px between form and notice and no horizontal overflow. One-line subtitle checked on invite, security and reset routes at 320px (173px content width, 17px line height). Brand link retains navigation without underlining the system expansion.
+
+## Password visibility and simplified recovery — local only
+
+User requested keyboard-accessible show/hide password on login, hidden by default. Added a non-submit control with a changing action label and explicit input association, without storing visibility or changing password values. User also requested removing the second recovery button (resend verification); removed that UI control and changed help text to refer to the received activation link and spam folder. Verification backend and email validation remain unchanged. Earlier notice spacing and all-screen acronym work are included; no publication authorization yet.
+
+## Approved eight-character password minimum — local only
+
+User explicitly approved reducing minimum length from 12 to 8 across BOSS after the risk was explained. Updated Better Auth, invitation registration validation, invitation/reset form constraints and operator bootstrap validation. Maximum length, verified-email requirement, rate limits, session revocation, RBAC and optional MFA stay unchanged. Existing accounts/passwords are not rewritten. E2E boundary coverage rejects seven characters through the real reset endpoint and accepts eight through the UI. No production account action or publication authorized here.
+
+Combined validation: lint, TypeScript and 3 E2E tests passed, including keyboard visibility toggle, server/network error handling, seven-character reset rejection and eight-character acceptance, isolation and session revocation. Desktop/mobile 320px login and recovery reviewed without horizontal overflow. Live owner diagnosis was read-only; no account modification or email send occurred.
+
+User explicitly authorized publishing the combined tested changes and, after publication, sending one new confirmation email through the normal BOSS flow to the approved owner. This does not authorize marking the account verified or claiming login success. Production verification and mail outcome must be checked separately from Git push.

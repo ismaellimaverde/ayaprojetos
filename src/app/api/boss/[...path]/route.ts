@@ -29,7 +29,7 @@ async function handler(
         .object({
           token: z.string().regex(/^[a-f0-9]{64}$/),
           name: z.string().min(2).max(120),
-          password: z.string().min(12).max(128),
+          password: z.string().min(8).max(128),
         })
         .parse(body);
       const inv = (

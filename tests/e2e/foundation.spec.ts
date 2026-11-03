@@ -183,7 +183,12 @@ test("real password-only admin access, optional MFA, project creation, invitatio
   await expect(guest.getByRole("status")).toContainText("Se houver uma conta");
   const reset = await mail("e2e-guest@example.test", "password-reset");
   await guest.goto(reset.url);
-  await guest.getByLabel("Nova senha").fill(f.password + "x");
+  const tooShort = await guest.request.post("/api/auth/reset-password", {
+    headers: { origin: "http://localhost:3100" },
+    data: { token: new URL(reset.url).searchParams.get("token"), newPassword: "Short7!" },
+  });
+  expect(tooShort.status()).toBe(400);
+  await guest.getByLabel("Nova senha").fill("Eight8!x");
   await guest.getByRole("button", { name: "Salvar nova senha" }).click();
   await expect(guest.getByRole("status")).toContainText("Senha alterada");
   expect((await guest.request.get("/api/boss/me")).status()).toBe(401);
