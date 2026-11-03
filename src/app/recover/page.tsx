@@ -1,5 +1,7 @@
 "use client";
 import Link from "next/link";
+import Image from "next/image";
+import bossLogo from "../../../public/brand/boss-logo-original.png";
 import { useState, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import { authClient } from "@/lib/client";
@@ -10,8 +12,8 @@ function RecoverContent() {
   return (
     <main className="authform" style={{ minHeight: "100vh" }}>
       <div>
-        <Link className="brand" href="/login">
-          BOSS
+        <Link className="system-logo" href="/login" aria-label="BOSS — login">
+          <Image src={bossLogo} alt="BOSS" sizes="280px" />
         </Link>
         <h1>{token ? "Redefinir senha" : "Recuperar acesso"}</h1>
         <form
@@ -96,7 +98,9 @@ function RecoverContent() {
           </p>
         )}
         <p>
-          <Link href="/login">Voltar ao login</Link>
+          <Link href="/login" className="btn secondary back-to-login">
+            Voltar ao login
+          </Link>
         </p>
         <p className="muted subtle">
           No primeiro acesso, confirme seu e-mail e defina sua senha. Se já

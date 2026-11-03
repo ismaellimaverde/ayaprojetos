@@ -74,3 +74,9 @@ User requested left optical alignment of AYA, BOSS B and system expansion; keep 
 User rejected teal and selected the final AYA contact section instead. Parent confirmed contact-section CSS: coral #EF9C83 (--color_42), graphite #1D1E21 and peach fields #FFD5BB. Coral now drives login and system colors; login submit uses approved optional graphite with white text; fields use peach. Neutral warm shades support contrast. Publication requires new explicit authorization; no push/deploy for this refinement. No screenshot attachment was available directly to this executor; reviewed locally generated desktop/mobile screenshots instead.
 
 User subsequently authorized publication of the tested coral/login refinement by voice (“Pode”). Lint, TypeScript, build and both E2E tests passed; desktop and 320/390px mobile checked without horizontal overflow. Publication authorization is limited to this BOSS version and preserves hosting configuration.
+
+## Recovery screen identity refinement — local only
+
+User confirmed the target is password recovery. Replaced the plain BOSS heading link with the original local BOSS PNG using existing CSS framing; both recovery and token-based password reset share this screen. “Voltar ao login” is now a small secondary button-style link. No handlers, API calls, messages or authentication rules changed. No publication authorization for this increment.
+
+User subsequently explicitly authorized publishing this recovery refinement (“Yes”). Validation: lint, TypeScript, 2 E2E tests, desktop/mobile 320px visual review without horizontal overflow, and return-to-login navigation passed. Scope remains BOSS only; hosting configuration and recovery handlers are unchanged.
