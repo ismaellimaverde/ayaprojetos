@@ -7,6 +7,9 @@ import {
   type ModuleItem,
 } from "@/lib/module-fields";
 import { Modal } from "./modal";
+import { RichSummaryEditor, SummaryView } from "./rich-summary";
+import { SUMMARY_KEY, summaryFromLegacy } from "@/lib/rich-summary";
+import { printSummary } from "@/lib/print-summary";
 
 type HistoryRow = { revision: number; created_at: string; author_name: string };
 export function ModuleEditor({
@@ -31,6 +34,7 @@ export function ModuleEditor({
   const [editing, setEditing] = useState(false);
   const [dirty, setDirty] = useState(false);
   const [busy, setBusy] = useState(false);
+  const [summaryInvalid, setSummaryInvalid] = useState(false);
   const [message, setMessage] = useState("");
   const [history, setHistory] = useState<HistoryRow[] | null>(null);
   const [snapshot, setSnapshot] = useState<ModuleDocument | null>(null);
@@ -40,6 +44,7 @@ export function ModuleEditor({
     setPermissions(r.permissions);
     setArchived(r.archived);
     setDirty(false);
+    setSummaryInvalid(false);
     setEditing(false);
     setHistory(null);
     setSnapshot(null);
@@ -89,6 +94,10 @@ export function ModuleEditor({
     setDirty(true);
   };
   const content = snapshot ?? document;
+  const summary =
+    area === "executive" && content
+      ? summaryFromLegacy(content.fields, content.items)
+      : null;
   const canEdit =
     !archived && permissions.includes(document?.revision ? "edit" : "create");
   return (
@@ -124,6 +133,17 @@ export function ModuleEditor({
                   onClick={() => {
                     setHistory(null);
                     setSnapshot(null);
+                    if (area === "executive" && document) {
+                      setDocument({
+                        ...document,
+                        fields: {
+                          ...document.fields,
+                          [SUMMARY_KEY]: JSON.stringify(
+                            summaryFromLegacy(document.fields, document.items),
+                          ),
+                        },
+                      });
+                    }
                     setEditing(true);
                     setMessage("");
                   }}
@@ -167,6 +187,42 @@ export function ModuleEditor({
                 Histórico
               </button>
             </div>
+            {area === "executive" &&
+              permissions.includes("export") &&
+              document.revision > 0 &&
+              !editing && (
+                <div className="summary-export">
+                  <button
+                    type="button"
+                    className="btn secondary"
+                    disabled={busy}
+                    onClick={async () => {
+                      setBusy(true);
+                      try {
+                        const r = await api(
+                          `${path}/export${snapshot ? `/${snapshot.revision}` : ""}`,
+                          org,
+                        );
+                        const saved = r.document ?? r;
+                        printSummary(
+                          summaryFromLegacy(saved.fields, saved.items),
+                          `Resumo executivo — revisão ${saved.revision}`,
+                        );
+                      } catch (e) {
+                        setMessage((e as Error).message);
+                      } finally {
+                        setBusy(false);
+                      }
+                    }}
+                  >
+                    Exportar PDF
+                  </button>
+                  <p className="muted subtle">
+                    Na janela de impressão, escolha Salvar como PDF. Exporta a
+                    revisão salva.
+                  </p>
+                </div>
+              )}
             {archived && (
               <p className="notice">Projeto arquivado: somente leitura.</p>
             )}
@@ -206,7 +262,7 @@ export function ModuleEditor({
                 inert={busy}
                 onSubmit={async (e) => {
                   e.preventDefault();
-                  if (!editing || busy) return;
+                  if (!editing || busy || summaryInvalid) return;
                   setBusy(true);
                   setMessage("");
                   try {
@@ -235,128 +291,157 @@ export function ModuleEditor({
                     ? ` · ${new Date(content.updated_at).toLocaleString("pt-BR")}`
                     : ""}
                 </p>
-                {moduleFields[area].map((f) => (
-                  <div key={f.id}>
+                {summary ? (
+                  <section className="module-field-card">
                     {editing ? (
-                      <label>
-                        {f.label}
-                        <textarea
-                          maxLength={10000}
-                          value={document.fields[f.id] ?? ""}
-                          onChange={(e) => changeField(f.id, e.target.value)}
-                          aria-describedby={`hint-${f.id}`}
-                        />
-                        <span id={`hint-${f.id}`} className="muted subtle">
-                          {f.hint}
-                        </span>
-                      </label>
+                      <RichSummaryEditor
+                        initial={summary}
+                        onValidity={(valid) => {
+                          setSummaryInvalid(!valid);
+                          if (!valid) setDirty(true);
+                        }}
+                        onChange={(value) => changeField(SUMMARY_KEY, value)}
+                      />
                     ) : (
-                      <>
-                        <h3>{f.label}</h3>
-                        <p className="module-text">
-                          {content.fields[f.id] || "Não informado."}
-                        </p>
-                      </>
+                      <SummaryView value={summary} />
                     )}
-                  </div>
-                ))}
-                <h3>Itens de informação</h3>
-                <p className="muted subtle">
-                  Registre detalhes, evidências e referências desta área. Não
-                  são lançamentos ou tarefas operacionais.
-                </p>
-                {!content.items.length && <p>Nenhum item cadastrado.</p>}
-                {content.items.map((item, index) => (
-                  <fieldset key={item.id} className="panel module-item">
-                    <legend>
-                      {item.archived ? "Arquivado · " : ""}Item {index + 1}
-                    </legend>
-                    {editing && !item.archived ? (
-                      <>
+                  </section>
+                ) : (
+                  moduleFields[area].map((f) => (
+                    <div className="module-field-card" key={f.id}>
+                      {editing ? (
                         <label>
-                          Título do item
-                          <input
-                            required
-                            maxLength={160}
-                            value={item.title}
-                            onChange={(e) =>
-                              changeItem(item.id, { title: e.target.value })
-                            }
-                          />
-                        </label>
-                        <label>
-                          Descrição do item
+                          {f.label}
                           <textarea
                             maxLength={10000}
-                            value={item.text}
-                            onChange={(e) =>
-                              changeItem(item.id, { text: e.target.value })
-                            }
+                            value={document.fields[f.id] ?? ""}
+                            onChange={(e) => changeField(f.id, e.target.value)}
+                            aria-describedby={`hint-${f.id}`}
                           />
+                          <span id={`hint-${f.id}`} className="muted subtle">
+                            {f.hint}
+                          </span>
                         </label>
-                        <label>
-                          Fonte ou referência
-                          <input
-                            maxLength={500}
-                            value={item.source}
-                            onChange={(e) =>
-                              changeItem(item.id, { source: e.target.value })
-                            }
-                          />
-                        </label>
-                        <label>
-                          Período ou data de referência
-                          <input
-                            maxLength={100}
-                            value={item.period}
-                            onChange={(e) =>
-                              changeItem(item.id, { period: e.target.value })
-                            }
-                          />
-                        </label>
-                        <label>
-                          Responsável pela informação
-                          <input
-                            maxLength={160}
-                            value={item.responsible}
-                            onChange={(e) =>
-                              changeItem(item.id, {
-                                responsible: e.target.value,
-                              })
-                            }
-                          />
-                        </label>
-                      </>
-                    ) : (
-                      <>
-                        <h3>{item.title}</h3>
-                        <p className="module-text">
-                          {item.text || "Sem descrição."}
-                        </p>
-                        <p className="subtle">
-                          Fonte: {item.source || "Não informada"} · Período:{" "}
-                          {item.period || "Não informado"} · Responsável:{" "}
-                          {item.responsible || "Não informado"}
-                        </p>
-                      </>
-                    )}
-                    {editing &&
-                      (item.archived || permissions.includes("delete")) && (
-                        <button
-                          type="button"
-                          className="btn secondary"
-                          onClick={() =>
-                            changeItem(item.id, { archived: !item.archived })
-                          }
-                        >
-                          {item.archived ? "Restaurar item" : "Arquivar item"}
-                        </button>
+                      ) : (
+                        <>
+                          <h3>{f.label}</h3>
+                          <p className="module-text">
+                            {content.fields[f.id] || "Não informado."}
+                          </p>
+                        </>
                       )}
-                  </fieldset>
-                ))}
+                    </div>
+                  ))
+                )}
+                {area !== "executive" && (
+                  <>
+                    <h3>Itens de informação</h3>
+                    <p className="muted subtle">
+                      Registre detalhes, evidências e referências desta área.
+                      Não são lançamentos ou tarefas operacionais.
+                    </p>
+                    {!content.items.length && <p>Nenhum item cadastrado.</p>}
+                    {content.items.map((item, index) => (
+                      <fieldset key={item.id} className="panel module-item">
+                        <legend>
+                          {item.archived ? "Arquivado · " : ""}Item {index + 1}
+                        </legend>
+                        {editing && !item.archived ? (
+                          <>
+                            <label>
+                              Título do item
+                              <input
+                                required
+                                maxLength={160}
+                                value={item.title}
+                                onChange={(e) =>
+                                  changeItem(item.id, { title: e.target.value })
+                                }
+                              />
+                            </label>
+                            <label>
+                              Descrição do item
+                              <textarea
+                                maxLength={10000}
+                                value={item.text}
+                                onChange={(e) =>
+                                  changeItem(item.id, { text: e.target.value })
+                                }
+                              />
+                            </label>
+                            <label>
+                              Fonte ou referência
+                              <input
+                                maxLength={500}
+                                value={item.source}
+                                onChange={(e) =>
+                                  changeItem(item.id, {
+                                    source: e.target.value,
+                                  })
+                                }
+                              />
+                            </label>
+                            <label>
+                              Período ou data de referência
+                              <input
+                                maxLength={100}
+                                value={item.period}
+                                onChange={(e) =>
+                                  changeItem(item.id, {
+                                    period: e.target.value,
+                                  })
+                                }
+                              />
+                            </label>
+                            <label>
+                              Responsável pela informação
+                              <input
+                                maxLength={160}
+                                value={item.responsible}
+                                onChange={(e) =>
+                                  changeItem(item.id, {
+                                    responsible: e.target.value,
+                                  })
+                                }
+                              />
+                            </label>
+                          </>
+                        ) : (
+                          <>
+                            <h3>{item.title}</h3>
+                            <p className="module-text">
+                              {item.text || "Sem descrição."}
+                            </p>
+                            <p className="subtle">
+                              Fonte: {item.source || "Não informada"} · Período:{" "}
+                              {item.period || "Não informado"} · Responsável:{" "}
+                              {item.responsible || "Não informado"}
+                            </p>
+                          </>
+                        )}
+                        {editing &&
+                          (item.archived || permissions.includes("delete")) && (
+                            <button
+                              type="button"
+                              className="btn secondary"
+                              onClick={() =>
+                                changeItem(item.id, {
+                                  archived: !item.archived,
+                                })
+                              }
+                            >
+                              {item.archived
+                                ? "Restaurar item"
+                                : "Arquivar item"}
+                            </button>
+                          )}
+                      </fieldset>
+                    ))}
+                  </>
+                )}
                 {editing && (
                   <>
-                    {permissions.includes("create") && (
+                    {area !== "executive" && permissions.includes("create") && (
                       <button
                         type="button"
                         className="btn secondary"
@@ -387,7 +472,10 @@ export function ModuleEditor({
                       </button>
                     )}
                     <div className="row">
-                      <button className="btn" disabled={busy || !dirty}>
+                      <button
+                        className="btn"
+                        disabled={busy || !dirty || summaryInvalid}
+                      >
                         {busy ? "Salvando…" : "Salvar informações"}
                       </button>
                       <button

@@ -1,5 +1,6 @@
 import { test, expect } from "@playwright/test";
 import { readFile, readdir } from "node:fs/promises";
+import { execFileSync } from "node:child_process";
 import { createHmac } from "node:crypto";
 import { verifyPassword } from "better-auth/crypto";
 import { Pool } from "pg";
@@ -69,14 +70,17 @@ test("real password-only admin access, optional MFA, project creation, invitatio
   // Real planning editor: save, reload, history, and a competing writer.
   await page.getByRole("button", { name: "Abrir Business Plan" }).click();
   await page
-    .getByRole("button", { name: "Abrir Resumo executivo", exact: true })
+    .getByRole("button", {
+      name: "Abrir DNA, identidade e cultura",
+      exact: true,
+    })
     .click();
   const editorDialog = page.getByRole("dialog");
   await editorDialog
     .getByRole("button", { name: "Preencher informações" })
     .click();
   await editorDialog
-    .getByRole("textbox", { name: /^Visão do negócio/ })
+    .getByRole("textbox", { name: /^Propósito/ })
     .fill("Planning persisted by E2E");
   await editorDialog.getByRole("button", { name: "Adicionar item" }).click();
   await editorDialog
@@ -95,7 +99,10 @@ test("real password-only admin access, optional MFA, project creation, invitatio
   await page.reload();
   await page.getByRole("button", { name: "Abrir Business Plan" }).click();
   await page
-    .getByRole("button", { name: "Abrir Resumo executivo", exact: true })
+    .getByRole("button", {
+      name: "Abrir DNA, identidade e cultura",
+      exact: true,
+    })
     .click();
   await expect(
     editorDialog.getByText("Planning persisted by E2E", { exact: true }),
@@ -111,7 +118,7 @@ test("real password-only admin access, optional MFA, project creation, invitatio
     .getByRole("button", { name: "Editar informações" })
     .click();
   await editorDialog
-    .getByRole("textbox", { name: /^Visão do negócio/ })
+    .getByRole("textbox", { name: /^Propósito/ })
     .fill("Unsaved local draft");
   const planOverview = await (
     await page.request.get("/api/boss/overview", {
@@ -121,7 +128,7 @@ test("real password-only admin access, optional MFA, project creation, invitatio
   const planProject = planOverview.projects.find(
     (p: { name: string }) => p.name === "Projeto A",
   );
-  const contentURL = `/api/boss/module-content/${planProject.id}/executive`;
+  const contentURL = `/api/boss/module-content/${planProject.id}/dna`;
   const saved = (
     await (
       await page.request.get(contentURL, {
@@ -133,7 +140,7 @@ test("real password-only admin access, optional MFA, project creation, invitatio
     headers: { origin: "http://localhost:3100", "x-organization-id": f.org },
     data: {
       revision: saved.revision,
-      fields: { business: "Concurrent saved content" },
+      fields: { purpose: "Concurrent saved content" },
       items: saved.items,
     },
   });
@@ -145,7 +152,7 @@ test("real password-only admin access, optional MFA, project creation, invitatio
     "Outra pessoa atualizou",
   );
   await expect(
-    editorDialog.getByRole("textbox", { name: /^Visão do negócio/ }),
+    editorDialog.getByRole("textbox", { name: /^Propósito/ }),
   ).toHaveValue("Unsaved local draft");
   await page.setViewportSize({ width: 390, height: 844 });
   expect(
@@ -158,6 +165,121 @@ test("real password-only admin access, optional MFA, project creation, invitatio
   ).toBeVisible();
   await editorDialog.getByRole("button", { name: "Fechar área" }).click();
   await page.setViewportSize({ width: 1280, height: 720 });
+  // Single rich summary, literal legacy text, formatting, reload and browser PDF.
+  const richURL = `/api/boss/module-content/${planProject.id}/executive`;
+  expect(
+    (
+      await page.request.post(richURL, {
+        headers: {
+          origin: "http://localhost:3100",
+          "x-organization-id": f.org,
+        },
+        data: {
+          revision: 0,
+          fields: {
+            business: "Legado preservado <img src=x onerror=alert(1)>",
+          },
+          items: [],
+        },
+      })
+    ).status(),
+  ).toBe(200);
+  await page
+    .getByRole("button", { name: "Abrir Resumo executivo", exact: true })
+    .click();
+  await expect(
+    editorDialog.getByText("Legado preservado <img src=x onerror=alert(1)>", {
+      exact: true,
+    }),
+  ).toBeVisible();
+  await expect(editorDialog.locator(".summary-prose img")).toHaveCount(0);
+  await editorDialog
+    .getByRole("button", { name: "Editar informações" })
+    .click();
+  const richBox = editorDialog.getByRole("textbox", {
+    name: "Resumo executivo",
+    exact: true,
+  });
+  await expect(richBox).toBeVisible();
+  await expect(editorDialog.getByRole("textbox")).toHaveCount(1);
+  await richBox.fill("Resumo com acentuação: estratégia e operação.");
+  await richBox.press("ControlOrMeta+a");
+  await editorDialog
+    .getByRole("button", { name: "Negrito", exact: true })
+    .click();
+  await editorDialog
+    .getByRole("button", { name: "Itálico", exact: true })
+    .click();
+  await editorDialog
+    .getByRole("button", { name: "Título H1", exact: true })
+    .click();
+  await editorDialog
+    .getByRole("combobox", { name: "Fonte", exact: true })
+    .selectOption("Georgia");
+  page.once("dialog", (d) => d.accept("https://example.com/reference"));
+  await editorDialog.getByRole("button", { name: "Link", exact: true }).click();
+  await editorDialog
+    .getByRole("button", { name: "Salvar informações" })
+    .click();
+  await expect(editorDialog.getByRole("status")).toContainText(
+    "Informações salvas",
+  );
+  await editorDialog
+    .getByRole("button", { name: "Recarregar", exact: true })
+    .click();
+  await expect(editorDialog.locator(".summary-prose h1 strong")).toContainText(
+    "Resumo com acentuação",
+  );
+  await expect(editorDialog.locator(".summary-prose em")).toContainText(
+    "estratégia",
+  );
+  await expect(editorDialog.locator(".summary-prose a")).toHaveAttribute(
+    "href",
+    "https://example.com/reference",
+  );
+  const richSaved = (
+    await (
+      await page.request.get(richURL, {
+        headers: { "x-organization-id": f.org },
+      })
+    ).json()
+  ).document;
+  expect(richSaved.fields.business).toContain("Legado preservado");
+  expect(richSaved.fields.summary_rich_v1).toContain("Georgia");
+  await editorDialog
+    .getByRole("button", { name: "Exportar PDF", exact: true })
+    .click();
+  const printFrame = page.locator("iframe[data-boss-print]");
+  await expect(printFrame).toHaveCount(1);
+  const printHTML = await printFrame.evaluate(
+    (el) =>
+      (el as HTMLIFrameElement).contentDocument!.documentElement.outerHTML,
+  );
+  const pdfPage = await browser.newPage();
+  await pdfPage.setContent(printHTML);
+  await pdfPage.pdf({
+    path: "/tmp/boss-rich-summary-test.pdf",
+    preferCSSPageSize: true,
+  });
+  expect(
+    execFileSync("pdftotext", [
+      "/tmp/boss-rich-summary-test.pdf",
+      "-",
+    ]).toString(),
+  ).toContain("estratégia e operação");
+  await pdfPage.close();
+  await page.screenshot({ path: "/tmp/boss-summary-desktop.png" });
+  await page.setViewportSize({ width: 390, height: 844 });
+  await editorDialog
+    .getByRole("button", { name: "Editar informações", exact: true })
+    .click();
+  expect(
+    await editorDialog.evaluate((el) => el.scrollWidth <= el.clientWidth),
+  ).toBe(true);
+  await page.screenshot({ path: "/tmp/boss-summary-mobile.png" });
+  await editorDialog.getByRole("button", { name: "Fechar área" }).click();
+  await page.setViewportSize({ width: 1280, height: 720 });
+
   await page.goto("/security");
   await page.getByLabel("Confirme sua senha").fill(f.password);
   await page.getByRole("button", { name: "Configurar autenticador" }).click();

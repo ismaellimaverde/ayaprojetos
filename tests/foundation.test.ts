@@ -622,3 +622,118 @@ test("module content persists contextual fields and items with history, conflict
     /arquivado/,
   );
 });
+
+test("executive rich saves preserve legacy data, reject XSS, and enforce export grants", async () => {
+  const { SUMMARY_KEY } = await import("../src/lib/rich-summary");
+  const project = await execute(actor(ownerId), org, "POST", ["projects"], {
+    name: "Rich summary",
+    modules: ["executive"],
+  });
+  const path = ["module-content", project.id, "executive"];
+  const item = {
+    id: randomUUID(),
+    title: "Original item",
+    text: "Evidence",
+    source: "",
+    period: "",
+    responsible: "",
+    archived: false,
+  };
+  await execute(actor(ownerId), org, "POST", path, {
+    revision: 0,
+    fields: { business: "Original business" },
+    items: [item],
+  });
+  const rich = JSON.stringify({
+    type: "doc",
+    content: [
+      {
+        type: "paragraph",
+        content: [
+          { type: "text", text: "Texto rico", marks: [{ type: "bold" }] },
+        ],
+      },
+    ],
+  });
+  await execute(actor(ownerId), org, "POST", path, {
+    revision: 1,
+    fields: { [SUMMARY_KEY]: rich },
+    items: [],
+  });
+  const current = (await execute(actor(ownerId), org, "GET", path, undefined))
+    .document;
+  assert.equal(current.fields.business, "Original business");
+  assert.deepEqual(current.items, [item]);
+  assert.equal(current.fields[SUMMARY_KEY], rich);
+  await assert.rejects(
+    execute(actor(ownerId), org, "POST", path, {
+      revision: 2,
+      fields: { business: "Old client" },
+      items: [item],
+    }),
+    /formato/,
+  );
+  const bad = JSON.stringify({
+    type: "doc",
+    content: [
+      {
+        type: "paragraph",
+        content: [
+          {
+            type: "text",
+            text: "XSS",
+            marks: [{ type: "link", attrs: { href: "javascript:alert(1)" } }],
+          },
+        ],
+      },
+    ],
+  });
+  await assert.rejects(
+    execute(actor(ownerId), org, "POST", path, {
+      revision: 2,
+      fields: { [SUMMARY_KEY]: bad },
+      items: [],
+    }),
+    /Formato/,
+  );
+  const reader = await makeUser("summary-reader@example.test");
+  await pool.query(
+    "INSERT INTO boss_private.members(id,org_id,user_id,role) VALUES($1,$2,$3,'member')",
+    [randomUUID(), org, reader],
+  );
+  await pool.query(
+    "INSERT INTO boss_private.grants(id,org_id,project_id,user_id,role,permissions,source) VALUES($1,$2,$3,$4,'viewer',$5,'test')",
+    [
+      randomUUID(),
+      org,
+      project.id,
+      reader,
+      JSON.stringify({ executive: ["view"] }),
+    ],
+  );
+  await assert.rejects(
+    execute(actor(reader), org, "GET", [...path, "export"], undefined),
+    /Acesso/,
+  );
+  await assert.rejects(
+    execute(actor(reader), org, "GET", [...path, "export", "1"], undefined),
+    /Acesso/,
+  );
+  assert.equal(
+    (await execute(actor(ownerId), org, "GET", [...path, "export"], undefined))
+      .document.revision,
+    2,
+  );
+  assert.equal(
+    (
+      await execute(
+        actor(ownerId),
+        org,
+        "GET",
+        [...path, "export", "1"],
+        undefined,
+      )
+    ).fields.business,
+    "Original business",
+  );
+});

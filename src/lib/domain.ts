@@ -10,6 +10,7 @@ import {
 } from "./catalog";
 import { z } from "zod";
 import { moduleFields, type ModuleItem } from "./module-fields";
+import { SUMMARY_KEY, parseSummary } from "./rich-summary";
 import { deliver, deliveryStatus } from "./mail";
 export class DomainError extends Error {
   constructor(
@@ -212,7 +213,8 @@ export async function execute(
       );
       const allowed: string[] = project.permissions[sub] ?? [];
       if (method === "GET") {
-        if (path[3] === "history") {
+        if (path[3] === "export" && !allowed.includes("export")) deny();
+        if (path[3] === "history" || (path[3] === "export" && path[4])) {
           if (path[4]) {
             const revision = z.coerce.number().int().positive().parse(path[4]);
             const row = (
@@ -270,12 +272,23 @@ export async function execute(
       const v = z
         .object({
           revision: z.number().int().min(0),
-          fields: z.record(z.string(), z.string().max(10000)),
+          fields: z.record(z.string(), z.string().max(1000000)),
           items: z.array(itemSchema).max(50),
         })
         .strict()
         .parse(body);
       const fieldIds = new Set(moduleFields[sub].map((f) => f.id));
+      if (sub === "executive") fieldIds.add(SUMMARY_KEY);
+      for (const [key, value] of Object.entries(v.fields)) {
+        if (key === SUMMARY_KEY && sub === "executive") {
+          try {
+            parseSummary(value);
+          } catch {
+            throw new DomainError(400, "Formato do resumo inválido");
+          }
+        } else if (value.length > 10000)
+          throw new DomainError(400, "Campo excede o limite");
+      }
       if (
         Object.keys(v.fields).some((k) => !fieldIds.has(k)) ||
         new Set(v.items.map((i) => i.id)).size !== v.items.length
@@ -286,7 +299,7 @@ export async function execute(
         );
       const old = (
         await c.query(
-          "SELECT revision,items FROM boss_private.module_content WHERE org_id=$1 AND project_id=$2 AND area=$3 FOR UPDATE",
+          "SELECT revision,fields,items FROM boss_private.module_content WHERE org_id=$1 AND project_id=$2 AND area=$3 FOR UPDATE",
           [org, id, sub],
         )
       ).rows[0];
@@ -296,6 +309,24 @@ export async function execute(
           409,
           "Outra pessoa atualizou esta área. Recarregue antes de salvar; suas alterações ainda estão no formulário.",
         );
+      if (
+        sub === "executive" &&
+        old?.fields?.[SUMMARY_KEY] &&
+        !v.fields[SUMMARY_KEY]
+      ) {
+        throw new DomainError(
+          409,
+          "O formato desta área foi atualizado. Recarregue antes de salvar.",
+        );
+      }
+      // A new-format save must not erase or mutate the hidden legacy source fields/items.
+      if (sub === "executive" && v.fields[SUMMARY_KEY]) {
+        v.fields = {
+          ...(old?.fields ?? {}),
+          [SUMMARY_KEY]: v.fields[SUMMARY_KEY],
+        };
+        v.items = old?.items ?? [];
+      }
       const previous: ModuleItem[] = old?.items ?? [];
       if (previous.some((i) => !v.items.some((n) => n.id === i.id)))
         throw new DomainError(

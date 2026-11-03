@@ -29,3 +29,5 @@ Future entities: strategic plans, objectives, key results, initiatives, tasks, c
 ## Planning content increment (local migration 003)
 
 `module_content`: one current document per organization/project/area, schema version 1, optimistic revision, validated area-specific plain-text fields, up to 50 identified information items, last author/time. `module_revisions`: append-only full snapshots with author/time; database trigger rejects updates/deletes. Composite project/organization foreign keys preserve tenant association. Module API rechecks area enabled state, project grants, view/create/edit/delete rights and project archive state. Runtime RLS remains server-only, with tenant/area authorization in the domain. No user data backfill.
+
+Executive rich text (pending release): `module_content.fields.summary_rich_v1` is a versioned, bounded JSON string containing a validated document tree. Existing fields and items remain stored unchanged on rich saves; historical snapshots keep their original shape. No migration or business-data rewrite is required. Original fields can be inspected through earlier history/API but are no longer separate inputs in the executive editor.

@@ -128,3 +128,15 @@ Migration 003 creates private content/revision tables; revisions are append-only
 ## Approved combined release
 
 User subsequently approved company/unit UI, visual cleanup, editable module planning and migration 003. Applied the additive migration transactionally to the dedicated BOSS database with advisory lock, private-schema RLS, existing boss_app policy/grants and Data API denial. Existing project/member counts remained one each; new content/revision tables are empty. Login diagnostic UI changes remain outside this release.
+
+## Rich executive summary and unified UI — approved implementation, publication pending
+
+User requested a single long rich-text field for Resumo Executivo, with font selection, bold/italic, H1, links and PDF, then expanded the reference design to the whole system and explicitly replaced brown with black while retaining AYA coral. Shared cards, fields, buttons, badges, navigation, tables, notices, dialogs and focus states now follow the rounded, softly elevated reference language; existing routes and dark-theme behavior remain.
+
+Tiptap's open-source editor is pinned in the lockfile. Store a strictly validated document as `fields.summary_rich_v1` in the existing JSONB model. Allowed nodes are paragraphs/H1/text/line breaks; marks are bold/italic, three local font families, and HTTP(S)/mailto links. No raw HTML rendering, remote images, embeds, uploaded fonts or external processing. Backend rejects unknown attributes, unsafe URLs and excessive sizes; React renders validated nodes as text/elements. Unsupported pasted formatting prevents saving until corrected.
+
+Legacy executive fields and information items are combined into the initial editor document for reading only. Nothing is migrated automatically. A rich save retains the original fields/items server-side and creates a normal revision; older client writes cannot silently remove a saved rich document. Other modules retain their contextual field models. No schema migration is needed.
+
+PDF export checks both view and export permissions against the current session, project and area through the API. It prints the selected saved revision in an isolated document using only validated nodes and fixed CSS. The browser's dialog provides Save as PDF; this is not an automatic file download and destination labels vary by browser/mobile OS. Unsaved drafts are not exported. No real data, account, email, service or deployment action was performed for this increment.
+
+Publication authorization: user approved publishing the tested coral/black UI and rich executive summary with browser PDF export. This release requires no migration or environment/configuration changes. The unrelated login-error diagnostic remains local and excluded. Production completion must be verified against the pushed SHA separately.
