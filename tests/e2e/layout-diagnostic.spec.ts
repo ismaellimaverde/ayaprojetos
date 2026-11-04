@@ -91,8 +91,16 @@ test("project layout has three independent desktop columns and compact mobile st
         .locator("#area-navigation")
         .getByRole("button")
         .allTextContents();
-      expect(names.slice(2)).toEqual(
-        modules.map((m) => m.name).sort((x, y) => x.localeCompare(y, "pt-BR")),
+      expect(names.slice(0, 3)).toEqual([
+        "Biblioteca",
+        "Áreas do projeto",
+        "Resumo executivo",
+      ]);
+      expect(names.slice(3)).toEqual(
+        modules
+          .filter((m) => m.id !== "executive")
+          .map((m) => m.name)
+          .sort((x, y) => x.localeCompare(y, "pt-BR")),
       );
       await page
         .getByRole("button", { name: "Recolher menu principal", exact: true })

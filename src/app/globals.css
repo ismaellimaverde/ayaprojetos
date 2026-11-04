@@ -1431,3 +1431,47 @@ h3 {
 .project-edit-compact:hover::before {
   background: #fbe5dd;
 }
+
+.library-workspace {
+  min-width: 0;
+}
+.library-workspace .heading h2 {
+  overflow-wrap: anywhere;
+}
+.library-workspace .library-document {
+  padding: 16px;
+}
+.library-workspace .summary-prose {
+  height: clamp(200px, calc(100svh - 390px), 680px);
+  min-height: 200px;
+  overflow: auto;
+  overscroll-behavior: contain;
+}
+@media print {
+  .library-workspace .summary-prose {
+    height: auto;
+    max-height: none;
+    overflow: visible;
+  }
+}
+
+@media screen and (max-width: 650px) {
+  .library-workspace .summary-prose {
+    height: clamp(200px, calc(100svh - 650px), 440px);
+  }
+}
+
+.area-frequent {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 6px;
+  margin-bottom: 12px;
+  border-radius: 18px;
+  border: 1px solid #ef9c8355;
+  background: #fff0e9;
+}
+.dark .area-frequent {
+  background: #343033;
+  border-color: #ef9c8366;
+}

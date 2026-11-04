@@ -258,3 +258,15 @@ Biblioteca, individual area PDF and consolidated Business Plan consume the same 
 Additional requested UI change: removed the redundant horizontal Business Plan card, keeping the project description beneath its name. Editar projeto now sits beside the project name, uses a compact visible outline with a 44px target, wraps responsively, remains admin-only and routes through the existing protected editor-exit flow. No production data, migration, push or deployment is authorized for this batch yet.
 
 Publication explicitly approved on 2026-11-04 for the tested shared rich-text fields across BP areas and the compact project-edit heading. No database migration, real-data mutation, infrastructure change or unrelated login diagnostic is included.
+
+## Library source editor, metadata and document frame — local, publication pending
+
+Library area documents now open the existing area editor directly. This edits the source fields, not a detached Library copy. Current edit/create permission and archived state are rechecked by the same endpoint; view-only users get a read-only document. Saving/reopening retains content, and closing a Library-origin editor returns to Library unless a different guarded navigation destination was selected. Executive content stays one rich field; other areas retain their separate semantic fields and shared toolbar.
+
+The consolidated Business Plan opens on its own document surface rather than underneath the Library cards. Its content scrolls inside a bounded, keyboard-focusable frame. It remains derived/read-only: edit the constituent area documents to update it, avoiding an unsafe split of arbitrary consolidated text back into semantic fields. PDF still exports the complete saved content independently of the scroll frame.
+
+Document titles and PDF titles no longer append revision numbers. Library cards, editor metadata and consolidated section metadata show Última atualização with the recorded date/time in the browser locale, without displaying the author. Missing/invalid timestamps say não informada; no date is invented. Revision counters/history remain unchanged internally. No migrations or real data changes; these new Library changes are not authorized for publication yet.
+
+Additional local menu request: Biblioteca, Áreas do projeto and authorized Resumo executivo are grouped at the top in Acessos frequentes, with a pale coral background and a distinct dark-theme surface. Other authorized areas remain alphabetic. Executive is not duplicated in the alphabetical list and is absent if access is not granted. Existing icons, Montserrat, selection/hover/focus, collapse controls and guarded navigation are preserved. Publication remains pending.
+
+Publication explicitly approved for the tested Library source editor, recorded update metadata, revision-free document titles, bounded document view and frequent-menu group. No migration or real-data mutation is included. Previous production verification remains a separate Netlify investigation; a failed preview is not production evidence.

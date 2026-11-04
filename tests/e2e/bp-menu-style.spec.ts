@@ -39,6 +39,15 @@ test("BP menu uses local Montserrat and semantic icons without changing accessib
         .click();
     const nav = page.getByRole("navigation", { name: "Menu do projeto" });
     await page.evaluate(() => document.fonts.ready);
+    const frequent = nav.getByRole("group", { name: "Acessos frequentes" });
+    await expect(frequent.getByRole("button")).toHaveText([
+      "Biblioteca",
+      "Áreas do projeto",
+      "Resumo executivo",
+    ]);
+    expect(
+      await frequent.evaluate((el) => getComputedStyle(el).backgroundColor),
+    ).not.toBe("rgba(0, 0, 0, 0)");
     for (const m of modules) {
       const heading = page.getByRole("heading", { name: m.name, exact: true });
       await expect(heading).toHaveCount(1);
@@ -106,5 +115,13 @@ test("BP menu uses local Montserrat and semantic icons without changing accessib
       name: "Financeiro e controladoria",
       exact: true,
     }),
+  ).toHaveCount(0);
+  allowed = ["finance"];
+  await page.goto("/?workspace=org&project=bp-style");
+  await expect(
+    nav.getByRole("group", { name: "Acessos frequentes" }).getByRole("button"),
+  ).toHaveText(["Biblioteca", "Áreas do projeto"]);
+  await expect(
+    nav.getByRole("button", { name: "Resumo executivo", exact: true }),
   ).toHaveCount(0);
 });

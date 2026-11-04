@@ -1,4 +1,5 @@
 import { fieldDocument, itemDocument, documentText } from "./rich-fields";
+import { updatedAtLabel } from "./document-metadata";
 import { modules } from "./catalog";
 import { moduleFields, type ModuleDocument } from "./module-fields";
 import { summaryFromLegacy, type SummaryDocument } from "./rich-summary";
@@ -78,7 +79,7 @@ export function consolidatedDocument(
       content: [
         {
           type: "text",
-          text: `Revisão ${entry.revision} · ${entry.author_name} · ${new Date(entry.updated_at).toLocaleDateString("pt-BR")}`,
+          text: updatedAtLabel(entry.updated_at),
         },
       ],
     });

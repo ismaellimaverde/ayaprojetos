@@ -74,9 +74,12 @@ test("dual menus collapse without losing drafts and long text scrolls internally
     .click();
   const areaNav = page.getByRole("navigation", { name: "Menu do projeto" });
   expect(
-    (await areaNav.getByRole("button").allTextContents()).slice(2),
+    (await areaNav.getByRole("button").allTextContents()).slice(3),
   ).toEqual(
-    modules.map((m) => m.name).sort((a, b) => a.localeCompare(b, "pt-BR")),
+    modules
+      .filter((m) => m.id !== "executive")
+      .map((m) => m.name)
+      .sort((a, b) => a.localeCompare(b, "pt-BR")),
   );
   const first = await areaNav.getByRole("button").nth(2).boundingBox();
   const second = await areaNav.getByRole("button").nth(3).boundingBox();

@@ -307,13 +307,13 @@ test("real password-only admin access, optional MFA, project creation, invitatio
   ).toBeVisible();
   await expect(
     page.getByRole("button", {
-      name: "Ler documento Resumo executivo",
+      name: "Abrir documento Resumo executivo",
       exact: true,
     }),
   ).toBeVisible();
   await expect(
     page.getByRole("button", {
-      name: "Ler documento DNA, identidade e cultura",
+      name: "Abrir documento DNA, identidade e cultura",
       exact: true,
     }),
   ).toBeVisible();

@@ -6,6 +6,7 @@ import {
   type ModuleDocument,
   type ModuleItem,
 } from "@/lib/module-fields";
+import { updatedAtLabel } from "@/lib/document-metadata";
 import { Modal } from "./modal";
 import { modules } from "@/lib/catalog";
 import {
@@ -34,6 +35,8 @@ export function ModuleEditor({
   onClose,
   onSaved,
   onCancelClose,
+  startEditing = false,
+  documentTitle,
   ref,
 }: {
   org: string;
@@ -43,6 +46,8 @@ export function ModuleEditor({
   onClose: () => void;
   onSaved: () => void;
   onCancelClose?: () => void;
+  startEditing?: boolean;
+  documentTitle?: string;
   ref?: Ref<ModuleEditorHandle>;
 }) {
   const path = `module-content/${projectId}/${area}`;
@@ -63,7 +68,7 @@ export function ModuleEditor({
     setDirty(false);
     setSummaryInvalid(false);
     setEditing(
-      area === "executive" &&
+      (area === "executive" || startEditing) &&
         !r.archived &&
         r.permissions.includes(r.document.revision ? "edit" : "create"),
     );
@@ -77,19 +82,20 @@ export function ModuleEditor({
           setPermissions(r.permissions);
           setArchived(r.archived);
           if (
-            area === "executive" &&
+            (area === "executive" || startEditing) &&
             !r.archived &&
             r.permissions.includes(r.document.revision ? "edit" : "create")
           ) {
-            setDocument({
-              ...r.document,
-              fields: {
-                ...r.document.fields,
-                [SUMMARY_KEY]: JSON.stringify(
-                  summaryFromLegacy(r.document.fields, r.document.items),
-                ),
-              },
-            });
+            if (area === "executive")
+              setDocument({
+                ...r.document,
+                fields: {
+                  ...r.document.fields,
+                  [SUMMARY_KEY]: JSON.stringify(
+                    summaryFromLegacy(r.document.fields, r.document.items),
+                  ),
+                },
+              });
             setEditing(true);
           }
         }
@@ -100,7 +106,7 @@ export function ModuleEditor({
     return () => {
       active = false;
     };
-  }, [path, org, area]);
+  }, [path, org, area, startEditing]);
   useEffect(() => {
     if (!dirty) return;
     const warn = (e: BeforeUnloadEvent) => {
@@ -248,7 +254,7 @@ export function ModuleEditor({
         <div className="heading">
           <div>
             <div className="eyebrow">Business Plan</div>
-            <h2 tabIndex={-1}>{title}</h2>
+            <h2 tabIndex={-1}>{documentTitle ?? title}</h2>
           </div>
           <button type="button" className="btn secondary" onClick={close}>
             Fechar área
@@ -313,7 +319,7 @@ export function ModuleEditor({
                         const saved = r.document ?? r;
                         printSummary(
                           areaDocument(area, saved),
-                          `${title} — revisão ${saved.revision}`,
+                          documentTitle ?? title,
                         );
                       } catch (e) {
                         setMessage((e as Error).message);
@@ -348,11 +354,7 @@ export function ModuleEditor({
               >
                 {content.revision > 0 && (
                   <p className="muted subtle">
-                    {content.revision ? `Revisão ${content.revision}` : ""}
-                    {content.author_name ? ` · ${content.author_name}` : ""}
-                    {content.updated_at
-                      ? ` · ${new Date(content.updated_at).toLocaleString("pt-BR")}`
-                      : ""}
+                    {updatedAtLabel(content.updated_at)}
                   </p>
                 )}
                 <RichFieldsScope

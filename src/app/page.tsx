@@ -133,6 +133,7 @@ export default function Home() {
     projectId: string;
     area: string;
     title: string;
+    fromLibrary?: boolean;
   } | null>(null);
   const initialAddress = useRef<URLSearchParams | null>(null);
   const addressReady = useRef(false);
@@ -152,7 +153,8 @@ export default function Home() {
     const action = pendingNavigation.current;
     pendingNavigation.current = null;
     setEditingArea(null);
-    action?.();
+    if (action) action();
+    else if (editingArea?.fromLibrary) setTab("library");
   }
   const [companyFilter, setCompanyFilter] = useState("");
   const [unitFilter, setUnitFilter] = useState("");
@@ -347,6 +349,28 @@ export default function Home() {
     plan: selected?.name ?? "Business Plan",
     library: selected?.name ?? "Biblioteca",
   };
+  const areaMenuButton = (m: (typeof modules)[number]) =>
+    selected ? (
+      <button
+        key={m.id}
+        className={`btn ${editingArea?.area === m.id ? "" : "secondary"}`}
+        aria-current={editingArea?.area === m.id ? "page" : undefined}
+        onClick={() => {
+          if (editingArea?.area === m.id) return;
+          navigate(() => {
+            setTab("plan");
+            setEditingArea({
+              projectId: selected.id,
+              area: m.id,
+              title: m.name,
+            });
+          });
+        }}
+      >
+        <AreaIcon area={m.id} />
+        <span>{m.name}</span>
+      </button>
+    ) : null;
   return (
     <div
       className={`shell workspace-shell ${dark ? "dark" : ""} ${mainCollapsed ? "main-collapsed" : ""} ${selected && ["plan", "library"].includes(tab) ? "has-project" : ""} ${areasCollapsed ? "areas-collapsed" : ""}`}
@@ -533,56 +557,52 @@ export default function Home() {
             hidden={areasCollapsed}
             aria-label="Menu do projeto"
           >
-            <button
-              className={`btn ${tab === "plan" && !editingArea ? "" : "secondary"}`}
-              aria-current={tab === "plan" && !editingArea ? "page" : undefined}
-              onClick={() =>
-                navigate(() => {
-                  setEditingArea(null);
-                  setTab("plan");
-                })
-              }
+            <div
+              className="area-frequent"
+              role="group"
+              aria-label="Acessos frequentes"
             >
-              <AreaIcon area="overview" />
-              <span>Áreas do projeto</span>
-            </button>
-            <button
-              className={`btn ${tab === "library" ? "" : "secondary"}`}
-              aria-current={tab === "library" ? "page" : undefined}
-              onClick={() =>
-                navigate(() => {
-                  setEditingArea(null);
-                  setTab("library");
-                })
-              }
-            >
-              <AreaIcon area="library" />
-              <span>Biblioteca</span>
-            </button>
+              <button
+                className={`btn ${tab === "library" ? "" : "secondary"}`}
+                aria-current={tab === "library" ? "page" : undefined}
+                onClick={() =>
+                  navigate(() => {
+                    setEditingArea(null);
+                    setTab("library");
+                  })
+                }
+              >
+                <AreaIcon area="library" />
+                <span>Biblioteca</span>
+              </button>
+              <button
+                className={`btn ${tab === "plan" && !editingArea ? "" : "secondary"}`}
+                aria-current={
+                  tab === "plan" && !editingArea ? "page" : undefined
+                }
+                onClick={() =>
+                  navigate(() => {
+                    setEditingArea(null);
+                    setTab("plan");
+                  })
+                }
+              >
+                <AreaIcon area="overview" />
+                <span>Áreas do projeto</span>
+              </button>
+              {modules
+                .filter(
+                  (m) =>
+                    m.id === "executive" && selected.modules.includes(m.id),
+                )
+                .map(areaMenuButton)}
+            </div>
             {modules
-              .filter((m) => selected.modules.includes(m.id))
+              .filter(
+                (m) => m.id !== "executive" && selected.modules.includes(m.id),
+              )
               .sort((a, b) => a.name.localeCompare(b.name, "pt-BR"))
-              .map((m) => (
-                <button
-                  key={m.id}
-                  className={`btn ${editingArea?.area === m.id ? "" : "secondary"}`}
-                  aria-current={editingArea?.area === m.id ? "page" : undefined}
-                  onClick={() => {
-                    if (editingArea?.area === m.id) return;
-                    navigate(() => {
-                      setTab("plan");
-                      setEditingArea({
-                        projectId: selected.id,
-                        area: m.id,
-                        title: m.name,
-                      });
-                    });
-                  }}
-                >
-                  <AreaIcon area={m.id} />
-                  <span>{m.name}</span>
-                </button>
-              ))}
+              .map(areaMenuButton)}
           </nav>
         </aside>
       )}
@@ -906,6 +926,15 @@ export default function Home() {
                   key={`${org}:${selected.id}`}
                   org={org}
                   projectId={selected.id}
+                  onOpenArea={(area) => {
+                    setEditingArea({
+                      projectId: selected.id,
+                      area,
+                      title: modules.find((m) => m.id === area)?.name ?? area,
+                      fromLibrary: true,
+                    });
+                    setTab("plan");
+                  }}
                 />
               )}
               {tab === "plan" && selected && !editingArea && (
@@ -951,6 +980,12 @@ export default function Home() {
                   key={`${org}:${editingArea.projectId}:${editingArea.area}`}
                   org={org}
                   {...editingArea}
+                  startEditing={editingArea.fromLibrary}
+                  documentTitle={
+                    editingArea.fromLibrary
+                      ? `${selected.name} — ${editingArea.title}`
+                      : undefined
+                  }
                   onClose={finishClose}
                   onCancelClose={() => {
                     pendingNavigation.current = null;
