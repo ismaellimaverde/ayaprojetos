@@ -22,6 +22,15 @@ test("BP menu uses local Montserrat and semantic icons without changing accessib
                 status: "active",
                 modules: allowed,
                 template_version: 1,
+                module_summaries: [
+                  {
+                    area: "executive",
+                    revision: 3,
+                    updated_at: "2026-11-04T12:34:56Z",
+                  },
+                  { area: "dna", revision: 1, updated_at: null },
+                  { area: "strategy", revision: 1, updated_at: "invalid" },
+                ],
               },
             ],
           },
@@ -39,6 +48,27 @@ test("BP menu uses local Montserrat and semantic icons without changing accessib
         .click();
     const nav = page.getByRole("navigation", { name: "Menu do projeto" });
     await page.evaluate(() => document.fonts.ready);
+    const timestamp = await page.evaluate(() =>
+      new Date("2026-11-04T12:34:56Z").toLocaleString("pt-BR"),
+    );
+    const card = (name: string) =>
+      page
+        .locator("section.module")
+        .filter({ has: page.getByRole("heading", { name, exact: true }) });
+    await expect(card("Resumo executivo").locator(".tag")).toHaveText(
+      `Última atualização: ${timestamp}`,
+    );
+    await expect(card("DNA, identidade e cultura").locator(".tag")).toHaveText(
+      "Última atualização: não informada",
+    );
+    await expect(card("Planejamento estratégico").locator(".tag")).toHaveText(
+      "Última atualização: não informada",
+    );
+    await expect(card("Mercado e inteligência").locator(".tag")).toHaveText(
+      "Ainda não preenchido",
+    );
+    await expect(page.getByText(/Informações salvas · revisão/)).toHaveCount(0);
+
     const frequent = nav.getByRole("group", { name: "Acessos frequentes" });
     await expect(frequent.getByRole("button")).toHaveText([
       "Biblioteca",

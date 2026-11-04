@@ -1,4 +1,5 @@
 "use client";
+import { updatedAtLabel } from "@/lib/document-metadata";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Modal } from "@/components/modal";
@@ -953,7 +954,11 @@ export default function Home() {
                             {selected.module_summaries?.find(
                               (s) => s.area === m.id,
                             )
-                              ? `Informações salvas · revisão ${selected.module_summaries.find((s) => s.area === m.id)!.revision}`
+                              ? updatedAtLabel(
+                                  selected.module_summaries.find(
+                                    (s) => s.area === m.id,
+                                  )?.updated_at,
+                                )
                               : "Ainda não preenchido"}
                           </span>
                           <button

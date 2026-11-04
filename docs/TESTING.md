@@ -202,3 +202,9 @@ The authenticated foundation test initially expected an item title as read-only 
 The corrected authenticated foundation test passed against isolated local data (2.2 minutes), including persisted field/item values after reopening, concurrent edits, permissions, invitation and session revocation. Six affected browser cases passed across targeted runs, including the 34 direct route/viewport combinations. ESLint and standalone TypeScript passed. No remote data or accounts were changed; publication remains pending approval.
 
 Final production build passed. Publication of this correction was subsequently authorized; remote deployment status is checked separately after push.
+
+## BP area-card last-update label — local
+
+Timestamp unit test and desktop/mobile area-card browser test passed. Coverage includes an actual recorded timestamp formatted in pt-BR/browser timezone, saved records with missing and invalid dates, unsaved areas, absence of the revision label, and existing restricted-area visibility. ESLint passed. Only display changed; no database or real-account operations. Publication pending approval.
+
+Production build including TypeScript passed. Publication subsequently authorized; remote deployment result is verified after push.

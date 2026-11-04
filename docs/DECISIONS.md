@@ -294,3 +294,9 @@ Inspection of published source 50b37ca found one shared ModuleEditor, so the pre
 All project area entry points now pass the same direct-edit option and document title. Existing edit/create permission and archived checks remain authoritative; read-only users still cannot edit. The shared heading includes the same semantic area icon/category, and Executive has a labeled content section and a bounded editing frame. Route-change focus now targets the new document-heading instead of the removed heading wrapper. Library return destination remains origin-aware; save/discard/cancel and source fields are preserved. No migration or production data change.
 
 Publication explicitly approved on 2026-11-04 for direct editing entry and shared document framing across all 17 areas. No migration, real-data operation or unrelated login diagnostic is included.
+
+## Area-card save metadata — local, publication pending
+
+Replaced the visible saved/revision pill on all BP area cards with Última atualização and the existing module_summaries.updated_at timestamp. Reuses the same pt-BR date/time formatter as Library and area documents, in the browser timezone. Unsaved areas remain Ainda não preenchido; a saved record with missing/invalid timestamp says Última atualização: não informada. Revision/history, stored values, permissions and API queries are unchanged. No migration or remote mutation.
+
+Publication of the tested last-update area-card label explicitly approved on 2026-11-04. No data, API, migration or unrelated login change is included.
