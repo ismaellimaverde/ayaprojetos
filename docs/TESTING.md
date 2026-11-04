@@ -192,3 +192,13 @@ Four affected browser cases passed: close/save/discard/cancel, independent menus
 No backend, schema, permissions or real-data changes. No dependency added. The reference images themselves were inspected by the parent, not this executor. No screenshots or test data are staged for publication.
 
 Final ESLint, TypeScript, production build and diff check passed. Publication of this tested visual batch was subsequently authorized; remote deployment verification follows the push.
+
+## Direct area route parity — local
+
+New browser matrix opens all 17 areas directly via workspace/project/area URLs at 1440 and 390 pixels, without visiting Library. It verifies source editors are available immediately where permitted, common document heading/category/icon, area description, recorded update timestamp, top-bar export and no horizontal overflow. It also checks view-only access exposes neither editors nor export. The matrix passed; direct Executive desktop and multi-field DNA mobile screenshots were inspected with synthetic content. Existing Library save/reopen/permissions, shared-field formatting/PDF, close confirmation and menu/long-PDF tests passed.
+
+The authenticated foundation test initially expected an item title as read-only text after reopening; direct editing now renders it as an input. Its assertion was corrected to check the persisted input value, matching the requested entry behavior. Production UI/version could not be inspected in this executor; conclusions about the previous mismatch are based on the published source and local routed UI, not assumptions about cache.
+
+The corrected authenticated foundation test passed against isolated local data (2.2 minutes), including persisted field/item values after reopening, concurrent edits, permissions, invitation and session revocation. Six affected browser cases passed across targeted runs, including the 34 direct route/viewport combinations. ESLint and standalone TypeScript passed. No remote data or accounts were changed; publication remains pending approval.
+
+Final production build passed. Publication of this correction was subsequently authorized; remote deployment status is checked separately after push.

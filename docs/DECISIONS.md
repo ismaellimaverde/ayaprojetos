@@ -286,3 +286,11 @@ The parent directly inspected both supplied screenshots and provided their hiera
 All 17 areas share the document composition: top navigation and permitted PDF export, Business Plan category, title, area-specific explanation, recorded update time and a centered content surface with semantic sections. Existing Archivo/Montserrat, AYA coral/black, separate rich fields, scroll frames, permissions and save/discard/cancel remain. The consolidated plan remains derived/read-only; area documents open the existing source editor. Export no longer closes an already-open consolidated reader. No schema change, migration, content conversion or production mutation.
 
 Publication explicitly approved on 2026-11-04 for the tested Library and shared 17-area visual organization. Scope excludes unrelated login diagnostics, data changes and migrations.
+
+## Direct area/editor parity — local correction, publication pending
+
+Inspection of published source 50b37ca found one shared ModuleEditor, so the previous document heading was not Library-only. However, its caller only enabled direct editing and project-qualified document titles for Library-origin navigation; other non-executive areas still opened a read surface. Previous visual validation emphasized Library and did not assert parity across all direct area URLs. No claim is made about the exact version loaded in the user's browser.
+
+All project area entry points now pass the same direct-edit option and document title. Existing edit/create permission and archived checks remain authoritative; read-only users still cannot edit. The shared heading includes the same semantic area icon/category, and Executive has a labeled content section and a bounded editing frame. Route-change focus now targets the new document-heading instead of the removed heading wrapper. Library return destination remains origin-aware; save/discard/cancel and source fields are preserved. No migration or production data change.
+
+Publication explicitly approved on 2026-11-04 for direct editing entry and shared document framing across all 17 areas. No migration, real-data operation or unrelated login diagnostic is included.

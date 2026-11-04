@@ -77,9 +77,6 @@ test("real password-only admin access, optional MFA, project creation, invitatio
     .click();
   const editorDialog = page.locator(".module-page");
   await editorDialog
-    .getByRole("button", { name: "Preencher informações" })
-    .click();
-  await editorDialog
     .getByRole("textbox", { name: /^Propósito/ })
     .fill("Planning persisted by E2E");
   await editorDialog.getByRole("button", { name: "Adicionar item" }).click();
@@ -111,11 +108,8 @@ test("real password-only admin access, optional MFA, project creation, invitatio
     editorDialog.getByRole("button", { name: "Histórico", exact: true }),
   ).toHaveCount(0);
   await expect(
-    editorDialog.getByText("Research evidence", { exact: true }),
-  ).toBeVisible();
-  await editorDialog
-    .getByRole("button", { name: "Editar informações" })
-    .click();
+    editorDialog.getByLabel("Título do item", { exact: true }),
+  ).toHaveValue("Research evidence");
   await editorDialog
     .getByRole("textbox", { name: /^Propósito/ })
     .fill("Unsaved local draft");

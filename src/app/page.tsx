@@ -276,7 +276,7 @@ export default function Home() {
   }, [org, tab, selected, editingArea]);
   useEffect(() => {
     const heading = document.querySelector<HTMLElement>(
-      editingArea ? ".module-page .heading h2" : "main h1",
+      editingArea ? ".module-page .document-heading h2" : "main h1",
     );
     heading?.focus({ preventScroll: true });
     document
@@ -980,12 +980,8 @@ export default function Home() {
                   key={`${org}:${editingArea.projectId}:${editingArea.area}`}
                   org={org}
                   {...editingArea}
-                  startEditing={editingArea.fromLibrary}
-                  documentTitle={
-                    editingArea.fromLibrary
-                      ? `${selected.name} — ${editingArea.title}`
-                      : undefined
-                  }
+                  startEditing
+                  documentTitle={`${selected.name} — ${editingArea.title}`}
                   onClose={finishClose}
                   onCancelClose={() => {
                     pendingNavigation.current = null;

@@ -84,9 +84,6 @@ test("shared toolbar targets separate fields, preserves legacy data, reopens for
   await page
     .getByRole("button", { name: "Acessar DNA, identidade e cultura" })
     .click();
-  await page
-    .getByRole("button", { name: "Editar informações", exact: true })
-    .click();
   const purpose = page.getByRole("textbox", { name: "Propósito", exact: true });
   const mission = page.getByRole("textbox", { name: "Missão", exact: true });
   await expect(purpose).toHaveText("Propósito original");
@@ -153,9 +150,6 @@ test("shared toolbar targets separate fields, preserves legacy data, reopens for
   expect(stored.items[0].period).toBe("2026");
   expect(stored.items[0].rich_text_v1).toContain("underline");
   await page.reload();
-  await page
-    .getByRole("button", { name: "Editar informações", exact: true })
-    .click();
   await expect(purpose.locator("strong")).toHaveText("Propósito original");
   await expect(mission.locator("em")).toHaveText("Missão original");
   await expect(item.locator("u")).toHaveText("Detalhe final");

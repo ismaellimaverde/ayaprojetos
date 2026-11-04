@@ -7,6 +7,7 @@ import {
   type ModuleItem,
 } from "@/lib/module-fields";
 import { updatedAtLabel } from "@/lib/document-metadata";
+import { AreaIcon } from "./area-icon";
 import { Modal } from "./modal";
 import { modules } from "@/lib/catalog";
 import {
@@ -288,7 +289,12 @@ export function ModuleEditor({
             )}
         </div>
         <header className="document-heading">
-          <span className="document-category">Business Plan</span>
+          <div className="document-identity">
+            <span className="library-icon">
+              <AreaIcon area={area} />
+            </span>
+            <span className="document-category">Business Plan</span>
+          </div>
           <h2 tabIndex={-1}>{documentTitle ?? title}</h2>
           <p className="muted">
             {modules.find((module) => module.id === area)?.description}
@@ -365,7 +371,8 @@ export function ModuleEditor({
                   }}
                 >
                   {summary ? (
-                    <section className="module-field-card">
+                    <section className="module-field-card executive-document-section">
+                      <h3>Resumo executivo</h3>
                       {editing ? (
                         <RichSummaryEditor
                           key={document.revision}

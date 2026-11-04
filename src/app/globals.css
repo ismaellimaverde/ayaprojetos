@@ -1637,3 +1637,34 @@ h3 {
     box-shadow: none;
   }
 }
+
+.document-identity {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+.document-identity .library-icon {
+  margin: 0;
+  width: 32px;
+  height: 32px;
+}
+.document-surface .executive-document-section > h3 {
+  margin: 0 0 16px;
+}
+/* Document framing applies to editable routes as well as Library readers. */
+.module-page .document-surface > .executive-document-section .summary-prose {
+  height: clamp(200px, calc(100svh - 620px), 560px);
+}
+@media (max-width: 650px) {
+  .module-page .document-surface > .executive-document-section .summary-prose {
+    height: 260px;
+  }
+}
+@media print {
+  .module-page .document-surface > .executive-document-section .summary-prose {
+    height: auto;
+    max-height: none;
+    overflow: visible;
+  }
+}
