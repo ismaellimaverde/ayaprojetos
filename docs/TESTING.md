@@ -140,3 +140,7 @@ Seven affected browser cases passed across the final targeted runs: submenu typo
 New submenu coverage verifies Montserrat 700, 19 distinct decorative icons, unchanged accessible names, desktop/mobile no horizontal overflow, and omission of unauthorized areas. Confirmation bounds are checked at 1440×900, 390×844, 320×480 and 844×390: outer dialog and inner panel share the same edges, width stays within the viewport, no horizontal overflow or nested shadow, and all three choices remain enabled. Desktop/mobile submenu and desktop/narrow-mobile/landscape dialog screenshots were inspected directly using synthetic fixtures. Published navigation defaults and structure are unchanged. No real accounts, content or production services were modified.
 
 Final ESLint, TypeScript, production build and git diff --check passed. Publication remains pending explicit approval; no commit or push was performed.
+
+## BP area-card icons — local, publication pending
+
+Extended the existing submenu browser test to verify all 17 card headings retain their accessible names, decorative icons and access buttons at 1440px and 390px; unauthorized cards remain absent. Targeted browser test, ESLint, TypeScript and diff check passed. Desktop/mobile screenshots inspected directly with synthetic data: original grid, descriptions, status and actions preserved. No backend changes; no production writes, commit or push.

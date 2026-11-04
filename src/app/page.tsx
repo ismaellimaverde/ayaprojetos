@@ -920,7 +920,10 @@ export default function Home() {
                       .filter((m) => selected.modules.includes(m.id))
                       .map((m) => (
                         <section className="panel module" key={m.id}>
-                          <h3>{m.name}</h3>
+                          <h3 className="module-title">
+                            <AreaIcon area={m.id} />
+                            <span>{m.name}</span>
+                          </h3>
                           <p className="muted subtle">{m.description}</p>
                           <span className="tag">
                             {selected.module_summaries?.find(

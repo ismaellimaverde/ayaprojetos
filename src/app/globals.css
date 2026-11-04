@@ -1356,3 +1356,18 @@ h3 {
   margin: 0;
   box-shadow: none;
 }
+
+.module-title {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  min-width: 0;
+}
+.module-title > svg {
+  flex: 0 0 18px;
+  margin-top: 2px;
+}
+.module-title > span {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}

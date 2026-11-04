@@ -40,6 +40,14 @@ test("BP menu uses local Montserrat and semantic icons without changing accessib
     const nav = page.getByRole("navigation", { name: "Menu do projeto" });
     await page.evaluate(() => document.fonts.ready);
     for (const m of modules) {
+      const heading = page.getByRole("heading", { name: m.name, exact: true });
+      await expect(heading).toHaveCount(1);
+      await expect(
+        heading.locator(`svg[data-area-icon="${m.id}"]`),
+      ).toHaveAttribute("aria-hidden", "true");
+      await expect(
+        page.getByRole("button", { name: `Acessar ${m.name}`, exact: true }),
+      ).toHaveCount(1);
       const button = nav.getByRole("button", { name: m.name, exact: true });
       await expect(button).toHaveCount(1);
       await expect(
@@ -71,6 +79,7 @@ test("BP menu uses local Montserrat and semantic icons without changing accessib
         () => document.documentElement.scrollWidth <= innerWidth,
       ),
     ).toBe(true);
+    await page.locator(".module").first().scrollIntoViewIfNeeded();
     await page.screenshot({
       path: testInfo.outputPath(`bp-menu-${width}.png`),
     });
@@ -89,4 +98,13 @@ test("BP menu uses local Montserrat and semantic icons without changing accessib
     }),
   ).toHaveCount(0);
   await expect(nav.locator("svg[data-area-icon]")).toHaveCount(3);
+  await expect(page.locator(".module-title svg[data-area-icon]")).toHaveCount(
+    1,
+  );
+  await expect(
+    page.getByRole("heading", {
+      name: "Financeiro e controladoria",
+      exact: true,
+    }),
+  ).toHaveCount(0);
 });

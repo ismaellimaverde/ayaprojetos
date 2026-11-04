@@ -240,3 +240,9 @@ User clarified that both navigation menus already work correctly. Kept the publi
 The save-before-close dialog had a 700px outer frame around a panel capped at 560px, creating an extra right-hand band. Matched the outer frame to the panel at up to 560px, with 16px viewport margins, matching corner radius and no nested shadow. This is scoped to that confirmation only. Save, discard, cancel and failed-save protection are unchanged. No database changes, production writes or publication in this batch.
 
 Publication approved specifically for BP submenu Montserrat/icons and the save-before-close frame correction. Existing dual-menu structure, collapse defaults, data and configuration remain unchanged. Unrelated login diagnostics are excluded.
+
+## BP area-card icons — local, publication pending
+
+Confirmed scope is the 17 Business Plan area cards, not project or indicator cards. Each area heading reuses the same decorative AreaIcon as its submenu entry, keeping its accessible name, description, status and access button. The grid and navigation remain unchanged; headings can wrap beside a fixed-size icon. No data or permission changes.
+
+Publication approved specifically for the tested icons in the 17 BP area cards. No other interface behavior, data or configuration is included.
