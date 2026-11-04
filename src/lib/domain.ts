@@ -1,6 +1,6 @@
 import { randomUUID, randomBytes, createHash } from "node:crypto";
 import type { PoolClient } from "pg";
-import { pool } from "./db";
+import { getPool } from "./db";
 import {
   modules,
   actions,
@@ -92,7 +92,7 @@ export async function inOrg<T>(
   fn: (c: PoolClient, admin: boolean) => Promise<T>,
 ): Promise<T> {
   idSchema.parse(org);
-  const c = await pool.connect();
+  const c = await getPool().connect();
   try {
     await c.query("BEGIN");
     if (
@@ -186,7 +186,7 @@ function fresh(actor: Actor) {
 }
 export async function listOrganizations(userId: string) {
   return (
-    await pool.query(
+    await getPool().query(
       "SELECT o.*,w.name AS workspace_name,m.role FROM boss_private.organizations o JOIN boss_private.workspaces w ON w.id=o.workspace_id JOIN boss_private.members m ON m.org_id=o.id WHERE m.user_id=$1 AND m.status='active' ORDER BY o.created_at",
       [userId],
     )
@@ -802,7 +802,7 @@ export async function execute(
 export const digest = (s: string) =>
   createHash("sha256").update(s).digest("hex");
 export async function acceptInvitation(token: string, userId: string) {
-  const c = await pool.connect();
+  const c = await getPool().connect();
   try {
     await c.query("BEGIN");
     const inv = (

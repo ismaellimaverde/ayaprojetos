@@ -1,4 +1,9 @@
-import { auth } from "@/lib/auth";
+import {
+  assertRuntimeAvailable,
+  RuntimeUnavailableError,
+  unavailableResponse,
+} from "@/lib/runtime-availability";
+import { getAuth } from "@/lib/auth";
 import {
   execute,
   listOrganizations,
@@ -6,7 +11,7 @@ import {
   acceptInvitation,
   digest,
 } from "@/lib/domain";
-import { pool } from "@/lib/db";
+import { getPool } from "@/lib/db";
 import { z } from "zod";
 import { mailConfiguration } from "@/lib/mail";
 export const runtime = "nodejs";
@@ -16,6 +21,7 @@ async function handler(
   ctx: { params: Promise<{ path: string[] }> },
 ) {
   try {
+    assertRuntimeAvailable();
     const { path } = await ctx.params;
     if (
       req.method !== "GET" &&
@@ -33,7 +39,7 @@ async function handler(
         })
         .parse(body);
       const inv = (
-        await pool.query(
+        await getPool().query(
           "UPDATE boss_private.invitations SET registration_attempts=registration_attempts+1 WHERE token_hash=$1 AND status='pending' AND expires_at>now() AND registration_attempts<3 RETURNING email",
           [digest(v.token)],
         )
@@ -42,7 +48,7 @@ async function handler(
       mailConfiguration();
       // Constant public result prevents account enumeration; signup cannot alter existing credentials.
       try {
-        await auth.api.signUpEmail({
+        await getAuth().api.signUpEmail({
           body: { name: v.name, email: inv.email, password: v.password },
         });
       } catch (error) {
@@ -58,7 +64,7 @@ async function handler(
           "Se necessário, confirme seu e-mail na mensagem de verificação. Depois entre para aceitar o convite.",
       });
     }
-    const session = await auth.api.getSession({ headers: req.headers });
+    const session = await getAuth().api.getSession({ headers: req.headers });
     if (!session) throw new DomainError(401, "Entre para continuar");
     if (path[0] === "me")
       return Response.json({
@@ -94,6 +100,7 @@ async function handler(
     );
     return Response.json(result, { headers: { "Cache-Control": "no-store" } });
   } catch (e) {
+    if (e instanceof RuntimeUnavailableError) return unavailableResponse();
     if (e instanceof DomainError)
       return Response.json({ message: e.message }, { status: e.status });
     if (e instanceof z.ZodError)

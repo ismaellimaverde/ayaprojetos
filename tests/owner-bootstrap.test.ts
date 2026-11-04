@@ -18,8 +18,10 @@ test("operator bootstrap preserves verification, password reset and optional MFA
   process.env.DATABASE_URL = url.toString();
   process.env.MAIL_MODE = "local";
   process.env.BETTER_AUTH_URL = "http://localhost:3200";
-  const { pool } = await import("../src/lib/db");
-  const { auth } = await import("../src/lib/auth");
+  const { getPool } = await import("../src/lib/db");
+  const pool = getPool();
+  const { getAuth } = await import("../src/lib/auth");
+  const auth = getAuth();
   const { inOrg } = await import("../src/lib/domain");
   const email = "operator-bootstrap@example.test";
   const origin = process.env.BETTER_AUTH_URL;

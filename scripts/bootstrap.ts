@@ -26,8 +26,10 @@ const control = new Pool(
   databaseConfig({ ...process.env, DATABASE_POOL_MAX: "1" }, url),
 );
 const c = await control.connect();
-const { pool } = await import("../src/lib/db");
-const { auth } = await import("../src/lib/auth");
+const { getPool } = await import("../src/lib/db");
+const pool = getPool();
+const { getAuth } = await import("../src/lib/auth");
+const auth = getAuth();
 let lock = false;
 try {
   const result = await c.query(

@@ -270,3 +270,11 @@ Document titles and PDF titles no longer append revision numbers. Library cards,
 Additional local menu request: Biblioteca, Áreas do projeto and authorized Resumo executivo are grouped at the top in Acessos frequentes, with a pale coral background and a distinct dark-theme surface. Other authorized areas remain alphabetic. Executive is not duplicated in the alphabetical list and is absent if access is not granted. Existing icons, Montserrat, selection/hover/focus, collapse controls and guarded navigation are preserved. Publication remains pending.
 
 Publication explicitly approved for the tested Library source editor, recorded update metadata, revision-free document titles, bounded document view and frequent-menu group. No migration or real-data mutation is included. Previous production verification remains a separate Netlify investigation; a failed preview is not production evidence.
+
+## Isolated visual previews — local correction, publication pending
+
+Netlify logs inspected by the authorized operator confirmed that preview page-data collection eagerly imported database/auth configuration and failed with DATABASE_URL is required. The operator also confirmed production published at 757b3d3fc66c1c2a7dbbddad6020f21b066c0f3f and inspected its interface; the preview failure did not mean production failed.
+
+Database and Better Auth instances now initialize only on runtime use, not route import during build. Existing identity, TLS, database-role, authentication and permission validation remains in effect. Hosted deploy-preview and branch-deploy contexts explicitly reject backend access with generic 503 responses even if credentials are accidentally present. Public signup remains forbidden. These previews are visual-only; an interactive preview requires a separately authorized isolated backend. No production secrets are copied, hosting settings changed or remote data accessed. This code correction remains local pending publication approval.
+
+Publication of the tested preview correction explicitly authorized on 2026-11-04. Scope is code and validation records only; preview backend remains disabled, with no credential, hosting-setting or database change. Deployment outcome must be verified separately after push.

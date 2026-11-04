@@ -104,3 +104,11 @@ Update: migration 003 was explicitly authorized and applied to BOSS on 2026-11-0
 Pending rich-editor/UI release needs no new environment variables or migrations. Tiptap packages are pinned and client-rendered; PDF uses the browser's print/Save as PDF facility. No external converter, uploaded font or paid service is introduced. Publish only after explicit approval of this release.
 
 Pending library/Archivo release also needs no database migration or new environment variables. Biblioteca reads existing private module_content rows through the authenticated BOSS API. Archivo 5.3.0 is bundled through Fontsource and served as local Next assets; no browser request to Google Fonts is required. Its license is included at /licenses/Archivo-OFL.txt. Publication remains unauthorized for this increment.
+
+## Visual deploy previews
+
+Route imports no longer require runtime database/auth secrets during Next build. Hosted CONTEXT=deploy-preview and CONTEXT=branch-deploy intentionally disable backend initialization and return generic 503/no-store from application APIs; the login page can render, but authentication and project data are not functional in that preview. This applies even if variables are accidentally inherited. Do not copy production database, mail or auth credentials into preview contexts. An interactive preview needs a separately approved isolated backend and an explicit change to this policy. Production validation, strict TLS and permissions remain unchanged.
+
+Authorized operator confirmed production commit 757b3d3fc66c1c2a7dbbddad6020f21b066c0f3f and its interface on 2026-11-04. The lazy-initialization correction described here is currently local and has not been published.
+
+Publication of the tested preview correction explicitly authorized on 2026-11-04. Scope is code and validation records only; preview backend remains disabled, with no credential, hosting-setting or database change. Deployment outcome must be verified separately after push.

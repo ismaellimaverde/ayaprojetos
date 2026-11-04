@@ -14,8 +14,10 @@ const testURL = new URL(process.env.DATABASE_URL!);
 testURL.pathname = "/boss_test";
 process.env.DATABASE_URL = testURL.toString();
 process.env.BETTER_AUTH_URL = "http://localhost:3000";
-const { pool } = await import("../src/lib/db");
-const { auth } = await import("../src/lib/auth");
+const { getPool } = await import("../src/lib/db");
+const pool = getPool();
+const { getAuth } = await import("../src/lib/auth");
+const auth = getAuth();
 const { execute, acceptInvitation, digest, projectAccess, inOrg } =
   await import("../src/lib/domain");
 const { profile, modules } = await import("../src/lib/catalog");

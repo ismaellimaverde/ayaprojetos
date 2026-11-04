@@ -172,3 +172,15 @@ The supplied Library image read returned metadata, caption/OCR and an asset poin
 Frequent-menu follow-up: submenu style/permission checks, five-width layout matrix, Library edit/reopen and two guarded navigation cases passed. The frequent group contains Biblioteca, Áreas do projeto, then authorized Resumo executivo; remaining areas stay alphabetic and Executive is never duplicated. An account restricted to finance sees only the two utility buttons in the group. Desktop/mobile screenshots were inspected; keyboard focus and the selected background remain distinct from the group background. The existing editor-frame test's ordering assertion was updated for the intentionally pinned Executive entry.
 
 Final verification for Library plus frequent-menu changes: 27 unit/integration tests and eight distinct affected browser cases passed across targeted runs. ESLint, TypeScript, production build and git diff --check passed. This local batch remains uncommitted/unpublished, with no migration or real-data change.
+
+## Preview import correction — local validation
+
+30 unit/integration tests passed. Three new isolated-process cases import API routes without runtime initialization and assert generic/no-store 503 responses, forbidden public signup and no pool creation. Preview cases also supply synthetic production-looking configuration to prove the context guard prevents backend initialization. Existing production validators and real local database tests remain active.
+
+A deploy-preview build with DATABASE_URL, BETTER_AUTH_URL and BETTER_AUTH_SECRET explicitly empty passed. The compiled application served login with 200; session and BOSS APIs returned 503/no-store; signup returned 403. Smoke checks used a dedicated local port after detecting an occupied port, without stopping another process. The dedicated server was stopped afterward. The real authenticated foundation browser test passed (2.2 minutes), covering password login, project creation, invitation, isolation and session revocation against isolated local test data. No production account, email or data was used.
+
+New UX references: Library returned metadata/captions and asset pointers for the two supplied images, not renderable pixels. One supported materialization attempt per original failed with `library file transfer failed: download failed`. No downloader bypass or repeated transfer attempted, and no screenshots were uploaded. Applying their precise layout remains pending inspectable pixels or a direct visual description from the parent executor; no claim of pixel inspection.
+
+Final verification: ESLint, TypeScript, normal production build and git diff --check passed. Preview correction remains local; no commit, push, deployment, credential change or migration was performed. Unrelated pre-existing login diagnostic changes were preserved outside this batch.
+
+Publication of the tested preview correction explicitly authorized on 2026-11-04. Scope is code and validation records only; preview backend remains disabled, with no credential, hosting-setting or database change. Deployment outcome must be verified separately after push.

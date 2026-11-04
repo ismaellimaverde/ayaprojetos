@@ -16,9 +16,11 @@ const url = new URL(process.env.DATABASE_URL!);
 url.pathname = "/boss_e2e";
 process.env.DATABASE_URL = url.toString();
 process.env.BETTER_AUTH_URL = "http://localhost:3100";
-const { pool } = await import("../src/lib/db");
+const { getPool } = await import("../src/lib/db");
+const pool = getPool();
 await migratePrivateDatabase(pool);
-const { auth } = await import("../src/lib/auth");
+const { getAuth } = await import("../src/lib/auth");
+const auth = getAuth();
 const password = randomBytes(24).toString("hex"),
   email = "e2e-owner@example.test";
 const u = await auth.api.signUpEmail({
