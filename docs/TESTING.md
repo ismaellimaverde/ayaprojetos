@@ -144,3 +144,15 @@ Final ESLint, TypeScript, production build and git diff --check passed. Publicat
 ## BP area-card icons — local, publication pending
 
 Extended the existing submenu browser test to verify all 17 card headings retain their accessible names, decorative icons and access buttons at 1440px and 390px; unauthorized cards remain absent. Targeted browser test, ESLint, TypeScript and diff check passed. Desktop/mobile screenshots inspected directly with synthetic data: original grid, descriptions, status and actions preserved. No backend changes; no production writes, commit or push.
+
+## Shared rich fields and compact project heading — local, publication pending
+
+26 unit/integration tests passed on isolated local databases, including round-trip storage across all 16 non-executive areas, untouched-field preservation, immutable original revisions, rich item descriptions, rejection of unsafe JSON/links, old-client downgrade protection, tenant isolation, permissions and existing export guards. No remote database or business account was used.
+
+Nine affected browser cases passed across targeted runs: real authenticated foundation workflow (including competing writes), shared-field formatting, executive close safeguards, executive bounded scrolling/full PDF, project navigation, revoked access, project settings, company/unit linkage, and responsive shared screens. One project-settings test initially clicked portfolio before asynchronous project restoration finished; it now waits for the restored project heading before navigating and passed on rerun. No navigation behavior was changed for that timing correction.
+
+The new browser case checks one toolbar, active selection across two fields, independent undo/redo, fonts and marks, invalid-field save blocking even after a valid update elsewhere, metadata separation, save/reload, mobile formatting, protected transition to Editar projeto, Biblioteca formatting and consolidated content. Actual PDF generation/pdftotext confirms the final line of a 90-line item; existing executive long-PDF test also passed. Desktop/mobile rich-field screenshots and compact project heading inspected directly with synthetic data. The removed redundant Business Plan card does not remove the project description; the relocated admin edit control retains a 44px target and exit confirmation.
+
+Limits: 10,000 plain-text characters per narrative field/item description; allowed rich nodes/styles only, not arbitrary HTML. Undo/redo is session-local per field. Titles, sources, periods and responsible-party metadata remain plain structured controls. Printing remains browser Save as PDF of saved revisions and retains the existing validated document size limits; exports are not silently truncated. No migration is needed, and no production mutation or publication was performed.
+
+Final ESLint (no warnings), TypeScript, production build and diff check passed. Changes remain local, uncommitted and unpublished pending approval.

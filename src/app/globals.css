@@ -1371,3 +1371,63 @@ h3 {
   min-width: 0;
   overflow-wrap: anywhere;
 }
+
+.rich-fields-scope {
+  display: grid;
+  gap: 18px;
+  min-width: 0;
+}
+.shared-rich-toolbar {
+  position: sticky;
+  top: 8px;
+  z-index: 2;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  background: var(--surface);
+  box-shadow: 0 4px 16px #1d1e2110;
+}
+.shared-rich-toolbar > p {
+  margin: 0 0 8px;
+}
+.module-page .rich-fields-scope .summary-prose {
+  min-height: 160px;
+  height: auto;
+  max-height: 440px;
+}
+@media (max-width: 650px) {
+  .shared-rich-toolbar {
+    top: 4px;
+    max-height: 42svh;
+    overflow: auto;
+  }
+}
+
+.project-title-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.project-title-row h1 {
+  margin: 0;
+}
+.project-title-row .project-edit-compact {
+  position: relative;
+  min-height: 44px;
+  padding: 8px 14px;
+  border: 0;
+  background: transparent;
+  z-index: 0;
+}
+.project-edit-compact::before {
+  content: "";
+  position: absolute;
+  inset: 5px 0;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  z-index: -1;
+}
+.project-edit-compact:hover::before {
+  background: #fbe5dd;
+}

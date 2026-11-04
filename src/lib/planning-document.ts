@@ -1,3 +1,4 @@
+import { fieldDocument, itemDocument, documentText } from "./rich-fields";
 import { modules } from "./catalog";
 import { moduleFields, type ModuleDocument } from "./module-fields";
 import { summaryFromLegacy, type SummaryDocument } from "./rich-summary";
@@ -18,12 +19,15 @@ export function areaDocument(
     content: [{ type: "text", text: value, marks: [{ type: "bold" }] }],
   });
   for (const field of moduleFields[area] ?? [])
-    if (document.fields[field.id]?.trim())
-      content.push(label(field.label), ...text(document.fields[field.id]));
+    if (documentText(fieldDocument(document.fields, field.id)).trim())
+      content.push(
+        label(field.label),
+        ...fieldDocument(document.fields, field.id).content,
+      );
   for (const item of document.items) {
     content.push(
       label(`${item.archived ? "Arquivado — " : ""}${item.title}`),
-      ...text(item.text),
+      ...itemDocument(item).content,
     );
     for (const [key, value] of [
       ["Fonte", item.source],

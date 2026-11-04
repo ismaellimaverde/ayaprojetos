@@ -358,6 +358,7 @@ export type ModuleItem = {
   id: string;
   title: string;
   text: string;
+  rich_text_v1?: string;
   source: string;
   period: string;
   responsible: string;

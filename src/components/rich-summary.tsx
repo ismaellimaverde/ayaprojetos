@@ -3,7 +3,17 @@ import { useEditor, EditorContent, useEditorState } from "@tiptap/react";
 import TextAlign from "@tiptap/extension-text-align";
 import StarterKit from "@tiptap/starter-kit";
 import { TextStyle, FontFamily, FontSize } from "@tiptap/extension-text-style";
-import { useState, type ReactNode } from "react";
+import {
+  useState,
+  useContext,
+  createContext,
+  useEffect,
+  useRef,
+  useId,
+  type ReactNode,
+} from "react";
+import type { Editor } from "@tiptap/react";
+import { parseRichField } from "@/lib/rich-fields";
 import {
   summaryFonts,
   summarySizes,
@@ -13,16 +23,90 @@ import {
   type SummaryDocument,
 } from "@/lib/rich-summary";
 
+type ActiveField = { id: string; label: string; editor: Editor };
+const RichFieldsContext = createContext<{
+  activate: (field: ActiveField) => void;
+  validity: (id: string, valid: boolean) => void;
+  remove: (id: string) => void;
+} | null>(null);
+
+export function RichFieldsScope({
+  children,
+  onValidity,
+  enabled,
+}: {
+  children: ReactNode;
+  onValidity: (valid: boolean) => void;
+  enabled: boolean;
+}) {
+  const [active, setActive] = useState<ActiveField | null>(null);
+  const invalid = useRef(new Set<string>());
+  const validity = (id: string, valid: boolean) => {
+    if (valid) invalid.current.delete(id);
+    else invalid.current.add(id);
+    onValidity(invalid.current.size === 0);
+  };
+  if (!enabled) return children;
+  return (
+    <RichFieldsContext.Provider
+      value={{
+        activate: setActive,
+        validity,
+        remove: (id) => {
+          setActive((a) => (a?.id === id ? null : a));
+          validity(id, true);
+        },
+      }}
+    >
+      <div
+        className="rich-fields-scope"
+        onFocusCapture={(event) => {
+          const target = event.target as HTMLElement;
+          if (
+            target.matches("input, textarea, select") &&
+            !target.closest(".shared-rich-toolbar")
+          )
+            setActive(null);
+        }}
+      >
+        <div className="shared-rich-toolbar">
+          <p className="subtle" role="status">
+            {active
+              ? `Formatando: ${active.label}`
+              : "Selecione um campo de texto para formatar."}
+          </p>
+          {active && !active.editor.isDestroyed && (
+            <RichToolbar
+              key={active.id}
+              editor={active.editor}
+              label="Formatação dos campos"
+            />
+          )}
+        </div>
+        {children}
+      </div>
+    </RichFieldsContext.Provider>
+  );
+}
+
 export function RichSummaryEditor({
   initial,
   onChange,
   onValidity,
+  label = "Resumo executivo",
+  describedBy,
+  field = false,
 }: {
   initial: SummaryDocument;
   onChange: (value: string) => void;
   onValidity: (valid: boolean) => void;
+  label?: string;
+  describedBy?: string;
+  field?: boolean;
 }) {
   const [error, setError] = useState("");
+  const shared = useContext(RichFieldsContext);
+  const id = useId();
   const editor = useEditor({
     immediatelyRender: false,
     extensions: [
@@ -47,26 +131,50 @@ export function RichSummaryEditor({
     editorProps: {
       attributes: {
         role: "textbox",
-        "aria-label": "Resumo executivo",
+        "aria-label": label,
+        ...(describedBy ? { "aria-describedby": describedBy } : {}),
         "aria-multiline": "true",
         class: "summary-prose",
       },
     },
+    onFocus: ({ editor }) => shared?.activate({ id, label, editor }),
     onUpdate: ({ editor }) => {
       const value = JSON.stringify(editor.getJSON());
       try {
-        parseSummary(value);
+        if (field) parseRichField(value);
+        else parseSummary(value);
         onChange(value);
         onValidity(true);
+        shared?.validity(id, true);
         setError("");
       } catch {
         onValidity(false);
+        shared?.validity(id, false);
         setError(
           "O texto contém formatação não suportada ou excede o limite. Desfaça a última alteração ou cole como texto simples antes de salvar.",
         );
       }
     },
   });
+  useEffect(
+    () => () => {
+      shared?.remove(id);
+    },
+    // Cleanup follows editor lifetime, not toolbar focus changes.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [id],
+  );
+  if (!editor) return <p>Carregando editor…</p>;
+  return (
+    <div className="summary-editor">
+      {!shared && <RichToolbar editor={editor} label="Formatação do resumo" />}
+      {error && <p role="alert">{error}</p>}
+      <EditorContent editor={editor} />
+    </div>
+  );
+}
+function RichToolbar({ editor, label }: { editor: Editor; label: string }) {
+  const [error, setError] = useState("");
   const state = useEditorState({
     editor,
     selector: ({ editor }) => ({
@@ -84,14 +192,10 @@ export function RichSummaryEditor({
       font: editor?.getAttributes("textStyle").fontFamily ?? "Arial",
     }),
   });
-  if (!editor || !state) return <p>Carregando editor…</p>;
+  if (!state) return null;
   return (
-    <div className="summary-editor">
-      <div
-        className="summary-toolbar"
-        role="group"
-        aria-label="Formatação do resumo"
-      >
+    <>
+      <div className="summary-toolbar" role="group" aria-label={label}>
         <label>
           Fonte
           <select
@@ -250,8 +354,7 @@ export function RichSummaryEditor({
         </button>
       </div>
       {error && <p role="alert">{error}</p>}
-      <EditorContent editor={editor} />
-    </div>
+    </>
   );
 }
 export function SummaryView({ value }: { value: SummaryDocument }) {

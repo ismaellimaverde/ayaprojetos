@@ -862,3 +862,115 @@ test("project library derives ordered documents without leaking restricted areas
     /Acesso/,
   );
 });
+
+test("all planning fields support rich content with isolated persistence, history and old-client protection", async () => {
+  const { moduleFields } = await import("../src/lib/module-fields");
+  const { richFieldKey, textDocument } = await import("../src/lib/rich-fields");
+  const areas = Object.keys(moduleFields).filter((a) => a !== "executive");
+  const project = await execute(actor(ownerId), org, "POST", ["projects"], {
+    name: "Rich fields test",
+    modules: areas,
+  });
+  for (const area of areas) {
+    const fields = moduleFields[area];
+    const path = ["module-content", project.id, area];
+    const legacy = Object.fromEntries(
+      fields.map((f) => [f.id, `Original ${f.label}`]),
+    );
+    const item = {
+      id: randomUUID(),
+      title: "Item",
+      text: "Original item",
+      source: "Source",
+      period: "2026",
+      responsible: "Team",
+      archived: false,
+    };
+    await execute(actor(ownerId), org, "POST", path, {
+      revision: 0,
+      fields: legacy,
+      items: [item],
+    });
+    const rich = JSON.stringify(textDocument("Formatted content"));
+    const next = { ...legacy, [richFieldKey(fields[0].id)]: rich };
+    const items = [{ ...item, rich_text_v1: rich }];
+    await execute(actor(ownerId), org, "POST", path, {
+      revision: 1,
+      fields: next,
+      items,
+    });
+    const current = (await execute(actor(ownerId), org, "GET", path, undefined))
+      .document;
+    assert.equal(current.fields[fields[0].id], "Formatted content");
+    assert.equal(current.fields[fields[1].id], legacy[fields[1].id]);
+    assert.equal(current.items[0].text, "Formatted content");
+    assert.equal(current.items[0].period, "2026");
+    const old = await execute(
+      actor(ownerId),
+      org,
+      "GET",
+      [...path, "history", "1"],
+      undefined,
+    );
+    assert.deepEqual(old.fields, legacy);
+    assert.equal(old.items[0].text, "Original item");
+    await assert.rejects(
+      execute(actor(ownerId), org, "POST", path, {
+        revision: 2,
+        fields: legacy,
+        items,
+      }),
+      /formato/,
+    );
+    await assert.rejects(
+      execute(actor(ownerId), org, "POST", path, {
+        revision: 2,
+        fields: next,
+        items: [item],
+      }),
+      /formato/,
+    );
+    const bad = JSON.stringify({
+      type: "doc",
+      content: [
+        {
+          type: "paragraph",
+          content: [
+            {
+              type: "text",
+              text: "x",
+              marks: [{ type: "link", attrs: { href: "javascript:alert(1)" } }],
+            },
+          ],
+        },
+      ],
+    });
+    await assert.rejects(
+      execute(actor(ownerId), org, "POST", path, {
+        revision: 2,
+        fields: { ...next, [richFieldKey(fields[0].id)]: bad },
+        items,
+      }),
+      /Formato/,
+    );
+    await assert.rejects(
+      execute(actor(ownerId), org, "POST", path, {
+        revision: 2,
+        fields: next,
+        items: [{ ...item, rich_text_v1: bad }],
+      }),
+      /Formato/,
+    );
+    await assert.rejects(
+      execute(actor(ownerId), other, "GET", path, undefined),
+    );
+    await assert.rejects(
+      execute(actor(memberId), org, "POST", path, {
+        revision: 2,
+        fields: next,
+        items,
+      }),
+      /Acesso/,
+    );
+  }
+});

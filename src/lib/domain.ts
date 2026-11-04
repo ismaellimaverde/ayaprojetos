@@ -10,6 +10,7 @@ import {
 } from "./catalog";
 import { z } from "zod";
 import { moduleFields, type ModuleItem } from "./module-fields";
+import { richFieldKey, parseRichField, documentText } from "./rich-fields";
 import { SUMMARY_KEY, parseSummary } from "./rich-summary";
 import { hasPlanningContent } from "./planning-document";
 import { deliver, deliveryStatus } from "./mail";
@@ -300,6 +301,7 @@ export async function execute(
           id: z.uuid(),
           title: z.string().trim().min(1).max(160),
           text: z.string().max(10000),
+          rich_text_v1: z.string().max(1000000).optional(),
           source: z.string().max(500),
           period: z.string().max(100),
           responsible: z.string().max(160),
@@ -316,12 +318,21 @@ export async function execute(
         .parse(body);
       const fieldIds = new Set(moduleFields[sub].map((f) => f.id));
       if (sub === "executive") fieldIds.add(SUMMARY_KEY);
+      else
+        for (const field of moduleFields[sub])
+          fieldIds.add(richFieldKey(field.id));
       for (const [key, value] of Object.entries(v.fields)) {
         if (key === SUMMARY_KEY && sub === "executive") {
           try {
             parseSummary(value);
           } catch {
             throw new DomainError(400, "Formato do resumo inválido");
+          }
+        } else if (sub !== "executive" && key.startsWith("rich_field_v1:")) {
+          try {
+            parseRichField(value);
+          } catch {
+            throw new DomainError(400, "Formato do campo inválido");
           }
         } else if (value.length > 10000)
           throw new DomainError(400, "Campo excede o limite");
@@ -334,6 +345,15 @@ export async function execute(
           400,
           "Campos ou identificadores de itens inválidos",
         );
+      for (const item of v.items) {
+        if (item.rich_text_v1) {
+          try {
+            item.text = documentText(parseRichField(item.rich_text_v1));
+          } catch {
+            throw new DomainError(400, "Formato da descrição inválido");
+          }
+        }
+      }
       const old = (
         await c.query(
           "SELECT revision,fields,items FROM boss_private.module_content WHERE org_id=$1 AND project_id=$2 AND area=$3 FOR UPDATE",
@@ -363,6 +383,29 @@ export async function execute(
           [SUMMARY_KEY]: v.fields[SUMMARY_KEY],
         };
         v.items = old?.items ?? [];
+      }
+      if (sub !== "executive") {
+        // Never allow an older client to silently overwrite formatted content.
+        for (const field of moduleFields[sub]) {
+          const key = richFieldKey(field.id);
+          if (old?.fields?.[key] && !v.fields[key])
+            throw new DomainError(
+              409,
+              "O formato desta área foi atualizado. Recarregue antes de salvar.",
+            );
+          if (v.fields[key])
+            v.fields[field.id] = documentText(parseRichField(v.fields[key]));
+        }
+        for (const item of old?.items ?? []) {
+          if (
+            item.rich_text_v1 &&
+            !v.items.find((i) => i.id === item.id)?.rich_text_v1
+          )
+            throw new DomainError(
+              409,
+              "O formato desta área foi atualizado. Recarregue antes de salvar.",
+            );
+        }
       }
       const previous: ModuleItem[] = old?.items ?? [];
       if (previous.some((i) => !v.items.some((n) => n.id === i.id)))

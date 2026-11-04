@@ -669,7 +669,26 @@ export default function Home() {
                 {orgs.find((o) => o.id === org)?.name ?? "BEM-VINDO"} /{" "}
                 {tab === "users" ? "ADMINISTRAÇÃO" : "ESPAÇO DE GESTÃO"}
               </div>
-              <h1 tabIndex={-1}>{titles[tab]}</h1>
+              <div className="project-title-row">
+                <h1 tabIndex={-1}>{titles[tab]}</h1>
+                {data.admin &&
+                  selected &&
+                  ["plan", "library"].includes(tab) && (
+                    <button
+                      type="button"
+                      className="btn secondary project-edit-compact"
+                      onClick={() =>
+                        navigate(() => {
+                          setEditingArea(null);
+                          setEdit(selected);
+                          setModal("project");
+                        })
+                      }
+                    >
+                      Editar projeto
+                    </button>
+                  )}
+              </div>
               {["plan", "library"].includes(tab) ? (
                 selected?.description?.trim() ? (
                   <p className="muted module-text">{selected.description}</p>
@@ -891,30 +910,6 @@ export default function Home() {
               )}
               {tab === "plan" && selected && !editingArea && (
                 <>
-                  <div className="panel" style={{ marginBottom: 24 }}>
-                    <div className="heading">
-                      <div style={{ minWidth: 0 }}>
-                        <h2>Business Plan</h2>
-                        <p className="muted module-text">
-                          {selected.description ||
-                            "Uma estrutura viva para construir o negócio."}
-                        </p>
-                      </div>
-                      {data.admin && (
-                        <div className="row">
-                          <button
-                            className="btn secondary"
-                            onClick={() => {
-                              setEdit(selected);
-                              setModal("project");
-                            }}
-                          >
-                            Editar projeto
-                          </button>
-                        </div>
-                      )}
-                    </div>
-                  </div>
                   <div className="grid">
                     {modules
                       .filter((m) => selected.modules.includes(m.id))

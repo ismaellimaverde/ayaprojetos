@@ -121,6 +121,9 @@ test("project form hides technical settings and preserves nondefault values on e
   expect(writes[1].timezone).toBe("America/New_York");
   project.description = "   ";
   await page.reload();
+  await expect(
+    page.getByRole("heading", { name: project.name, exact: true }),
+  ).toBeVisible();
   await page
     .getByRole("button", { name: "Visão do portfólio", exact: true })
     .click();

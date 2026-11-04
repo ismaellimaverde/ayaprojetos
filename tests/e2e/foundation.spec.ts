@@ -87,12 +87,12 @@ test("real password-only admin access, optional MFA, project creation, invitatio
     .getByLabel("Título do item", { exact: true })
     .fill("Research evidence");
   await editorDialog
-    .getByLabel("Descrição do item", { exact: true })
+    .getByRole("textbox", { name: "Descrição do item 1", exact: true })
     .fill("Documented customer interviews");
   await editorDialog
     .getByRole("button", { name: "Salvar informações" })
     .click();
-  await expect(editorDialog.getByRole("status")).toContainText(
+  await expect(editorDialog.locator("[role=status].notice")).toContainText(
     "Informações salvas",
   );
   await editorDialog.getByRole("button", { name: "Fechar área" }).click();
@@ -139,7 +139,19 @@ test("real password-only admin access, optional MFA, project creation, invitatio
     headers: { origin: "http://localhost:3100", "x-organization-id": f.org },
     data: {
       revision: saved.revision,
-      fields: { purpose: "Concurrent saved content" },
+      fields: {
+        ...saved.fields,
+        purpose: "Concurrent saved content",
+        "rich_field_v1:purpose": JSON.stringify({
+          type: "doc",
+          content: [
+            {
+              type: "paragraph",
+              content: [{ type: "text", text: "Concurrent saved content" }],
+            },
+          ],
+        }),
+      },
       items: saved.items,
     },
   });
@@ -147,12 +159,12 @@ test("real password-only admin access, optional MFA, project creation, invitatio
   await editorDialog
     .getByRole("button", { name: "Salvar informações" })
     .click();
-  await expect(editorDialog.getByRole("status")).toContainText(
+  await expect(editorDialog.locator("[role=status].notice")).toContainText(
     "Outra pessoa atualizou",
   );
   await expect(
     editorDialog.getByRole("textbox", { name: /^Propósito/ }),
-  ).toHaveValue("Unsaved local draft");
+  ).toHaveText("Unsaved local draft");
   await page.setViewportSize({ width: 390, height: 844 });
   expect(
     await editorDialog.evaluate((el) => el.scrollWidth <= el.clientWidth),
@@ -230,7 +242,7 @@ test("real password-only admin access, optional MFA, project creation, invitatio
   await editorDialog
     .getByRole("button", { name: "Salvar informações" })
     .click();
-  await expect(editorDialog.getByRole("status")).toContainText(
+  await expect(editorDialog.locator("[role=status].notice")).toContainText(
     "Informações salvas",
   );
   await editorDialog.getByRole("button", { name: "Fechar área" }).click();
