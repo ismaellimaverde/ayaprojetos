@@ -132,3 +132,11 @@ Measured BOSS allocation at 1440px: expanded 246px primary + 230px contextual + 
 After the user approved structural adaptation, seven affected browser cases passed across two runs: editor frame/complete PDF, five-width layout matrix, selection/hover/focus, navigation, revoked-access fallback, editor-close choices and shared desktop/mobile screens. Primary rail defaults compact on project pages and measured workspace width is viewport minus 298px above 900px. Both expanded/collapsed combinations remain tested. Synthetic desktop/mobile screenshots were inspected directly; they do not constitute production evidence. Lint and TypeScript passed. No database schema or authorization changes were made.
 
 Final production build and git diff --check passed for the approved structural adaptation. Changes remain local; no commit, push, migration or deployment was performed.
+
+## BP submenu and close-dialog frame — 2026-11-04 (local)
+
+Seven affected browser cases passed across the final targeted runs: submenu typography/icons, close choices and failure handling, editor scrolling/full PDF, independent layout/collapse matrix, hover/selection/focus, guarded navigation, and revoked-project fallback. The first new submenu test incorrectly asserted focus-visible after a mouse interaction; corrected the test to enter keyboard modality with Tab, then verified the visible outline. No application focus behavior was changed.
+
+New submenu coverage verifies Montserrat 700, 19 distinct decorative icons, unchanged accessible names, desktop/mobile no horizontal overflow, and omission of unauthorized areas. Confirmation bounds are checked at 1440×900, 390×844, 320×480 and 844×390: outer dialog and inner panel share the same edges, width stays within the viewport, no horizontal overflow or nested shadow, and all three choices remain enabled. Desktop/mobile submenu and desktop/narrow-mobile/landscape dialog screenshots were inspected directly using synthetic fixtures. Published navigation defaults and structure are unchanged. No real accounts, content or production services were modified.
+
+Final ESLint, TypeScript, production build and git diff --check passed. Publication remains pending explicit approval; no commit or push was performed.

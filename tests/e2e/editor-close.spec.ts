@@ -103,6 +103,36 @@ test("editor close always offers save, discard and cancel and waits for successf
   await editor.fill("Rascunho descartável");
   await close();
   await expect(page.getByRole("alertdialog")).toBeVisible();
+  for (const [width, height] of [
+    [1440, 900],
+    [390, 844],
+    [320, 480],
+    [844, 390],
+  ]) {
+    await page.setViewportSize({ width, height });
+    const bounds = await page.getByRole("dialog").boundingBox();
+    const panel = await page.getByRole("alertdialog").boundingBox();
+    expect(Math.abs(bounds!.x - panel!.x)).toBeLessThanOrEqual(1);
+    expect(Math.abs(bounds!.width - panel!.width)).toBeLessThanOrEqual(1);
+    expect(bounds!.width).toBeLessThanOrEqual(Math.min(560, width - 32));
+    expect(
+      await page
+        .getByRole("dialog")
+        .evaluate((el) => el.scrollWidth <= el.clientWidth),
+    ).toBe(true);
+    expect(
+      await page
+        .getByRole("alertdialog")
+        .evaluate((el) => getComputedStyle(el).boxShadow),
+    ).toBe("none");
+    for (const name of ["Salvar e fechar", "Não salvar", "Cancelar"])
+      await expect(
+        page.getByRole("button", { name, exact: true }),
+      ).toBeEnabled();
+    await page.screenshot({ path: `/tmp/boss-close-frame-${width}.png` });
+  }
+  await page.setViewportSize({ width: 1280, height: 720 });
+
   await page.getByRole("button", { name: "Cancelar", exact: true }).click();
   await expect(editor).toHaveText("Rascunho descartável");
   await close();

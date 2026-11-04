@@ -1169,8 +1169,9 @@ h3 {
 }
 .area-sidebar nav button {
   justify-content: flex-start;
-  font-family: "Archivo Variable", sans-serif;
-  font-weight: 500;
+  font-family: "Montserrat", "Archivo Variable", sans-serif;
+  font-weight: 700;
+  gap: 8px;
   white-space: normal;
   overflow-wrap: anywhere;
   border: 0;
@@ -1337,4 +1338,21 @@ h3 {
   .workspace-shell .topbar {
     padding: 10px 14px;
   }
+}
+
+.area-sidebar nav button > span {
+  min-width: 0;
+  text-align: left;
+}
+
+/* Confirmation frame must end at the same edge as its content panel. */
+.boss-dialog:has(> .editor-close-prompt) {
+  width: min(560px, calc(100vw - 32px));
+  border-radius: 26px;
+}
+.shell .boss-dialog > .editor-close-prompt {
+  width: 100%;
+  max-width: none;
+  margin: 0;
+  box-shadow: none;
 }

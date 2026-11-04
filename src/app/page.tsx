@@ -7,6 +7,7 @@ import {
   ModuleEditor,
   type ModuleEditorHandle,
 } from "@/components/module-editor";
+import { AreaIcon } from "@/components/area-icon";
 import { Brand } from "@/components/brand";
 import { ProjectAffiliation } from "@/components/project-affiliation";
 import {
@@ -542,7 +543,8 @@ export default function Home() {
                 })
               }
             >
-              Áreas do projeto
+              <AreaIcon area="overview" />
+              <span>Áreas do projeto</span>
             </button>
             <button
               className={`btn ${tab === "library" ? "" : "secondary"}`}
@@ -554,7 +556,8 @@ export default function Home() {
                 })
               }
             >
-              Biblioteca
+              <AreaIcon area="library" />
+              <span>Biblioteca</span>
             </button>
             {modules
               .filter((m) => selected.modules.includes(m.id))
@@ -576,7 +579,8 @@ export default function Home() {
                     });
                   }}
                 >
-                  {m.name}
+                  <AreaIcon area={m.id} />
+                  <span>{m.name}</span>
                 </button>
               ))}
           </nav>

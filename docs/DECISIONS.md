@@ -232,3 +232,11 @@ BOSS primary navigation now uses its own graphite #1D1E21 surface with white ico
 Reduced project-heading and metadata spacing and placed PDF guidance beside its button where width permits. All controls and instructions remain available. At 1440px the default workspace column grows from 964px (both menus expanded) to 1142px; the user can still expand the primary menu or collapse either menu independently. Editor scroll, full PDF, permissions, direct addresses and protected exit are preserved. This visual refinement is not evidence that yesterday's production deployment was missing: production commit/session verification remains blocked separately. No push, deploy or migration is authorized for this new refinement yet.
 
 Publication approved for the tested compact graphite primary navigation, independent contextual menu and increased editor space. This release includes only the approved layout, supporting tests and documentation; the unrelated login diagnostic remains excluded. No database, data, account or infrastructure change is included.
+
+## BP menu typography/icons and confirmation frame — 2026-11-04 (local, publication pending)
+
+User clarified that both navigation menus already work correctly. Kept the published structure, default collapse behavior and independent controls unchanged; discarded the initial uncommitted navigation adjustment. BP area labels now use the existing locally hosted Montserrat 700 font and distinct semantic Lucide icons (17 areas plus overview and Library). Icons are decorative for assistive technology; authorized labels and filtering remain unchanged. Archivo and original logos are preserved elsewhere.
+
+The save-before-close dialog had a 700px outer frame around a panel capped at 560px, creating an extra right-hand band. Matched the outer frame to the panel at up to 560px, with 16px viewport margins, matching corner radius and no nested shadow. This is scoped to that confirmation only. Save, discard, cancel and failed-save protection are unchanged. No database changes, production writes or publication in this batch.
+
+Publication approved specifically for BP submenu Montserrat/icons and the save-before-close frame correction. Existing dual-menu structure, collapse defaults, data and configuration remain unchanged. Unrelated login diagnostics are excluded.
