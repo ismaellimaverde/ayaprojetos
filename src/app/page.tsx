@@ -126,7 +126,6 @@ export default function Home() {
   const [areaCollapseChoice, setAreaCollapseChoice] = useState<boolean | null>(
     null,
   );
-  const mainCollapsed = mainCollapseChoice ?? compact;
   const areasCollapsed = areaCollapseChoice ?? compact;
 
   const [editingArea, setEditingArea] = useState<{
@@ -170,6 +169,9 @@ export default function Home() {
     [busy, setBusy] = useState(true),
     [dark, setDark] = useState(false),
     [query, setQuery] = useState("");
+  const mainCollapsed =
+    mainCollapseChoice ??
+    (compact || (selected !== null && ["plan", "library"].includes(tab)));
   const [users, setUsers] = useState<User[]>([]),
     [invites, setInvites] = useState<Invitation[]>([]),
     [grants, setGrants] = useState<Grant[]>([]),

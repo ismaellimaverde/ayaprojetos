@@ -69,6 +69,9 @@ test("dual menus collapse without losing drafts and long text scrolls internally
     exact: true,
   });
   await expect(editor).toBeVisible();
+  await page
+    .getByRole("button", { name: "Expandir menu principal", exact: true })
+    .click();
   const areaNav = page.getByRole("navigation", { name: "Menu do projeto" });
   expect(
     (await areaNav.getByRole("button").allTextContents()).slice(2),

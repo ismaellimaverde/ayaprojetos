@@ -1269,3 +1269,72 @@ h3 {
     overflow: visible !important;
   }
 }
+
+/* Approved structural reference: dark global rail, light contextual navigation, open work canvas. */
+.workspace-shell .primary-sidebar {
+  background: #1d1e21;
+  color: #ffffff;
+  border-right-color: #393b42;
+}
+.primary-sidebar .menu-collapse {
+  background: #292b30;
+  color: #ffffff;
+  border-color: #646873;
+}
+.primary-sidebar button:focus-visible,
+.primary-sidebar a:focus-visible {
+  outline-color: #ef9c83;
+}
+.primary-sidebar nav button.active,
+.primary-sidebar nav button[aria-current="page"],
+.primary-sidebar nav button:hover {
+  color: #1d1e21;
+}
+.workspace-shell .area-sidebar {
+  background: var(--surface);
+  border-right: 1px solid var(--line);
+}
+.workspace-shell .topbar {
+  min-height: 64px;
+  padding: 10px 20px;
+}
+.workspace-shell .project-page {
+  padding: 20px 24px;
+}
+.project-page > .heading {
+  margin-bottom: 16px;
+}
+.project-page > .heading h1 {
+  font-size: 28px;
+  line-height: 1.25;
+  margin: 4px 0;
+}
+.project-page > .heading p {
+  margin: 6px 0 0;
+}
+.module-page .summary-export {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px 12px;
+  margin-bottom: 10px;
+}
+.module-page .summary-export p {
+  margin: 0;
+  max-width: 400px;
+}
+.module-page form {
+  margin-top: 10px;
+  gap: 12px;
+}
+.module-page form > p {
+  margin: 0;
+}
+@media (max-width: 900px) {
+  .workspace-shell .project-page {
+    padding: 18px 14px;
+  }
+  .workspace-shell .topbar {
+    padding: 10px 14px;
+  }
+}
