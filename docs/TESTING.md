@@ -184,3 +184,11 @@ New UX references: Library returned metadata/captions and asset pointers for the
 Final verification: ESLint, TypeScript, normal production build and git diff --check passed. Preview correction remains local; no commit, push, deployment, credential change or migration was performed. Unrelated pre-existing login diagnostic changes were preserved outside this batch.
 
 Publication of the tested preview correction explicitly authorized on 2026-11-04. Scope is code and validation records only; preview backend remains disabled, with no credential, hosting-setting or database change. Deployment outcome must be verified separately after push.
+
+## Shared document hierarchy — local, publication pending
+
+Four affected browser cases passed: close/save/discard/cancel, independent menus and executive long-text/PDF, shared rich fields with separate values and full PDF, and Library edit/save/reopen/read-only permissions/actual timestamps/full consolidated PDF. The first Library run detected the taller header pushing the reader below the tested viewport; its internal height was reduced and the full Library test passed on rerun. Added assertions for semantic card icons, section heading, top-bar export placement and update metadata. Desktop (1440px) and mobile (390px) Library screenshots plus document/editor screenshots were inspected directly with synthetic data. No horizontal overflow at those widths; the consolidated scroll frame stays within the 900px tested viewport and PDF retains its last line. Small screens may still scroll the surrounding controls; document length stays internally bounded.
+
+No backend, schema, permissions or real-data changes. No dependency added. The reference images themselves were inspected by the parent, not this executor. No screenshots or test data are staged for publication.
+
+Final ESLint, TypeScript, production build and diff check passed. Publication of this tested visual batch was subsequently authorized; remote deployment verification follows the push.

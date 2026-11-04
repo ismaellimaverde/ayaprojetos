@@ -1442,7 +1442,7 @@ h3 {
   padding: 16px;
 }
 .library-workspace .summary-prose {
-  height: clamp(200px, calc(100svh - 390px), 680px);
+  height: clamp(200px, calc(100svh - 480px), 680px);
   min-height: 200px;
   overflow: auto;
   overscroll-behavior: contain;
@@ -1457,7 +1457,7 @@ h3 {
 
 @media screen and (max-width: 650px) {
   .library-workspace .summary-prose {
-    height: clamp(200px, calc(100svh - 650px), 440px);
+    height: clamp(200px, calc(100svh - 730px), 440px);
   }
 }
 
@@ -1474,4 +1474,166 @@ h3 {
 .dark .area-frequent {
   background: #343033;
   border-color: #ef9c8366;
+}
+
+/* Shared document composition: Library and every Business Plan area. */
+.document-topbar,
+.document-location {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px 16px;
+  min-width: 0;
+}
+.document-topbar {
+  justify-content: space-between;
+  padding-bottom: 14px;
+  border-bottom: 1px solid var(--line);
+  margin-bottom: 24px;
+}
+.document-breadcrumb {
+  font-size: 12px;
+  color: var(--muted);
+  overflow-wrap: anywhere;
+}
+.document-heading {
+  width: 100%;
+  max-width: 1120px;
+  margin: 0 auto 20px;
+  min-width: 0;
+}
+.document-heading h2 {
+  font-size: clamp(24px, 2.5vw, 34px);
+  line-height: 1.2;
+  margin: 10px 0;
+  overflow-wrap: anywhere;
+}
+.document-heading > p {
+  margin: 8px 0;
+}
+.document-category {
+  display: inline-block;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.document-metadata {
+  padding-top: 10px;
+  border-top: 1px solid var(--line);
+}
+.module-page .document-topbar .summary-export {
+  margin: 0;
+}
+.module-page .document-surface,
+.library-workspace .library-document {
+  width: 100%;
+  max-width: 1120px;
+  margin-left: auto;
+  margin-right: auto;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 20px;
+  padding: 20px;
+  box-shadow: 0 8px 30px #1d1e2105;
+  min-width: 0;
+}
+.document-surface .module-field-card {
+  border: 0;
+  box-shadow: none;
+  border-radius: 0;
+  padding: 12px 0;
+}
+.document-surface .module-field-card + .module-field-card {
+  border-top: 1px solid var(--line);
+}
+.library-heading {
+  max-width: none;
+  margin-bottom: 0;
+}
+.library-index .library-complete {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px 32px;
+  padding: 28px;
+  background: linear-gradient(120deg, #fff1eb, #ffd5bb);
+  color: #1d1e21;
+}
+.library-complete .muted {
+  color: #424349;
+}
+.library-feature-copy {
+  flex: 1 1 280px;
+  min-width: 0;
+}
+.library-feature-copy h3 {
+  margin: 8px 0;
+  font-size: 26px;
+}
+.library-feature-copy p {
+  margin: 0;
+  max-width: 620px;
+}
+.library-icon {
+  display: flex;
+  width: 40px;
+  height: 40px;
+  align-items: center;
+  justify-content: center;
+  border-radius: 12px;
+  background: #fbe5dd;
+  color: #1d1e21;
+  margin-bottom: 12px;
+}
+.library-section-title {
+  margin: 10px 0 0;
+}
+.library-area-card {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+}
+.library-area-card h3 {
+  margin: 8px 0;
+}
+.library-area-card > .row {
+  margin-top: auto;
+  padding-top: 16px;
+  width: 100%;
+}
+.library-area-card .subtle {
+  margin: 4px 0 12px;
+}
+@media (max-width: 650px) {
+  .document-topbar {
+    margin-bottom: 18px;
+  }
+  .document-location {
+    align-items: flex-start;
+  }
+  .module-page .document-surface,
+  .library-workspace .library-document {
+    padding: 12px;
+    border-radius: 16px;
+  }
+  .library-index .library-complete {
+    padding: 20px;
+  }
+  .library-feature-actions {
+    width: 100%;
+  }
+  .library-feature-actions .btn {
+    width: 100%;
+  }
+}
+@media print {
+  .document-topbar {
+    display: none;
+  }
+  .document-surface {
+    border: 0;
+    box-shadow: none;
+  }
 }

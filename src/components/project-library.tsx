@@ -10,6 +10,7 @@ import {
 } from "@/lib/planning-document";
 import type { SummaryDocument } from "@/lib/rich-summary";
 import { printSummary } from "@/lib/print-summary";
+import { AreaIcon } from "./area-icon";
 import { SummaryView } from "./rich-summary";
 export function ProjectLibrary({
   org,
@@ -52,7 +53,7 @@ export function ProjectLibrary({
   async function open(area: string | undefined, exportPDF = false) {
     setBusy(true);
     setMessage("");
-    setOpened(null);
+    if (!exportPDF) setOpened(null);
     try {
       let content: SummaryDocument;
       let title: string;
@@ -93,42 +94,58 @@ export function ProjectLibrary({
         className="library-workspace"
         aria-label="Documento da Biblioteca"
       >
-        <div className="heading">
-          <div>
-            <h2>{opened.title}</h2>
-            <p className="muted subtle">{updatedAtLabel(opened.updatedAt)}</p>
+        <div className="document-topbar">
+          <div className="document-location">
+            <button className="btn secondary" onClick={() => setOpened(null)}>
+              Fechar documento
+            </button>
+            <span className="document-breadcrumb">
+              Biblioteca / Business Plan
+            </span>
           </div>
-          <button className="btn secondary" onClick={() => setOpened(null)}>
-            Fechar documento
-          </button>
+          {documents.every((d) => d.can_export) && (
+            <button
+              className="btn secondary"
+              disabled={busy}
+              onClick={() => open(undefined, true)}
+            >
+              Exportar Business Plan em PDF
+            </button>
+          )}
         </div>
-        {documents.every((d) => d.can_export) && (
-          <button
-            className="btn secondary"
-            disabled={busy}
-            onClick={() => open(undefined, true)}
-          >
-            Exportar Business Plan em PDF
-          </button>
+        <header className="document-heading">
+          <span className="document-category">Business Plan</span>
+          <h2>{opened.title}</h2>
+          <p className="muted">
+            Documento consolidado. Para alterar seu conteúdo, abra a área
+            correspondente na Biblioteca.
+          </p>
+          <p className="muted subtle document-metadata">
+            {updatedAtLabel(opened.updatedAt)}
+          </p>
+        </header>
+        {message && (
+          <p role="status" className="notice">
+            {message}
+          </p>
         )}
-        <p className="muted subtle">
-          Documento consolidado. Para alterar seu conteúdo, abra a área
-          correspondente na Biblioteca.
-        </p>
         <article className="panel library-document" aria-label={opened.title}>
           <SummaryView value={opened.content} />
         </article>
       </section>
     );
   return (
-    <section aria-label="Biblioteca do projeto" className="stack">
-      <div>
+    <section aria-label="Biblioteca do projeto" className="stack library-index">
+      <header className="document-heading library-heading">
+        <p className="document-breadcrumb">
+          {projectName || "Projeto"} / Biblioteca
+        </p>
         <h2>Biblioteca</h2>
         <p className="muted">
           Documentos formados pelo conteúdo salvo em cada área. O Business Plan
           reúne as áreas disponíveis para seu acesso, na ordem do plano.
         </p>
-      </div>
+      </header>
       {message && (
         <p role="status" className="notice">
           {message}
@@ -146,12 +163,18 @@ export function ProjectLibrary({
       ) : (
         <>
           <article className="panel library-complete">
-            <h3>Business Plan</h3>
-            <p className="muted">
-              Conteúdo consolidado das áreas preenchidas, com a data de
-              atualização de cada documento.
-            </p>
-            <div className="row">
+            <div className="library-feature-copy">
+              <span className="library-icon">
+                <AreaIcon area="library" />
+              </span>
+              <span className="document-category">Documento consolidado</span>
+              <h3>Business Plan</h3>
+              <p className="muted">
+                Conteúdo consolidado das áreas preenchidas, com a data de
+                atualização de cada documento.
+              </p>
+            </div>
+            <div className="row library-feature-actions">
               <button
                 className="btn module-access"
                 disabled={busy}
@@ -170,9 +193,14 @@ export function ProjectLibrary({
               )}
             </div>
           </article>
-          <div className="grid">
+          <h3 className="library-section-title">Documentos por área</h3>
+          <div className="grid library-grid">
             {documents.map((d) => (
-              <article className="panel module" key={d.area}>
+              <article className="panel module library-area-card" key={d.area}>
+                <span className="library-icon">
+                  <AreaIcon area={d.area} />
+                </span>
+                <span className="document-category">Business Plan</span>
                 <h3>{modules.find((m) => m.id === d.area)?.name}</h3>
                 <p className="muted subtle">{updatedAtLabel(d.updated_at)}</p>
                 <div className="row">

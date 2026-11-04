@@ -251,18 +251,54 @@ export function ModuleEditor({
           }
         }}
       >
-        <div className="heading">
-          <div>
-            <div className="eyebrow">Business Plan</div>
-            <h2 tabIndex={-1}>{documentTitle ?? title}</h2>
+        <div className="document-topbar">
+          <div className="document-location">
+            <button type="button" className="btn secondary" onClick={close}>
+              Fechar área
+            </button>
+            <span className="document-breadcrumb">Business Plan / {title}</span>
           </div>
-          <button type="button" className="btn secondary" onClick={close}>
-            Fechar área
-          </button>
+          {permissions.includes("export") &&
+            (document?.revision ?? 0) > 0 &&
+            (!editing || !dirty) && (
+              <div className="summary-export">
+                <button
+                  type="button"
+                  className="btn secondary"
+                  disabled={busy}
+                  onClick={async () => {
+                    setBusy(true);
+                    try {
+                      const r = await api(`${path}/export`, org);
+                      const saved = r.document ?? r;
+                      printSummary(
+                        areaDocument(area, saved),
+                        documentTitle ?? title,
+                      );
+                    } catch (e) {
+                      setMessage((e as Error).message);
+                    } finally {
+                      setBusy(false);
+                    }
+                  }}
+                >
+                  Exportar PDF
+                </button>
+              </div>
+            )}
         </div>
-        <p className="muted">
-          {modules.find((module) => module.id === area)?.description}
-        </p>
+        <header className="document-heading">
+          <span className="document-category">Business Plan</span>
+          <h2 tabIndex={-1}>{documentTitle ?? title}</h2>
+          <p className="muted">
+            {modules.find((module) => module.id === area)?.description}
+          </p>
+          {document && document.revision > 0 && (
+            <p className="muted subtle document-metadata">
+              {updatedAtLabel(document.updated_at)}
+            </p>
+          )}
+        </header>
         {message && (
           <p role="status" className="notice">
             {message}
@@ -304,38 +340,6 @@ export function ModuleEditor({
                 </button>
               )}
             </div>
-            {permissions.includes("export") &&
-              document.revision > 0 &&
-              (!editing || !dirty) && (
-                <div className="summary-export">
-                  <button
-                    type="button"
-                    className="btn secondary"
-                    disabled={busy}
-                    onClick={async () => {
-                      setBusy(true);
-                      try {
-                        const r = await api(`${path}/export`, org);
-                        const saved = r.document ?? r;
-                        printSummary(
-                          areaDocument(area, saved),
-                          documentTitle ?? title,
-                        );
-                      } catch (e) {
-                        setMessage((e as Error).message);
-                      } finally {
-                        setBusy(false);
-                      }
-                    }}
-                  >
-                    Exportar PDF
-                  </button>
-                  <p className="muted subtle">
-                    Na janela de impressão, escolha Salvar como PDF. Exporta a
-                    revisão salva.
-                  </p>
-                </div>
-              )}
             {archived && (
               <p className="notice">Projeto arquivado: somente leitura.</p>
             )}
@@ -346,17 +350,13 @@ export function ModuleEditor({
             )}
             {content && (
               <form
+                className="document-surface"
                 inert={busy}
                 onSubmit={async (e) => {
                   e.preventDefault();
                   await save(false);
                 }}
               >
-                {content.revision > 0 && (
-                  <p className="muted subtle">
-                    {updatedAtLabel(content.updated_at)}
-                  </p>
-                )}
                 <RichFieldsScope
                   enabled={editing && area !== "executive"}
                   onValidity={(valid) => {

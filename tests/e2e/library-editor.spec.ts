@@ -84,6 +84,23 @@ test("Library opens source editors, saves with real timestamps, preserves read-o
   await page.setViewportSize({ width: 1440, height: 900 });
   await openLibrary();
   await expect(page.locator(".library-complete")).toBeVisible();
+  await expect(page.locator(".library-grid [data-area-icon]")).toHaveCount(2);
+  await expect(
+    page.getByRole("heading", { name: "Documentos por área" }),
+  ).toBeVisible();
+  for (const width of [1440, 390]) {
+    await page.setViewportSize({ width, height: 900 });
+    expect(
+      await page.evaluate(
+        () => document.documentElement.scrollWidth <= innerWidth,
+      ),
+    ).toBe(true);
+    await page.screenshot({
+      path: info.outputPath(`library-index-${width}.png`),
+    });
+  }
+  await page.setViewportSize({ width: 1440, height: 900 });
+
   await expect(page.getByText(/Revisão 1/)).toHaveCount(0);
   await expect(page.getByText(/Última atualização: 04\/11\/2026/)).toHaveCount(
     2,
@@ -99,6 +116,16 @@ test("Library opens source editors, saves with real timestamps, preserves read-o
     exact: true,
   });
   await expect(editor).toContainText("Linha 100");
+  await expect(
+    page
+      .locator(".document-topbar")
+      .getByRole("button", { name: "Exportar PDF", exact: true }),
+  ).toBeVisible();
+  await expect(
+    page.locator(".document-heading .document-metadata"),
+  ).toContainText("Última atualização:");
+  await page.screenshot({ path: info.outputPath("area-document-desktop.png") });
+
   await expect(
     page.getByRole("heading", {
       name: "Projeto de teste — Resumo executivo",
