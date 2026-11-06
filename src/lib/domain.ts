@@ -1,3 +1,4 @@
+import { sources } from "./source-domain";
 import { randomUUID, randomBytes, createHash } from "node:crypto";
 import type { PoolClient } from "pg";
 import { getPool } from "./db";
@@ -201,6 +202,8 @@ export async function execute(
 ) {
   return inOrg(actor, org, async (c, admin) => {
     const [resource, id, sub] = path;
+    if (resource === "sources")
+      return sources(c, actor, org, admin, method, path, body);
     if (resource === "project-library") {
       if (
         method !== "GET" ||

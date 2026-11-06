@@ -112,3 +112,9 @@ Route imports no longer require runtime database/auth secrets during Next build.
 Authorized operator confirmed production commit 757b3d3fc66c1c2a7dbbddad6020f21b066c0f3f and its interface on 2026-11-04. The lazy-initialization correction described here is currently local and has not been published.
 
 Publication of the tested preview correction explicitly authorized on 2026-11-04. Scope is code and validation records only; preview backend remains disabled, with no credential, hosting-setting or database change. Deployment outcome must be verified separately after push.
+
+## Pending private sources migration (004)
+
+The sources feature is local only. Before any approved production release, apply 004_project_sources.sql through the existing guarded migration operator flow (`npm run db:migrate`) against the exact BOSS database, with DATABASE_RUNTIME_ROLE=boss_app and existing protected migration authentication/TLS. Do not run migrations at request/build startup. The migration runner grants the two new private tables to the existing server role and enables RLS; Data API roles retain no schema access. This production action is NOT authorized yet.
+
+No new environment variable or public storage bucket is needed. Attachment bytes stay in boss_private.project_sources; source_links stores internal excerpt associations. API requests/records are bounded for the current serverless transport (2 MiB per binary). Attachments increase database/backup usage, capped at 50 MiB per project. An object-storage alternative or higher quotas must be reviewed separately. Existing identity, SMTP, TLS and preview isolation must stay unchanged. Rollout order after approval: review migration and backup/restore readiness, apply additive migration, verify private grants and RLS, then publish the code and check an authorized test workflow. No actual production operations were performed during development.

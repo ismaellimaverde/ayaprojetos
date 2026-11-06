@@ -7,6 +7,7 @@ import {
   type ModuleItem,
 } from "@/lib/module-fields";
 import { updatedAtLabel } from "@/lib/document-metadata";
+import { AreaSources, SourcesButton } from "./area-sources";
 import { AreaIcon } from "./area-icon";
 import { Modal } from "./modal";
 import { modules } from "@/lib/catalog";
@@ -190,7 +191,12 @@ export function ModuleEditor({
     }
   }
   return (
-    <>
+    <AreaSources
+      org={org}
+      projectId={projectId}
+      area={area}
+      document={document}
+    >
       {confirmClose && (
         <Modal onClose={cancelClose}>
           <section
@@ -259,6 +265,7 @@ export function ModuleEditor({
             </button>
             <span className="document-breadcrumb">Business Plan / {title}</span>
           </div>
+          <SourcesButton />
           {permissions.includes("export") &&
             (document?.revision ?? 0) > 0 &&
             (!editing || !dirty) && (
@@ -376,6 +383,7 @@ export function ModuleEditor({
                       {editing ? (
                         <RichSummaryEditor
                           key={document.revision}
+                          sourceField="executive"
                           initial={summary}
                           onValidity={(valid) => {
                             setSummaryInvalid(!valid);
@@ -396,6 +404,7 @@ export function ModuleEditor({
                             <RichSummaryEditor
                               key={`${document.revision}:${f.id}`}
                               label={f.label}
+                              sourceField={f.id}
                               describedBy={`hint-${f.id}`}
                               field
                               initial={fieldDocument(document.fields, f.id)}
@@ -472,6 +481,7 @@ export function ModuleEditor({
                                 <RichSummaryEditor
                                   key={`${document.revision}:${item.id}`}
                                   label={`Descrição do item ${index + 1}`}
+                                  sourceField={`item:${item.id}`}
                                   field
                                   initial={itemDocument(item)}
                                   onValidity={() => {}}
@@ -630,6 +640,6 @@ export function ModuleEditor({
           </>
         )}
       </section>
-    </>
+    </AreaSources>
   );
 }

@@ -1668,3 +1668,94 @@ h3 {
     overflow: visible;
   }
 }
+
+.source-drawer {
+  position: fixed;
+  inset: 0 0 0 auto;
+  margin: 0;
+  width: min(560px, 100vw);
+  max-width: 100vw;
+  height: 100dvh;
+  max-height: 100dvh;
+  border: 0;
+  border-left: 1px solid var(--line);
+  background: var(--surface, #fff);
+  color: var(--ink, #1d1e21);
+  padding: 24px;
+  overflow: auto;
+  font-family: "Archivo Variable", sans-serif;
+}
+.source-drawer::backdrop {
+  background: #1d1e2155;
+}
+.source-drawer .heading {
+  flex-wrap: wrap;
+  gap: 12px;
+}
+.source-drawer blockquote {
+  margin: 10px 0;
+  padding: 10px;
+  border-left: 3px solid #ef9c83;
+  overflow-wrap: anywhere;
+}
+.source-drawer img,
+.source-drawer audio {
+  max-width: 100%;
+  margin: 12px 0;
+}
+.source-note {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.source-list {
+  display: grid;
+  gap: 12px;
+  margin: 16px 0;
+}
+.source-use {
+  border-top: 1px solid var(--line);
+  padding: 12px 0;
+}
+.source-link-button,
+.source-field-links button {
+  min-height: 44px;
+  border: 0;
+  background: transparent;
+  color: var(--ink);
+  text-decoration: underline;
+  text-decoration-color: #ef9c83;
+  padding: 6px 10px;
+  text-align: left;
+  font: inherit;
+  font-size: 12px;
+}
+.source-field-actions,
+.source-field-links {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+.source-annotation {
+  text-decoration: underline dotted #d16b4c 2px;
+  text-underline-offset: 4px;
+  cursor: pointer;
+}
+@media (max-width: 650px) {
+  .source-drawer {
+    padding: 16px;
+  }
+  .source-drawer .row {
+    flex-wrap: wrap;
+  }
+}
+@media print {
+  .source-field-actions,
+  .source-field-links,
+  .source-drawer {
+    display: none !important;
+  }
+  .source-annotation {
+    text-decoration: none;
+  }
+}

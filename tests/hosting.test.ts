@@ -167,9 +167,16 @@ test("private schema denies Data API roles and permits only the server role, wit
           () => c.query('SELECT * FROM boss_private."user"'),
           { code: "42501" },
         );
+        for (const table of ["project_sources", "source_links"])
+          await assert.rejects(
+            () => c.query(`SELECT * FROM boss_private.${table}`),
+            { code: "42501" },
+          );
         await c.query("RESET ROLE");
       }
       await c.query(`SET ROLE "${runtime}"`);
+      for (const table of ["project_sources", "source_links"])
+        await c.query(`SELECT * FROM boss_private.${table}`);
       await c.query(
         'INSERT INTO boss_private."user"(id,name,email) VALUES($1,$2,$3)',
         ["test-user", "Test only", "test@example.test"],

@@ -976,3 +976,217 @@ test("all planning fields support rich content with isolated persistence, histor
     );
   }
 });
+
+test("private source library isolates attachments, reuses references, preserves exports and reconciles excerpts", async () => {
+  const project = (
+    await execute(actor(ownerId), org, "POST", ["projects"], {
+      name: "Source test project",
+    })
+  ).id;
+  const restricted = await makeUser("source-reader@example.test");
+  await pool.query(
+    "INSERT INTO boss_private.members(id,org_id,user_id,role) VALUES($1,$2,$3,'member')",
+    [randomUUID(), org, restricted],
+  );
+  const grant = async (permissions: Record<string, string[]>) =>
+    execute(actor(ownerId), org, "POST", ["grants"], {
+      project_id: project,
+      user_id: restricted,
+      role: "collaborator",
+      permissions,
+    });
+  await grant({ dna: ["view", "edit"], executive: ["view"] });
+  const call = (
+    user: string,
+    area: string,
+    method = "GET",
+    tail: string[] = [],
+    data: unknown = {},
+  ) =>
+    execute(
+      actor(user),
+      org,
+      method,
+      ["sources", project, area, ...tail],
+      data,
+    );
+  const id = randomUUID(),
+    png = Buffer.from("89504e470d0a1a0a00000000", "hex");
+  const input = {
+    id,
+    name: "PRIVATE source material",
+    kind: "image",
+    mime: "image/png",
+    data: png.toString("base64"),
+    filename: "private.png",
+    note: "INTERNAL ONLY",
+    origin: "private interview",
+  };
+  assert.equal((await call(ownerId, "finance", "POST", [], input)).id, id);
+  await call(ownerId, "finance", "POST", [], input); // idempotent source creation
+  assert.equal((await call(ownerId, "finance")).sources.length, 1);
+  assert.equal((await call(restricted, "dna")).sources.length, 0);
+  await assert.rejects(
+    call(restricted, "dna", "GET", ["file", id]),
+    /indisponível/,
+  );
+  await assert.rejects(
+    call(restricted, "dna", "POST", ["links"], {
+      id: randomUUID(),
+      source_id: id,
+    }),
+    /indisponível/,
+  );
+  const link = {
+    id: randomUUID(),
+    source_id: id,
+    field: "purpose",
+    quote: "A frase de planejamento",
+  };
+  await call(ownerId, "dna", "POST", ["links"], link);
+  await call(ownerId, "dna", "POST", ["links"], { ...link, id: randomUUID() });
+  await call(ownerId, "executive", "POST", ["links"], {
+    id: randomUUID(),
+    source_id: id,
+  });
+  assert.equal((await call(ownerId, "dna")).sources[0].links.length, 2);
+  const data = await call(restricted, "dna");
+  assert.equal(data.sources.length, 1);
+  assert.equal(data.sources[0].links.length, 2);
+  assert.ok(!("attachment" in data.sources[0]));
+  assert.ok(!("data" in data.sources[0]));
+  assert.deepEqual(
+    (await call(restricted, "dna", "GET", ["file", id])).privateFile,
+    png,
+  );
+  await grant({ dna: ["view", "edit"] });
+  assert.equal((await call(restricted, "dna")).sources[0].links.length, 1);
+  await execute(
+    actor(ownerId),
+    org,
+    "POST",
+    ["module-content", project, "dna"],
+    { revision: 0, fields: { purpose: "A frase de planejamento" }, items: [] },
+  );
+  assert.equal(
+    (await call(ownerId, "dna")).sources[0].links.find(
+      (l: { field: string }) => l.field === "purpose",
+    ).status,
+    "Trecho localizado",
+  );
+  const exported = await execute(
+    actor(ownerId),
+    org,
+    "GET",
+    ["project-library", project, "complete", "export"],
+    {},
+  );
+  assert.ok(!JSON.stringify(exported).includes("INTERNAL ONLY"));
+  assert.ok(!JSON.stringify(exported).includes("PRIVATE source material"));
+  await execute(
+    actor(ownerId),
+    org,
+    "POST",
+    ["module-content", project, "dna"],
+    { revision: 1, fields: { purpose: "Conteúdo modificado" }, items: [] },
+  );
+  assert.match(
+    (await call(ownerId, "dna")).sources[0].links.find(
+      (l: { field: string }) => l.field === "purpose",
+    ).status,
+    /alterado, removido/,
+  );
+  await execute(
+    actor(ownerId),
+    org,
+    "POST",
+    ["module-content", project, "dna"],
+    { revision: 2, fields: { purpose: "" }, items: [] },
+  );
+  assert.match(
+    (await call(ownerId, "dna")).sources[0].links.find(
+      (l: { field: string }) => l.field === "purpose",
+    ).status,
+    /alterado, removido/,
+  );
+  await assert.rejects(
+    execute(actor(ownerId), other, "GET", ["sources", project, "dna"], {}),
+    /autorizado|indisponível/,
+  );
+  await assert.rejects(
+    execute(
+      actor(ownerId),
+      org,
+      "GET",
+      ["sources", b, "executive", "file", id],
+      {},
+    ),
+    /indisponível/,
+  );
+  await assert.rejects(
+    call(restricted, "dna", "DELETE", ["links", link.id]),
+    /permissão/,
+  );
+  await call(ownerId, "dna", "DELETE", ["links", link.id]);
+  assert.equal(
+    (await call(ownerId, "dna")).sources[0].links.filter(
+      (l: { area: string }) => l.area === "dna",
+    ).length,
+    0,
+  );
+  assert.deepEqual(
+    (await call(ownerId, "finance", "GET", ["file", id])).privateFile,
+    png,
+  );
+  await call(ownerId, "dna", "POST", ["links"], {
+    id: randomUUID(),
+    source_id: id,
+    field: "purpose",
+    quote: "漢".repeat(2000),
+  });
+  await grant({ executive: ["view"] });
+  await assert.rejects(
+    call(restricted, "dna", "GET", ["file", id]),
+    /autorizado/,
+  );
+  await assert.rejects(
+    call(restricted, "executive", "POST", [], {
+      id: randomUUID(),
+      name: "Blocked",
+      kind: "book",
+    }),
+    /permissão/,
+  );
+  await assert.rejects(
+    call(ownerId, "dna", "POST", [], {
+      id: randomUUID(),
+      name: "Unsafe",
+      kind: "link",
+      url: "javascript:alert(1)",
+    }),
+    /inválido/,
+  );
+  await assert.rejects(
+    call(ownerId, "dna", "POST", [], {
+      ...input,
+      id: randomUUID(),
+      data: Buffer.from("<script>x</script>").toString("base64"),
+    }),
+    /permitido/,
+  );
+  await assert.rejects(
+    call(ownerId, "dna", "POST", [], {
+      ...input,
+      id: randomUUID(),
+      data: Buffer.alloc(2097153).toString("base64"),
+    }),
+  );
+  // Metadata-only references exist before any narrative is written.
+  await call(ownerId, "market", "POST", [], {
+    id: randomUUID(),
+    name: "Livro de referência",
+    kind: "book",
+    origin: "Autor, página 42",
+  });
+  assert.equal((await call(ownerId, "market")).sources.length, 2);
+});

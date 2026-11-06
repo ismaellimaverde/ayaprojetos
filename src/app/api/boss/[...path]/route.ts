@@ -28,8 +28,17 @@ async function handler(
       req.headers.get("origin") !== new URL(process.env.BETTER_AUTH_URL!).origin
     )
       throw new DomainError(403, "Origem não autorizada");
+    if (
+      path[0] === "sources" &&
+      Number(req.headers.get("content-length")) > 3000000
+    )
+      throw new DomainError(413, "Arquivo excede o limite");
     const body =
-      req.method === "GET" || req.method === "DELETE" ? {} : await req.json();
+      req.method === "GET" || req.method === "DELETE"
+        ? {}
+        : path[0] === "sources"
+          ? await sourceBody(req)
+          : await req.json();
     if (path[0] === "invite-register" && req.method === "POST") {
       const v = z
         .object({
@@ -98,6 +107,20 @@ async function handler(
       path,
       body,
     );
+    if (
+      result &&
+      "privateFile" in result &&
+      Buffer.isBuffer(result.privateFile)
+    )
+      return new Response(new Uint8Array(result.privateFile), {
+        headers: {
+          "Content-Type": result.mime,
+          "Content-Disposition": "attachment",
+          "Cache-Control": "private, no-store",
+          "X-Content-Type-Options": "nosniff",
+          "Content-Security-Policy": "sandbox; default-src 'none'",
+        },
+      });
     return Response.json(result, { headers: { "Cache-Control": "no-store" } });
   } catch (e) {
     if (e instanceof RuntimeUnavailableError) return unavailableResponse();
@@ -121,3 +144,25 @@ async function handler(
   }
 }
 export { handler as GET, handler as POST, handler as PATCH, handler as DELETE };
+
+async function sourceBody(req: Request) {
+  const reader = req.body?.getReader();
+  if (!reader) throw new DomainError(400, "Corpo ausente");
+  const chunks: Uint8Array[] = [];
+  let size = 0;
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    size += value.length;
+    if (size > 3000000) {
+      await reader.cancel();
+      throw new DomainError(413, "Arquivo excede o limite");
+    }
+    chunks.push(value);
+  }
+  try {
+    return JSON.parse(Buffer.concat(chunks).toString("utf8"));
+  } catch {
+    throw new DomainError(400, "Dados inválidos");
+  }
+}
