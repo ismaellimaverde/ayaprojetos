@@ -1,0 +1,126 @@
+# Netlify + Supabase Postgres — preparation and provisioning status
+
+## Current launch status — 2026-11-03 03:10:55 UTC
+
+Confirmed by the parent/native and Resend workers: production https://boss-aya.netlify.app is published at application commit `9361e04d9e9b634de1cb934f382f7bdf6bfcaee8` (published 02:52:41 UTC). Production visitor access is public by explicit approval; previews remain private. Application authentication, verified email and scoped RBAC still apply; MFA is optional. Other projects and external account security were not changed. Earlier sections below are historical checkpoints, not current blockers.
+
+The native worker resolved two database connection issues: explicit official CA trust, then Supavisor SCRAM iteration compatibility. It verified the existing runtime password/URL and stored verifier privately, then recomputed the verifier using **4096 iterations for the same existing 256-bit random password**, replacing the incompatible 16384-iteration verifier. Roles, grants and provider secrets were preserved. For this pooler use the compatible 4096 count; do not assume custom counts work until provider support is confirmed. The official [Supavisor PR #1222](https://github.com/supabase/supavisor/pull/1222) explains that older poolers announced 4096 regardless of the stored count, causing authentication failure. This guidance concerns the database role's SCRAM verifier, not Better Auth application-user password hashing.
+
+Official CA SHA-256 certificate fingerprint, verified by native:
+`807025ad50d4ed219d2c9c7d299c004f824eb00cf7f65afef607d07b72e6cafa`
+The public certificate comes from the exact dashboard download source documented below. DATABASE_SSL_CA and DATABASE_SSL_CA_SHA256 are configured for production; TLS retains rejectUnauthorized=true and hostname validation. No system-wide trust or TLS bypass was introduced.
+
+Runtime evidence: GET /api/auth/get-session returned 200 and database rateLimit metadata demonstrated database access. Recovery POST returned 200 at 03:10:03.468 UTC; verification POST returned 200 at 03:10:10.860 UTC. At 03:10:55 UTC, Resend filtered to the exact BOSS key confirmed **both messages Delivered** to the approved owner. This is stronger than HTTP acceptance, but does not establish that the user opened either message or completed onboarding.
+
+Remaining: owner opens verification, chooses a permanent password through the reset message, then logs in. No completed verification/password change/login is claimed. Do not repeat bootstrap or automatically resend messages. Native cleaned sensitive temporary bundles, verifiers and raw logs; the authorized Netlify CLI login was retained. No secret values or private temporary paths are recorded here.
+
+User selected this hosting direction on 2026-11-03. Parent confirmed the new separate Supabase project BOSS (`ubgabtgrfrixldstnqry`, `sa-east-1`, PostgreSQL 17, ACTIVE_HEALTHY), with public initially empty. Netlify site selection/login remains pending. Neither Arpoador Experience nor Agenda Parental is authorized for BOSS. At the initial preparation checkpoint no remote changes had been performed. The authorized database provisioning checkpoint below supersedes that initial status; there is still no deployment or email delivery by this executor.
+
+## Runtime
+
+Netlify's supported OpenNext adapter handles Next.js App Router and Node route handlers. `netlify.toml` uses Node 24, `npm run build` and `.next`. No static export, custom catch-all redirect, migration or bootstrap in build hooks. No Netlify site ID or domain is invented or embedded. The platform adapter build remains untested until an approved target exists.
+
+Keep Better Auth. Supabase supplies PostgreSQL only; Supabase Auth does not create BOSS identities and its email templates/provider do not automatically send Better Auth emails. No Supabase SDK, publishable key or service-role key is needed by this application, including its browser bundle.
+
+Use the confirmed project's Supavisor **transaction** connection for DATABASE_URL, with a dedicated BOSS runtime role. Pool max defaults to 1 per warm hosted instance, connection/idle timeout 10 seconds. node-postgres and the Better Auth Drizzle path use unnamed parameterized queries; no `.prepare(name)` or session-level search_path dependency. All runtime SQL and ORM tables explicitly address boss_private. Transactions reserve and release one connection. TLS verifies certificates; URL parameters cannot disable verification; a provider CA can be supplied if required. No `rejectUnauthorized:false` fallback.
+
+## Database isolation and operator workflow
+
+`scripts/database-setup.ts` runs only from the operator migration command or isolated local fixtures. It creates boss_private, applies the existing application migrations inside that schema, revokes schema/table/sequence access from PUBLIC and existing anon/authenticated/service_role roles, and enables RLS on every BOSS table. Keep boss_private **out of Data API exposed schemas**; do not change unrelated projects' Data API configuration.
+
+An existing non-superuser/non-BYPASSRLS runtime role receives only schema USAGE, table DML and sequence access. A role-specific RLS policy allows that trusted application server to execute its own scoped authorization queries. This is defense against Data API exposure, **not tenant-aware RLS**: tenant/project enforcement still belongs to BOSS transactional services. Do not give that DB credential to clients. No role, password or persistent remote grant has been created by this preparation. Grant changes are reviewable in the operator script and require approval for the actual target.
+
+Migrations use a separate DATABASE_MIGRATION_URL through direct or session-mode connection. They refuse remote execution unless ALLOW_REMOTE_MIGRATION=yes and CONFIRMED_DATABASE_HOST matches exactly, and refuse hosted build/request contexts. Existing public.schema_migrations triggers a stop for an explicitly reviewed data/schema move; no silent copy, move or reset of legacy data. This also applies to the original local development database. All compatibility tests use fresh isolated local databases.
+
+Before a remote run: confirm target/ref and backup policy, inspect existing schemas/exposed schemas and roles, review the private-schema changes and runtime grants, then authorize the migration. Never reuse the unrelated projects merely because they are connected. Never pass operator credentials/flags to Netlify Functions.
+
+## Email and first owner
+
+MAIL_MODE=local is development-only and fails on NETLIFY=true or BOSS_HOSTED=true. It remains a private filesystem mailbox with no HTTP route. It cannot support email verification or recovery on serverless hosting.
+
+A generic SMTP transport is prepared (no provider chosen). It requires explicit EMAIL_DELIVERY_ENABLED=true plus approved SMTP credentials and verified sender; port 465 uses TLS and 587 requires STARTTLS with certificate validation. Delivery is awaited, time-bounded and never falls back to disk. Provider acceptance does not guarantee inbox delivery. No external send has been tested or authorized. Provider/domain verification, limits, cost, credentials and real test recipient remain decisions.
+
+After the schema, exact HTTPS auth origin and SMTP are approved/configured, run `npm run bootstrap` once from a trusted operator environment. Supply chosen owner name/email/password through private stdin, not a web endpoint, build log, shell history or chat. DATABASE_OPERATOR_URL must use direct/session mode and the same database as runtime; the command holds a session advisory lock across signup and organization creation, verifies the runtime connection shares that lock, refuses existing membership, and requires explicit ALLOW_REMOTE_BOOTSTRAP=yes + confirmed host for remote use. A failure must be inspected privately before retry; no automatic promotion of existing accounts. Owner must verify email before administration; TOTP is optional by the later user decision. This initial preparation checkpoint preceded real owner creation, recorded below.
+
+## Variables (names only)
+
+Server runtime: DATABASE_URL, DATABASE_POOL_MAX, DATABASE_SSL_MODE, optional DATABASE_SSL_CA, BETTER_AUTH_SECRET, BETTER_AUTH_URL, MAIL_MODE, EMAIL_DELIVERY_ENABLED, MAIL_FROM, SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASSWORD. NETLIFY is provided by Netlify; BOSS_HOSTED can enforce the same guards elsewhere. No secret uses NEXT_PUBLIC_. Use the host's protected secret mechanism, with proper function scope; never netlify.toml or Git. BETTER_AUTH_SECRET must remain stable to preserve encrypted MFA material.
+
+Operator only: DATABASE_MIGRATION_URL, DATABASE_OPERATOR_URL, DATABASE_RUNTIME_ROLE, ALLOW_REMOTE_MIGRATION, ALLOW_REMOTE_BOOTSTRAP, CONFIRMED_DATABASE_HOST. Different preview and production environments must have separately approved database/origin/secret scopes; do not automatically authorize arbitrary deploy-preview origins or connect PR previews to live data.
+
+`npm run check:hosting` validates configuration only and makes no network request. It intentionally fails against the current localhost/local-mail configuration. A successful check is not authorization to deploy.
+
+## Documentation checked
+
+- Supabase changelog HTML index, including the 2026-10-30 Data API default-grants change: https://supabase.com/changelog/45329-breaking-change-tables-not-exposed-to-data-and-graphql-api-automatically . Direct ORM access is unaffected; existing grants still require inspection. No reliance on new default exposure settings.
+- Upcoming project HTTP API TLS-cipher removal: https://supabase.com/changelog/cbc-tls-ciphers-deprecated . This app uses PostgreSQL TLS and Node 24, not legacy HTTP clients.
+- Connection modes: https://supabase.com/docs/guides/database/connecting-to-postgres ; https://supabase.com/docs/guides/database/drizzle ; https://supabase.com/docs/guides/troubleshooting/disabling-prepared-statements-qL8lEL . Drizzle docs' `prepare:false` example is for postgres-js; this app retains node-postgres unnamed queries.
+- https://docs.netlify.com/build/frameworks/framework-setup-guides/nextjs/overview/ ; https://docs.netlify.com/build/functions/configuration/
+- https://node-postgres.com/features/ssl ; https://node-postgres.com/features/queries ; https://nodemailer.com/smtp
+
+The requested changelog.md endpoint could not be read (web tool: unsupported text/markdown; executor fetch: proxy 403). The official HTML index and relevant linked changelog entries were read successfully instead. No remote project access was needed.
+
+## Authorized database checkpoint — 2026-11-03 00:48 UTC
+
+Applied Supabase migration `20261103004742_boss_private_foundation` exclusively to BOSS `ubgabtgrfrixldstnqry`, through the existing authenticated Supabase connector. It wraps the existing 001 and 002 application migrations in boss_private, records both application versions, applies the revokes/RLS/server policy described above, and prepares boss_app with NOLOGIN, NOSUPERUSER, NOCREATEDB, NOCREATEROLE, NOINHERIT, NOREPLICATION and NOBYPASSRLS. No password was generated or set; no account-level grant/token was created. This is a staged role, not a usable runtime credential.
+
+Verified remotely: 17 private tables and 17 with RLS; public has zero tables; zero users, members or projects; zero role memberships for boss_app; no schema access or auth-table SELECT for anon/authenticated/service_role; runtime DML allowed but schema CREATE and migration-history SELECT denied. Migration history confirmed. Advisor reports one INFO: schema_migrations has RLS without a policy, intentional because only the owning operator manages it. No policy is added just to silence that finding.
+
+An attempted SET LOCAL ROLE boss_app test was denied with PostgreSQL 42501 (operator is not authorized to assume the role). No membership was added to bypass this. Actual runtime login/TLS/pooler and end-to-end remote checks remain pending. SQL-visible pgrst.db_schemas settings returned no configured value; the management/dashboard exposed-schema setting must still be confirmed. The migration does not add boss_private to exposed schemas and explicitly denies API-role access.
+
+Credential handoff blocker: this executor has authenticated Supabase SQL tools but no Netlify connector/browser or protected cross-worker secret-transfer mechanism. Therefore boss_app password and stable BETTER_AUTH_SECRET were not generated. The Netlify worker must establish an approved protected route before generating/provisioning them; do not exchange plaintext in chat, PRs, tool outputs or migration text. Site/credential setup, SMTP and real owner remain pending.
+
+Resend SMTP is compatible with the existing Nodemailer transport: SMTP_HOST=smtp.resend.com, SMTP_PORT=465 (TLS) or 587 (required STARTTLS), SMTP_USER=resend, SMTP_PASSWORD supplied from an authorized Resend API key, MAIL_FROM from a verified sender domain. The registered user's email is the recipient, never the sender identity. Domain/key/sender approval and an authorized delivery test remain pending. Better Auth remains the identity provider and requires email verification. Source checked: https://resend.com/docs/send-with-smtp . No Resend API key or email was created/sent.
+
+## First owner operator fallback — 2026-11-03
+
+After explicit owner authorization, an operator-only SQL plan was tested against the installed Better Auth 1.7.15 behavior. `scripts/owner-bootstrap-plan.ts` uses the library's password hash function on a private random password, creates an unverified identity and credential account, and atomically creates the initial organization/owner/audit under advisory lock 827342. It refuses any existing identity/account/workspace/organization/membership state. Generated SQL contains a sensitive password hash and must never be logged, committed or saved as an artifact. There is no web bootstrap route.
+
+The authorized production transaction was applied once through authenticated Supabase MCP. Metadata confirmed exactly one active owner, one credential account, one owner audit, no session, and email/MFA still unverified/disabled. No password, token or hash is recorded here. The initial activation request from this executor failed at its outbound proxy; a read-only probe confirmed `Tunnel connection failed: 403 Forbidden`. No reset request was attempted and no retry was performed. A worker with the existing supported HTTPS route must check mail/request logs and send activation/reset via the existing hosted endpoints. Provider acceptance and inbox delivery remain unconfirmed.
+
+Local verification: all 16 tests passed, including repeated-bootstrap rejection, real hosted-handler verification/reset behavior against local PostgreSQL/mail, rejection of login before verification, reset-token replay rejection and mandatory admin MFA (428). TypeScript/lint passed. No production email verification or MFA bypass was performed.
+
+## Optional MFA decision — 2026-11-03
+
+The explicit user request supersedes the mandatory-MFA requirement described in earlier verification checkpoints. BOSS now permits verified administrators to use password-only login, including sensitive operations with a login less than ten minutes old. Existing optional MFA enrollment and challenges remain intact. No visitor protection, preview secrets or external account security is changed.
+
+## Verified TLS incident and remediation — 2026-11-03
+
+Parent/native correlated the production error `self-signed certificate in certificate chain` with the first Better Auth rateLimit SELECT. This failure occurs before reset-token creation and SMTP. The BOSS dashboard's Database Settings → SSL configuration → Download certificate was observed to link to:
+https://supabase-downloads.s3-ap-southeast-1.amazonaws.com/prod/ssl/prod-ca-2021.crt
+Dashboard source: https://supabase.com/dashboard/project/ubgabtgrfrixldstnqry/database/settings
+Official instructions: https://supabase.com/docs/guides/database/psql and https://supabase.com/docs/guides/platform/ssl-enforcement .
+
+Native owns certificate download, independent fingerprint/validity verification and Netlify production environment configuration. Set DATABASE_SSL_CA to that complete PEM (actual newline or literal \n encoding), DATABASE_SSL_MODE=verify-full and optionally DATABASE_SSL_CA_SHA256 to its verified SHA-256 fingerprint (colon-separated or plain hex). Use Build + Functions scopes. The code already supports explicit pg CA trust; this change adds strict single-PEM, X.509 CA/validity and optional fingerprint validation. Invalid configuration fails closed. rejectUnauthorized remains true and Node's default hostname check is unchanged. No global trust-store edit, NODE_TLS_REJECT_UNAUTHORIZED override, private key or credential rotation is needed. The executor could not download this artifact through its outbound proxy; the fingerprint subsequently verified by native is recorded in the current launch status above. Tests use a valid CA from Node's bundled trust store only as a parser fixture, not as a substitute Supabase CA.
+
+IP warning is separate from TLS. Current official Netlify Functions API documents context.ip/getContext(), while Better Auth requires a trusted single-IP header or verified proxy chain. No spoof-resistant guarantee for the exact Next/OpenNext header path was established here, so no arbitrary forwarded header or broad trusted-proxy range is enabled. The shared fallback rate-limit bucket remains restrictive. References: https://docs.netlify.com/build/functions/api/ ; https://better-auth.com/docs/concepts/rate-limit . Validate the deployed adapter/context path before a separate IP attribution change.
+
+## Pending planning-content release
+
+Migration `003_module_content.sql` has only been applied to isolated local test databases. Before deploying code that reads module summaries, the authorized operator must apply migrations through `migratePrivateDatabase` with the existing restricted runtime role so both new tables receive private-schema RLS/server grants. Do not deploy this code against a database missing migration 003. No new credentials, service, public schema exposure or external integration is required. Existing records are not rewritten. Production migration/deployment remains pending explicit approval.
+
+Update: migration 003 was explicitly authorized and applied to BOSS on 2026-11-03 before code publication, through the authenticated Supabase migration tool. Private tables, RLS and existing server-role grants were verified; no business records were rewritten. The immutable-revision function has a fixed pg_catalog search path.
+
+Pending rich-editor/UI release needs no new environment variables or migrations. Tiptap packages are pinned and client-rendered; PDF uses the browser's print/Save as PDF facility. No external converter, uploaded font or paid service is introduced. Publish only after explicit approval of this release.
+
+Pending library/Archivo release also needs no database migration or new environment variables. Biblioteca reads existing private module_content rows through the authenticated BOSS API. Archivo 5.3.0 is bundled through Fontsource and served as local Next assets; no browser request to Google Fonts is required. Its license is included at /licenses/Archivo-OFL.txt. Publication remains unauthorized for this increment.
+
+## Visual deploy previews
+
+Route imports no longer require runtime database/auth secrets during Next build. Hosted CONTEXT=deploy-preview and CONTEXT=branch-deploy intentionally disable backend initialization and return generic 503/no-store from application APIs; the login page can render, but authentication and project data are not functional in that preview. This applies even if variables are accidentally inherited. Do not copy production database, mail or auth credentials into preview contexts. An interactive preview needs a separately approved isolated backend and an explicit change to this policy. Production validation, strict TLS and permissions remain unchanged.
+
+Authorized operator confirmed production commit 757b3d3fc66c1c2a7dbbddad6020f21b066c0f3f and its interface on 2026-11-04. The lazy-initialization correction described here is currently local and has not been published.
+
+Publication of the tested preview correction explicitly authorized on 2026-11-04. Scope is code and validation records only; preview backend remains disabled, with no credential, hosting-setting or database change. Deployment outcome must be verified separately after push.
+
+## Pending private sources migration (004)
+
+The sources feature is local only. Before any approved production release, apply 004_project_sources.sql through the existing guarded migration operator flow (`npm run db:migrate`) against the exact BOSS database, with DATABASE_RUNTIME_ROLE=boss_app and existing protected migration authentication/TLS. Do not run migrations at request/build startup. The migration runner grants the two new private tables to the existing server role and enables RLS; Data API roles retain no schema access. This production action is NOT authorized yet.
+
+No new environment variable or public storage bucket is needed. Attachment bytes stay in boss_private.project_sources; source_links stores internal excerpt associations. API requests/records are bounded for the current serverless transport (2 MiB per binary). Attachments increase database/backup usage, capped at 50 MiB per project. An object-storage alternative or higher quotas must be reviewed separately. Existing identity, SMTP, TLS and preview isolation must stay unchanged. Rollout order after approval: review migration and backup/restore readiness, apply additive migration, verify private grants and RLS, then publish the code and check an authorized test workflow. No actual production operations were performed during development.
+
+## Sources release authorized and database prepared — 2026-11-06
+
+User explicitly approved database update and publication. Supabase MCP confirmed exact BOSS project ubgabtgrfrixldstnqry ACTIVE_HEALTHY; prior app migrations 001–003, new tables absent, boss_app non-superuser/non-BYPASSRLS. Applied reviewed migration 004 transactionally with advisory lock, private search_path, grants only for the existing boss_app server role and matching server-only RLS policies. No existing business rows changed. Verified 004 registered, both new tables empty, RLS enabled and Data API roles anon/authenticated/service_role denied SELECT. Security advisor result unchanged: only the existing informational schema_migrations RLS-without-policy finding.
+
+Code publication is now authorized. Production deployment outcome must be verified separately from the GitHub preview check; no new credentials, buckets, accounts, public URLs or provider settings were configured.

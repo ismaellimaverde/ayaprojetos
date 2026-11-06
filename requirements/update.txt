@@ -1,0 +1,289 @@
+# ATUALIZAÇÃO DO PROMPT MESTRE — BOSS
+
+## 1. IDENTIDADE DA PLATAFORMA
+
+Nome oficial: BOSS — Business Operation Sales System.
+
+Empresa principal: AYA Projetos.
+
+O BOSS será o sistema operacional central de todos os negócios, marcas, unidades e projetos administrados pela AYA Projetos.
+
+A plataforma deve ter arquitetura multiempresa e multiprojeto, mas a primeira instalação será configurada com a AYA Projetos como organização principal.
+
+O administrador principal poderá criar projetos, vinculá-los a empresas ou unidades, convidar usuários e controlar exatamente quais informações cada pessoa poderá consultar ou modificar.
+
+Manter todos os módulos e requisitos de negócio do prompt mestre original. Esta atualização aprofunda e substitui suas definições genéricas de login, gestão de usuários e permissões.
+
+## 2. AUTENTICAÇÃO E ACESSO
+
+Desenvolver autenticação real e segura com:
+- Tela de login com e-mail e senha.
+- Recuperação e redefinição de senha por e-mail.
+- Convites individuais com links de ativação temporários.
+- Verificação de e-mail.
+- Sessões seguras com encerramento de sessão.
+- Possibilidade de revogar sessões ativas.
+- Proteção contra tentativas excessivas de login.
+- Autenticação multifator (MFA), obrigatória para administradores e recomendada para demais usuários.
+- Mensagens de erro que não revelem a existência de contas.
+- Logs de acessos e eventos relevantes de segurança.
+
+Usar solução de autenticação consolidada e compatível com a arquitetura escolhida. Nunca armazenar senhas em texto puro. Utilizar hashing seguro e políticas de sessão apropriadas.
+
+Não criar contas administrativas públicas por meio de cadastro aberto. O primeiro administrador deverá ser provisionado por um processo seguro de inicialização.
+
+## 3. HIERARQUIA EMPRESARIAL
+
+Estruturar inicialmente:
+
+AYA Projetos (Main Company)
+  -> Empresas / Marcas / Unidades
+     -> Projetos
+        -> Áreas do Business Plan
+           -> Recursos, registros e documentos
+
+Permitir também projetos diretamente vinculados à AYA Projetos.
+
+Um usuário poderá pertencer a mais de um projeto e possuir papéis diferentes em cada um.
+
+O vínculo com uma empresa não deve conceder automaticamente acesso a todos os seus projetos.
+
+## 4. PAINEL ADMINISTRATIVO DE USUÁRIOS
+
+Criar uma área exclusiva denominada 'Administração > Usuários e Acessos'.
+
+Funcionalidades:
+- Listar usuários ativos, convidados, pendentes, suspensos e desativados.
+- Convidar por e-mail.
+- Definir nome, função e vínculo organizacional.
+- Atribuir usuários a um ou mais projetos.
+- Configurar módulos liberados para cada projeto.
+- Definir permissões individuais por área.
+- Aplicar perfis predefinidos ou personalizados.
+- Consultar histórico de alterações nas permissões.
+- Revogar acessos imediatamente.
+- Reenviar ou cancelar convites.
+- Consultar último login e sessões relevantes.
+- Transferir responsabilidades e tarefas antes da desativação de contas.
+
+Cada convite deve conter somente os acessos explicitamente concedidos. O convidado não poderá escolher seus próprios privilégios.
+
+## 5. CONTROLE GRANULAR DE PERMISSÕES
+
+Construir um sistema baseado em RBAC (Role-Based Access Control), complementado por políticas de acesso por recurso quando necessário.
+
+Três dimensões obrigatórias:
+
+A. ESCOPO
+- Plataforma/organização.
+- Empresa/unidade.
+- Projeto.
+- Área/módulo.
+- Recurso específico, quando aplicável.
+
+B. PAPEL
+- Proprietário da plataforma.
+- Administrador geral.
+- Administrador da empresa.
+- Gestor de projeto.
+- Gestor de área.
+- Colaborador.
+- Financeiro.
+- Convidado.
+- Visualizador.
+
+C. AÇÕES
+- Visualizar.
+- Criar.
+- Editar.
+- Excluir/arquivar.
+- Aprovar.
+- Exportar.
+- Gerenciar usuários.
+- Gerenciar permissões.
+- Configurar integrações.
+- Administrar dados sensíveis.
+
+Os papéis deverão servir como modelos de permissões, não como autorização ilimitada em qualquer projeto.
+
+Exemplo: um colaborador poderá editar Marketing no Projeto A, visualizar Vendas no Projeto A e não possuir qualquer acesso ao Projeto B.
+
+Permitir permissões de leitura e escrita separadas.
+
+Aplicar princípio do menor privilégio: negar tudo por padrão e conceder apenas o necessário.
+
+## 6. MATRIZ DE ACESSOS POR PROJETO
+
+Na edição de um usuário, exibir uma matriz de permissões.
+
+Linhas:
+- Dashboard do projeto.
+- Planejamento estratégico.
+- DNA, cultura e documentação.
+- Marketing.
+- Comercial e vendas.
+- Clientes e atendimento.
+- Financeiro.
+- Operações.
+- Projetos e tarefas.
+- Pessoas e RH.
+- Governança e jurídico.
+- Integrações.
+- Relatórios.
+
+Colunas:
+- Visualizar.
+- Criar.
+- Editar.
+- Excluir.
+- Aprovar.
+- Exportar.
+- Administrar.
+
+Mostrar somente as ações válidas para cada módulo.
+
+Permitir edição individual e aplicação de templates de perfil.
+
+Alterações de permissão devem ser auditadas e ter efeito imediato em novas solicitações, com invalidação apropriada de sessões e caches de autorização.
+
+## 7. DASHBOARDS RESPEITANDO PERMISSÕES
+
+Cada pessoa deve visualizar somente os dados autorizados.
+
+O dashboard executivo global será restrito a quem possuir permissão para consultar os dados consolidados.
+
+Um convidado com acesso apenas ao Marketing do Projeto A não poderá consultar receitas, despesas, clientes, documentos ou qualquer informação restrita ao financeiro ou a outros projetos.
+
+Essa restrição deve valer também para:
+- APIs e endpoints.
+- Consultas ao banco.
+- Relatórios.
+- Exportações.
+- Notificações.
+- Resultados da busca global.
+- Anexos.
+- Dados e resumos gerados por IA.
+- Indicadores consolidados e agregados.
+- Integrações e logs.
+
+Ocultar menus na interface melhora a experiência, mas nunca deve ser a única proteção.
+
+Toda autorização precisa ser validada no servidor e na camada de dados.
+
+Evitar vazamento de informações por indicadores agregados, contagens, nomes de entidades ou filtros.
+
+## 8. CONVITES E COLABORAÇÃO
+
+Fluxo esperado:
+
+1. Administrador seleciona o projeto.
+2. Abre 'Usuários e Acessos'.
+3. Informa o e-mail do convidado.
+4. Seleciona papel e áreas permitidas.
+5. Define permissões de ação.
+6. Envia convite com validade limitada.
+7. Convidado aceita o convite e cria senha ou acessa conta existente.
+8. O sistema valida o convite e ativa somente os vínculos autorizados.
+9. O usuário passa a visualizar os projetos e módulos liberados.
+
+Prever usuários que já possuem conta, convites expirados, revogação de convites, conflitos de permissão e suspensão.
+
+## 9. CONTROLE DE PROPRIETÁRIO E ADMINISTRADORES
+
+O proprietário da AYA Projetos terá controle global sobre configuração e administração de usuários, projetos e permissões, observadas políticas de segurança e segregação de funções.
+
+Restringir operações críticas, incluindo:
+- Transferência de propriedade.
+- Exclusão de empresas e projetos.
+- Alteração de administradores gerais.
+- Exportação massiva de dados.
+- Exclusão definitiva de registros.
+- Alteração de credenciais de integrações.
+- Acesso a informações financeiras sensíveis.
+
+Exigir reautenticação ou MFA para operações de risco elevado.
+
+Impedir acidentalmente a remoção do último proprietário habilitado.
+
+## 10. ARQUITETURA DE DADOS
+
+Projetar tabelas ou entidades equivalentes:
+- users
+- profiles
+- organizations
+- companies
+- projects
+- memberships
+- roles
+- permissions
+- role_permissions
+- permission_grants
+- invitations
+- sessions (quando aplicável ao provedor)
+- audit_logs
+
+Os vínculos de acesso devem identificar explicitamente usuário, escopo, papel, permissões, status e origem da concessão.
+
+Definir regras determinísticas para resolução de permissões herdadas e individuais.
+
+Impedir autoconcessão indevida de privilégios e escalonamento horizontal ou vertical.
+
+Garantir isolamento e autorização em todas as consultas e mutações.
+
+## 11. REGRAS DE SEGURANÇA
+
+- Nunca confiar em project_id recebido pelo frontend sem validar autorização.
+- Não depender exclusivamente da interface para controlar acesso.
+- Proteger dados de integrações, tokens e credenciais.
+- Implementar controles contra IDOR/BOLA e acesso cruzado.
+- Aplicar logs de auditoria para criação, alteração e revogação de permissões.
+- Definir política para convidados externos e acesso temporário.
+- Proteger rotas administrativas.
+- Testar permissões negativas além das positivas.
+- Tratar exportações e relatórios como superfícies de autorização.
+- Planejar retenção e tratamento de dados pessoais conforme LGPD.
+
+## 12. NOVAS TELAS
+
+Adicionar:
+1. Login.
+2. Recuperação de senha.
+3. Aceitação de convite.
+4. Perfil e segurança da conta.
+5. Administração de usuários.
+6. Detalhes de usuário.
+7. Matriz de permissões.
+8. Usuários vinculados ao projeto.
+9. Histórico de acessos e alterações.
+10. Configurações de segurança da organização.
+
+A interface deve seguir o design system geral do BOSS.
+
+## 13. CRITÉRIOS DE ACEITE
+
+Testar pelo menos:
+
+- Um administrador cria Projeto A e Projeto B.
+- Convida Usuário 1 para Marketing no Projeto A.
+- Usuário 1 não visualiza Financeiro do Projeto A.
+- Usuário 1 não acessa Projeto B.
+- Tentativas diretas de API a recursos proibidos são rejeitadas.
+- Usuário 2 recebe leitura no Financeiro e não consegue criar lançamentos.
+- Usuário 3 é gestor de um projeto, mas não pode alterar administradores globais.
+- Um usuário consegue ter diferentes papéis em projetos distintos.
+- Um convite expirado não pode ser aceito.
+- A revogação de acesso bloqueia novas consultas, inclusive por sessões previamente ativas.
+- Indicadores agregados não revelam informações de projetos proibidos.
+- Histórico registra quem concedeu, alterou ou removeu acesso.
+- Usuários não conseguem ampliar suas próprias permissões.
+- A exclusão do último proprietário é impedida.
+
+## 14. PRIORIZAÇÃO
+
+Autenticação, organização principal, usuários, convites e autorização devem fazer parte da FASE 1, antes dos módulos financeiros e demais dados empresariais.
+
+Comece projetando esse subsistema como parte central da fundação do BOSS. Não deixe permissões para uma etapa posterior.
+
+Mantenha integralmente o restante das funcionalidades descritas no prompt mestre original.
+
+OBJETIVO: criar uma plataforma BOSS segura e colaborativa, na qual a AYA Projetos gerencia todos os seus negócios enquanto cada usuário vê e manipula somente os projetos, áreas e registros para os quais foi autorizado.
