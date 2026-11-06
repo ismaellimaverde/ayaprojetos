@@ -220,3 +220,9 @@ Initial failures resolved: local PostgreSQL was stopped (ECONNREFUSED); restarte
 Not executed: production migration, remote attachment upload, production workflow, live deployment or preview publication. No user data, external credentials, public storage, screenshots or runtime artifacts were published. OCR and audio transcription are intentionally out of scope. Exact quote matching is conservative: changes/removals and duplicate text require review; it does not infer semantic replacements. Current limits and release approval steps are in HOSTING.md and DECISIONS.md.
 
 Final-code ESLint, standalone TypeScript, production build and git diff --check all passed. Sources migration remains local only; no remote migration, push, deploy, preview publication or credential change. Pre-existing login diagnostics were left outside this batch.
+
+## Sources release authorized and database prepared — 2026-11-06
+
+User explicitly approved database update and publication. Supabase MCP confirmed exact BOSS project ubgabtgrfrixldstnqry ACTIVE_HEALTHY; prior app migrations 001–003, new tables absent, boss_app non-superuser/non-BYPASSRLS. Applied reviewed migration 004 transactionally with advisory lock, private search_path, grants only for the existing boss_app server role and matching server-only RLS policies. No existing business rows changed. Verified 004 registered, both new tables empty, RLS enabled and Data API roles anon/authenticated/service_role denied SELECT. Security advisor result unchanged: only the existing informational schema_migrations RLS-without-policy finding.
+
+Code publication is now authorized. Production deployment outcome must be verified separately from the GitHub preview check; no new credentials, buckets, accounts, public URLs or provider settings were configured.
