@@ -2,7 +2,7 @@ import { test, expect } from "@playwright/test";
 import { execFileSync } from "node:child_process";
 import type { ModuleDocument } from "../../src/lib/module-fields";
 
-test("shared toolbar targets separate fields, preserves legacy data, reopens formatting and exports full documents", async ({
+test("single area editor preserves semantic originals, formatting, cancellation and full exports", async ({
   page,
   browser,
 }, info) => {
@@ -84,99 +84,58 @@ test("shared toolbar targets separate fields, preserves legacy data, reopens for
   await page
     .getByRole("button", { name: "Acessar DNA, identidade e cultura" })
     .click();
-  const purpose = page.getByRole("textbox", { name: "Propósito", exact: true });
-  const mission = page.getByRole("textbox", { name: "Missão", exact: true });
-  await expect(purpose).toHaveText("Propósito original");
-  await purpose.click();
-  await page.keyboard.press("ControlOrMeta+a");
-  await page.getByRole("button", { name: "Negrito", exact: true }).click();
-  await expect(purpose.locator("strong")).toHaveText("Propósito original");
-  await mission.click();
-  await page.keyboard.press("ControlOrMeta+a");
-  await page.getByRole("button", { name: "Itálico", exact: true }).click();
-  await expect(mission.locator("em")).toHaveText("Missão original");
-  await expect(purpose.locator("em")).toHaveCount(0);
-  await page.getByRole("button", { name: "Desfazer", exact: true }).click();
-  await expect(mission.locator("em")).toHaveCount(0);
-  await expect(purpose.locator("strong")).toHaveCount(1);
-  await page.getByRole("button", { name: "Refazer", exact: true }).click();
-  await expect(mission.locator("em")).toHaveCount(1);
+  const editor = page.locator('[contenteditable="true"]');
+  await expect(editor).toHaveCount(1);
+  await expect(editor).toContainText("Propósito original");
+  await expect(editor).toContainText("Missão original");
+  await editor.fill("Documento unificado");
+  await editor.press("ControlOrMeta+a");
   await page
-    .getByRole("combobox", { name: "Fonte", exact: true })
-    .selectOption("Georgia");
-  await expect(mission.locator('[style*="Georgia"]')).toHaveCount(1);
-  await expect(
-    page.getByRole("group", { name: "Formatação dos campos", exact: true }),
-  ).toHaveCount(1);
-  // Invalid content in one field cannot be cleared by a valid update in another.
-  await purpose.fill("x".repeat(10001));
-  await mission.fill("Missão temporária");
-  await expect(
-    page.getByRole("button", { name: "Salvar informações", exact: true }),
-  ).toBeDisabled();
-  await purpose.click();
-  await page.getByRole("button", { name: "Desfazer", exact: true }).click();
-  await expect(purpose.locator("strong")).toHaveText("Propósito original");
-  await mission.click();
-  await page.getByRole("button", { name: "Desfazer", exact: true }).click();
-  await expect(mission.locator("em")).toHaveText("Missão original");
-  await expect(
-    page.getByRole("button", { name: "Salvar informações", exact: true }),
-  ).toBeEnabled();
-  await mission.scrollIntoViewIfNeeded();
-  await page.screenshot({ path: info.outputPath("rich-fields-desktop.png") });
-  await page
-    .getByRole("button", { name: "Adicionar item", exact: true })
+    .getByRole("button", { name: "Limpar formatação", exact: true })
     .click();
-  await page.getByLabel("Título do item", { exact: true }).fill("Evidência");
-  await expect(
-    page.getByRole("group", { name: "Formatação dos campos", exact: true }),
-  ).toHaveCount(0);
-  const item = page.getByRole("textbox", {
-    name: "Descrição do item 1",
-    exact: true,
-  });
-  await item.fill("Detalhe final");
-  await page.keyboard.press("ControlOrMeta+a");
-  await page.getByRole("button", { name: "Sublinhado", exact: true }).click();
-  await page.getByLabel("Período ou data de referência").fill("2026");
+  await page.getByRole("button", { name: "Negrito", exact: true }).click();
+  await expect(editor.locator("strong")).toHaveText("Documento unificado");
+  await page.getByRole("button", { name: "Desfazer", exact: true }).click();
+  await expect(editor.locator("strong")).toHaveCount(0);
+  await page.getByRole("button", { name: "Refazer", exact: true }).click();
+  await expect(editor.locator("strong")).toHaveText("Documento unificado");
   await page
     .getByRole("button", { name: "Salvar informações", exact: true })
     .click();
   await expect(page.locator(".module-page > [role=status]")).toContainText(
     "Informações salvas",
   );
-  expect(stored.fields.vision).toBe("Visão original");
-  expect(stored.items[0].period).toBe("2026");
-  expect(stored.items[0].rich_text_v1).toContain("underline");
+  expect(stored.fields.purpose).toBe("Propósito original");
+  expect(stored.fields.mission).toBe("Missão original");
   await page.reload();
-  await expect(purpose.locator("strong")).toHaveText("Propósito original");
-  await expect(mission.locator("em")).toHaveText("Missão original");
-  await expect(item.locator("u")).toHaveText("Detalhe final");
+  await expect(editor.locator("strong")).toHaveText("Documento unificado");
   await page.setViewportSize({ width: 390, height: 844 });
-  await mission.click();
-  await page.keyboard.press("ControlOrMeta+a");
-  await page.getByRole("button", { name: "Tachado", exact: true }).click();
-  await expect(mission.locator("s")).toHaveCount(1);
+  await editor.fill("Rascunho descartável");
+  await page
+    .getByRole("button", { name: "Cancelar edição", exact: true })
+    .click();
+  await page.getByRole("button", { name: "Cancelar", exact: true }).click();
+  await expect(editor).toHaveText("Rascunho descartável");
+  await page
+    .getByRole("button", { name: "Cancelar edição", exact: true })
+    .click();
+  await page.getByRole("button", { name: "Não salvar", exact: true }).click();
+  await page
+    .getByRole("button", { name: "Acessar DNA, identidade e cultura" })
+    .click();
+  await expect(editor.locator("strong")).toHaveText("Documento unificado");
   expect(
     await page.evaluate(
       () => document.documentElement.scrollWidth <= innerWidth,
     ),
   ).toBe(true);
-  await mission.scrollIntoViewIfNeeded();
-  await page.screenshot({ path: info.outputPath("rich-fields-mobile.png") });
-  await page
-    .getByRole("button", { name: "Editar projeto", exact: true })
-    .click();
-  await expect(page.getByRole("alertdialog")).toBeVisible();
-  await page.getByRole("button", { name: "Cancelar", exact: true }).click();
-  await expect(mission.locator("s")).toHaveCount(1);
+  await page.screenshot({ path: info.outputPath("unified-mobile.png") });
   await page.setViewportSize({ width: 1440, height: 900 });
   const long = Array.from(
     { length: 90 },
     (_, i) => `Linha ${i + 1}: Conteúdo preservado do planejamento.`,
   ).join("\n");
-  await item.fill(long);
+  await editor.fill(long);
   await page
     .getByRole("button", { name: "Salvar informações", exact: true })
     .click();
@@ -191,7 +150,6 @@ test("shared toolbar targets separate fields, preserves legacy data, reopens for
         (el as HTMLIFrameElement).contentDocument!.documentElement.outerHTML,
     );
   expect(html).toContain("Linha 90");
-  expect(html).toContain("<strong>Propósito original</strong>");
   const print = await browser.newPage();
   await print.setContent(html);
   const pdf = await print.pdf({ format: "A4" });
@@ -208,11 +166,6 @@ test("shared toolbar targets separate fields, preserves legacy data, reopens for
   await page
     .getByRole("button", { name: "Ler Business Plan", exact: true })
     .click();
-  await expect(
-    page
-      .locator(".summary-prose strong")
-      .filter({ hasText: "Propósito original" }),
-  ).toHaveCount(1);
   await expect(
     page.getByText("Linha 90: Conteúdo preservado do planejamento.", {
       exact: true,

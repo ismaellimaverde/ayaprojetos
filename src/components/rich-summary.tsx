@@ -117,7 +117,10 @@ export function RichSummaryEditor({
     sourcesContext?.sources.flatMap((s) =>
       s.links
         .filter(
-          (l) => l.area === sourcesContext.area && l.field === sourceField,
+          (l) =>
+            l.area === sourcesContext.area &&
+            (l.field === sourceField ||
+              (sourceField === "document" && !!l.field)),
         )
         .map((l) => ({ ...l, name: s.name })),
     ) ?? [];
@@ -189,7 +192,9 @@ export function RichSummaryEditor({
             s.links
               .filter(
                 (l) =>
-                  l.area === sourcesContext.area && l.field === sourceField,
+                  l.area === sourcesContext.area &&
+                  (l.field === sourceField ||
+                    (sourceField === "document" && !!l.field)),
               )
               .map((l) => ({ id: l.source_id, quote: l.quote })),
           ) ?? [],
@@ -211,7 +216,9 @@ export function RichSummaryEditor({
           );
       }}
     >
-      {!shared && <RichToolbar editor={editor} label="Formatação do resumo" />}
+      {!shared && (
+        <RichToolbar editor={editor} label="Formatação do documento" />
+      )}
       {error && <p role="alert">{error}</p>}
       {sourceField && sourcesContext && (
         <div className="source-field-actions">

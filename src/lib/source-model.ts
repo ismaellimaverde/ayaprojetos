@@ -1,3 +1,5 @@
+import { AREA_DOCUMENT_KEY, areaDocument } from "./planning-document";
+import { parseSummary } from "./rich-summary";
 import { z } from "zod";
 import { documentText, fieldDocument, itemDocument } from "./rich-fields";
 import { summaryFromLegacy } from "./rich-summary";
@@ -36,8 +38,16 @@ export type ProjectSource = {
   created_at: string;
   links: SourceLink[];
 };
-export function fieldText(document: ModuleDocument | null, field: string) {
+export function fieldText(
+  document: ModuleDocument | null,
+  field: string,
+  area?: string,
+) {
   if (!document) return "";
+  if (document.fields[AREA_DOCUMENT_KEY] && field)
+    return documentText(parseSummary(document.fields[AREA_DOCUMENT_KEY]));
+  if (field === "document")
+    return area ? documentText(areaDocument(area, document)) : "";
   if (field === "executive")
     return documentText(summaryFromLegacy(document.fields, document.items));
   if (field.startsWith("item:")) {

@@ -1,3 +1,4 @@
+import { AREA_DOCUMENT_KEY } from "./planning-document";
 import { sources } from "./source-domain";
 import { randomUUID, randomBytes, createHash } from "node:crypto";
 import type { PoolClient } from "pg";
@@ -320,12 +321,16 @@ export async function execute(
         .strict()
         .parse(body);
       const fieldIds = new Set(moduleFields[sub].map((f) => f.id));
+      if (sub !== "executive") fieldIds.add(AREA_DOCUMENT_KEY);
       if (sub === "executive") fieldIds.add(SUMMARY_KEY);
       else
         for (const field of moduleFields[sub])
           fieldIds.add(richFieldKey(field.id));
       for (const [key, value] of Object.entries(v.fields)) {
-        if (key === SUMMARY_KEY && sub === "executive") {
+        if (
+          key === AREA_DOCUMENT_KEY ||
+          (key === SUMMARY_KEY && sub === "executive")
+        ) {
           try {
             parseSummary(value);
           } catch {
@@ -379,6 +384,19 @@ export async function execute(
           "O formato desta área foi atualizado. Recarregue antes de salvar.",
         );
       }
+      if (old?.fields?.[AREA_DOCUMENT_KEY] && !v.fields[AREA_DOCUMENT_KEY])
+        throw new DomainError(
+          409,
+          "O formato desta área foi atualizado. Recarregue antes de salvar.",
+        );
+      if (v.fields[AREA_DOCUMENT_KEY]) {
+        // The narrative is an additional representation; retain original semantic data verbatim.
+        v.fields = {
+          ...(old?.fields ?? {}),
+          [AREA_DOCUMENT_KEY]: v.fields[AREA_DOCUMENT_KEY],
+        };
+        v.items = old?.items ?? [];
+      }
       // A new-format save must not erase or mutate the hidden legacy source fields/items.
       if (sub === "executive" && v.fields[SUMMARY_KEY]) {
         v.fields = {
@@ -387,7 +405,7 @@ export async function execute(
         };
         v.items = old?.items ?? [];
       }
-      if (sub !== "executive") {
+      if (sub !== "executive" && !v.fields[AREA_DOCUMENT_KEY]) {
         // Never allow an older client to silently overwrite formatted content.
         for (const field of moduleFields[sub]) {
           const key = richFieldKey(field.id);

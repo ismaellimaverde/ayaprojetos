@@ -5,6 +5,8 @@ import { moduleFields } from "../../src/lib/module-fields";
 test("all direct area routes share document editing layout independent of Library origin", async ({
   page,
 }, info) => {
+  test.setTimeout(240000);
+  page.setDefaultTimeout(20000);
   let editable = true;
   const project = {
     id: "area-layout",
@@ -34,6 +36,19 @@ test("all direct area routes share document editing layout independent of Librar
         },
       });
     }
+    if (path.includes("/project-library/"))
+      return route.fulfill({
+        json: {
+          project_name: project.name,
+          documents: modules.map((m) => ({
+            area: m.id,
+            revision: 1,
+            updated_at: "2026-11-04T12:00:00Z",
+            can_export: true,
+            document: { revision: 1, fields: {}, items: [] },
+          })),
+        },
+      });
     return route.fulfill({
       json: path.endsWith("/me")
         ? {
@@ -72,9 +87,7 @@ test("all direct area routes share document editing layout independent of Librar
           exact: true,
         }),
       ).toHaveCount(0);
-      await expect(
-        surface.locator('[contenteditable="true"]').first(),
-      ).toBeVisible();
+      await expect(surface.locator('[contenteditable="true"]')).toBeVisible();
       await expect(
         surface
           .locator(".document-topbar")
@@ -85,6 +98,60 @@ test("all direct area routes share document editing layout independent of Librar
           () => document.documentElement.scrollWidth <= innerWidth,
         ),
       ).toBe(true);
+      await surface
+        .getByRole("button", { name: "Fechar área", exact: true })
+        .click();
+      await page
+        .getByRole("button", { name: "Não salvar", exact: true })
+        .click();
+      await page
+        .getByRole("button", { name: `Acessar ${area.name}`, exact: true })
+        .click();
+      await expect(surface.locator('[contenteditable="true"]')).toHaveCount(1);
+      await surface
+        .getByRole("button", { name: "Fechar área", exact: true })
+        .click();
+      await page
+        .getByRole("button", { name: "Não salvar", exact: true })
+        .click();
+      if (
+        await page
+          .getByRole("button", { name: "Expandir menu de áreas", exact: true })
+          .isVisible()
+      )
+        await page
+          .getByRole("button", { name: "Expandir menu de áreas", exact: true })
+          .click();
+      await page
+        .getByRole("navigation", { name: "Menu do projeto" })
+        .getByRole("button", { name: area.name, exact: true })
+        .click();
+      await expect(surface.locator('[contenteditable="true"]')).toHaveCount(1);
+      await surface
+        .getByRole("button", { name: "Fechar área", exact: true })
+        .click();
+      await page
+        .getByRole("button", { name: "Não salvar", exact: true })
+        .click();
+      if (
+        await page
+          .getByRole("button", { name: "Expandir menu de áreas", exact: true })
+          .isVisible()
+      )
+        await page
+          .getByRole("button", { name: "Expandir menu de áreas", exact: true })
+          .click();
+      await page
+        .getByRole("navigation", { name: "Menu do projeto" })
+        .getByRole("button", { name: "Biblioteca", exact: true })
+        .click();
+      await page
+        .getByRole("button", {
+          name: `Abrir documento ${area.name}`,
+          exact: true,
+        })
+        .click();
+      await expect(surface.locator('[contenteditable="true"]')).toHaveCount(1);
       if (["executive", "dna"].includes(area.id)) {
         await page.screenshot({
           path: info.outputPath(`${area.id}-direct-${width}.png`),

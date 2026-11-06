@@ -421,7 +421,7 @@ export function AreaSources({
                 {l.quote && <blockquote>{l.quote}</blockquote>}
                 <p>
                   {l.area === area
-                    ? quoteState(fieldText(document, l.field), l.quote)
+                    ? quoteState(fieldText(document, l.field, area), l.quote)
                     : l.status}
                 </p>
                 {l.area === area && canRemove && (

@@ -1,30 +1,16 @@
 "use client";
 import { useEffect, useImperativeHandle, useState, type Ref } from "react";
 import { api } from "@/lib/client";
-import {
-  moduleFields,
-  type ModuleDocument,
-  type ModuleItem,
-} from "@/lib/module-fields";
+import { moduleFields, type ModuleDocument } from "@/lib/module-fields";
 import { updatedAtLabel } from "@/lib/document-metadata";
 import { AreaSources, SourcesButton } from "./area-sources";
 import { AreaIcon } from "./area-icon";
 import { Modal } from "./modal";
 import { modules } from "@/lib/catalog";
-import {
-  RichSummaryEditor,
-  RichFieldsScope,
-  SummaryView,
-} from "./rich-summary";
+import { RichSummaryEditor, SummaryView } from "./rich-summary";
 import { SUMMARY_KEY, summaryFromLegacy } from "@/lib/rich-summary";
-import {
-  richFieldKey,
-  fieldDocument,
-  itemDocument,
-  parseRichField,
-  documentText,
-} from "@/lib/rich-fields";
-import { areaDocument } from "@/lib/planning-document";
+import { fieldDocument, itemDocument, documentText } from "@/lib/rich-fields";
+import { AREA_DOCUMENT_KEY, areaDocument } from "@/lib/planning-document";
 import { printSummary } from "@/lib/print-summary";
 
 export type ModuleEditorHandle = { requestClose: () => boolean };
@@ -133,8 +119,6 @@ export function ModuleEditor({
     setConfirmClose(false);
     onCancelClose?.();
   };
-  const discard = () =>
-    !dirty || confirm("Descartar as alterações ainda não salvas?");
   const close = () => {
     if (!busy) setConfirmClose((value) => !value);
   };
@@ -142,21 +126,9 @@ export function ModuleEditor({
     setDocument((d) => d && { ...d, fields: { ...d.fields, [id]: value } });
     setDirty(true);
   };
-  const changeItem = (id: string, changes: Partial<ModuleItem>) => {
-    setDocument(
-      (d) =>
-        d && {
-          ...d,
-          items: d.items.map((i) => (i.id === id ? { ...i, ...changes } : i)),
-        },
-    );
-    setDirty(true);
-  };
   const content = document;
-  const summary =
-    area === "executive" && content
-      ? summaryFromLegacy(content.fields, content.items)
-      : null;
+  const summary = content ? areaDocument(area, content) : null;
+  const narrativeKey = area === "executive" ? SUMMARY_KEY : AREA_DOCUMENT_KEY;
   const canEdit =
     !archived && permissions.includes(document?.revision ? "edit" : "create");
   async function save(closeAfter: boolean) {
@@ -370,271 +342,97 @@ export function ModuleEditor({
                   await save(false);
                 }}
               >
-                <RichFieldsScope
-                  enabled={editing && area !== "executive"}
-                  onValidity={(valid) => {
-                    setSummaryInvalid(!valid);
-                    if (!valid) setDirty(true);
-                  }}
-                >
-                  {summary ? (
-                    <section className="module-field-card executive-document-section">
-                      <h3>Resumo executivo</h3>
-                      {editing ? (
-                        <RichSummaryEditor
-                          key={document.revision}
-                          sourceField="executive"
-                          initial={summary}
-                          onValidity={(valid) => {
-                            setSummaryInvalid(!valid);
-                            if (!valid) setDirty(true);
-                          }}
-                          onChange={(value) => changeField(SUMMARY_KEY, value)}
-                        />
-                      ) : (
-                        <SummaryView value={summary} />
-                      )}
-                    </section>
-                  ) : (
-                    moduleFields[area].map((f) => (
-                      <div className="module-field-card" key={f.id}>
-                        {editing ? (
-                          <>
-                            <h3>{f.label}</h3>
-                            <RichSummaryEditor
-                              key={`${document.revision}:${f.id}`}
-                              label={f.label}
-                              sourceField={f.id}
-                              describedBy={`hint-${f.id}`}
-                              field
-                              initial={fieldDocument(document.fields, f.id)}
-                              onValidity={() => {}}
-                              onChange={(value) => {
-                                setDocument(
-                                  (d) =>
-                                    d && {
-                                      ...d,
-                                      fields: {
-                                        ...d.fields,
-                                        [f.id]: documentText(
-                                          parseRichField(value),
-                                        ),
-                                        [richFieldKey(f.id)]: value,
-                                      },
-                                    },
-                                );
-                                setDirty(true);
-                              }}
-                            />
-                            <p id={`hint-${f.id}`} className="muted subtle">
-                              {f.hint}
-                            </p>
-                          </>
-                        ) : (
-                          <>
-                            <h3>{f.label}</h3>
-                            {documentText(
-                              fieldDocument(content.fields, f.id),
-                            ).trim() ? (
-                              <SummaryView
-                                value={fieldDocument(content.fields, f.id)}
-                              />
-                            ) : (
-                              <p>Não informado.</p>
-                            )}
-                          </>
-                        )}
-                      </div>
-                    ))
-                  )}
-                  {area !== "executive" && (
-                    <>
-                      <h3>Itens de informação</h3>
+                {summary && (
+                  <section className="module-field-card executive-document-section">
+                    <h3>{title}</h3>
+                    {editing ? (
+                      <RichSummaryEditor
+                        key={`${area}:${document.revision}`}
+                        label={title}
+                        sourceField={
+                          area === "executive" ? "executive" : "document"
+                        }
+                        initial={summary}
+                        onValidity={(valid) => {
+                          setSummaryInvalid(!valid);
+                          if (!valid) setDirty(true);
+                        }}
+                        onChange={(value) => changeField(narrativeKey, value)}
+                      />
+                    ) : (
+                      <SummaryView value={summary} />
+                    )}
+                  </section>
+                )}
+                {area !== "executive" &&
+                  (Object.keys(content.fields).some(
+                    (key) => key !== AREA_DOCUMENT_KEY,
+                  ) ||
+                    content.items.length > 0) && (
+                    <details className="legacy-planning-data">
+                      <summary>
+                        Consultar campos e itens anteriores preservados
+                      </summary>
                       <p className="muted subtle">
-                        Registre detalhes, evidências e referências desta área.
-                        Não são lançamentos ou tarefas operacionais.
+                        O documento reúne o conteúdo anterior com seus títulos.
+                        A edição deste documento não altera os campos e itens
+                        originais abaixo, preservados para consulta. Vínculos de
+                        fontes acompanham os trechos no documento; trechos
+                        repetidos precisam de conferência.
                       </p>
-                      {!content.items.length && <p>Nenhum item cadastrado.</p>}
-                      {content.items.map((item, index) => (
-                        <fieldset key={item.id} className="panel module-item">
-                          <legend>
-                            {item.archived ? "Arquivado · " : ""}Item{" "}
-                            {index + 1}
-                          </legend>
-                          {editing && !item.archived ? (
-                            <>
-                              <label>
-                                Título do item
-                                <input
-                                  required
-                                  maxLength={160}
-                                  value={item.title}
-                                  onChange={(e) =>
-                                    changeItem(item.id, {
-                                      title: e.target.value,
-                                    })
-                                  }
-                                />
-                              </label>
-                              <div>
-                                <p>Descrição do item</p>
-                                <RichSummaryEditor
-                                  key={`${document.revision}:${item.id}`}
-                                  label={`Descrição do item ${index + 1}`}
-                                  sourceField={`item:${item.id}`}
-                                  field
-                                  initial={itemDocument(item)}
-                                  onValidity={() => {}}
-                                  onChange={(value) =>
-                                    changeItem(item.id, {
-                                      text: documentText(parseRichField(value)),
-                                      rich_text_v1: value,
-                                    })
-                                  }
-                                />
-                              </div>
-                              <label>
-                                Fonte ou referência
-                                <input
-                                  maxLength={500}
-                                  value={item.source}
-                                  onChange={(e) =>
-                                    changeItem(item.id, {
-                                      source: e.target.value,
-                                    })
-                                  }
-                                />
-                              </label>
-                              <label>
-                                Período ou data de referência
-                                <input
-                                  maxLength={100}
-                                  value={item.period}
-                                  onChange={(e) =>
-                                    changeItem(item.id, {
-                                      period: e.target.value,
-                                    })
-                                  }
-                                />
-                              </label>
-                              <label>
-                                Responsável pela informação
-                                <input
-                                  maxLength={160}
-                                  value={item.responsible}
-                                  onChange={(e) =>
-                                    changeItem(item.id, {
-                                      responsible: e.target.value,
-                                    })
-                                  }
-                                />
-                              </label>
-                            </>
-                          ) : (
-                            <>
-                              <h3>{item.title}</h3>
-                              {item.text.trim() ? (
-                                <SummaryView value={itemDocument(item)} />
-                              ) : (
-                                <p>Sem descrição.</p>
-                              )}
-                              <p className="subtle">
-                                Fonte: {item.source || "Não informada"} ·
-                                Período: {item.period || "Não informado"} ·
-                                Responsável:{" "}
-                                {item.responsible || "Não informado"}
-                              </p>
-                            </>
-                          )}
-                          {editing &&
-                            (item.archived ||
-                              permissions.includes("delete")) && (
-                              <button
-                                type="button"
-                                className="btn secondary"
-                                onClick={() =>
-                                  changeItem(item.id, {
-                                    archived: !item.archived,
-                                  })
-                                }
-                              >
-                                {item.archived
-                                  ? "Restaurar item"
-                                  : "Arquivar item"}
-                              </button>
-                            )}
-                        </fieldset>
-                      ))}
-                    </>
-                  )}
-                  {editing && (
-                    <>
-                      {area !== "executive" &&
-                        permissions.includes("create") && (
-                          <button
-                            type="button"
-                            className="btn secondary"
-                            disabled={document.items.length >= 50}
-                            onClick={() => {
-                              setDocument(
-                                (d) =>
-                                  d && {
-                                    ...d,
-                                    items: [
-                                      ...d.items,
-                                      {
-                                        id: crypto.randomUUID(),
-                                        title: "",
-                                        text: "",
-                                        source: "",
-                                        period: "",
-                                        responsible: "",
-                                        archived: false,
-                                      },
-                                    ],
-                                  },
-                              );
-                              setDirty(true);
-                            }}
-                          >
-                            Adicionar item
-                          </button>
-                        )}
-                      <div className="row">
-                        <button
-                          className="btn"
-                          disabled={busy || !dirty || summaryInvalid}
-                        >
-                          {busy ? "Salvando…" : "Salvar informações"}
-                        </button>
-                        <button
-                          type="button"
-                          className="btn secondary"
-                          disabled={busy}
-                          onClick={async () => {
-                            if (area === "executive") {
-                              close();
-                              return;
-                            }
-                            if (discard())
-                              try {
-                                await reload();
-                              } catch (e) {
-                                setMessage((e as Error).message);
-                              }
-                          }}
-                        >
-                          Cancelar edição
-                        </button>
-                      </div>
-                      {dirty && (
-                        <p className="muted subtle">
-                          Há alterações ainda não salvas.
-                        </p>
+                      {moduleFields[area].map((field) =>
+                        documentText(
+                          fieldDocument(content.fields, field.id),
+                        ).trim() ? (
+                          <section key={field.id}>
+                            <h3>{field.label}</h3>
+                            <SummaryView
+                              value={fieldDocument(content.fields, field.id)}
+                            />
+                          </section>
+                        ) : null,
                       )}
-                    </>
+                      {content.items.map((item) => (
+                        <section key={item.id}>
+                          <h3>
+                            {item.archived ? "Arquivado · " : ""}
+                            {item.title}
+                          </h3>
+                          <SummaryView value={itemDocument(item)} />
+                          <p>
+                            Fonte: {item.source || "Não informada"} · Período:{" "}
+                            {item.period || "Não informado"} · Responsável:{" "}
+                            {item.responsible || "Não informado"}
+                          </p>
+                        </section>
+                      ))}
+                    </details>
                   )}
-                </RichFieldsScope>
+                {editing && (
+                  <>
+                    <div className="row">
+                      <button
+                        className="btn"
+                        disabled={busy || !dirty || summaryInvalid}
+                      >
+                        {busy ? "Salvando…" : "Salvar informações"}
+                      </button>
+                      <button
+                        type="button"
+                        className="btn secondary"
+                        disabled={busy}
+                        onClick={close}
+                      >
+                        Cancelar edição
+                      </button>
+                    </div>
+                    {dirty && (
+                      <p className="muted subtle">
+                        Há alterações ainda não salvas.
+                      </p>
+                    )}
+                  </>
+                )}
               </form>
             )}
           </>

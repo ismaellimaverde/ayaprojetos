@@ -165,8 +165,8 @@ test("Library opens source editors, saves with real timestamps, preserves read-o
       exact: true,
     })
     .click();
-  const purpose = page.getByRole("textbox", { name: "Propósito", exact: true });
-  await expect(purpose).toHaveText("Propósito salvo");
+  const purpose = page.locator('[contenteditable="true"]');
+  await expect(purpose).toContainText("Propósito salvo");
   await purpose.fill(long);
   await page
     .getByRole("button", { name: "Salvar informações", exact: true })

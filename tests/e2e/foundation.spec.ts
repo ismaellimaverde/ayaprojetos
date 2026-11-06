@@ -77,15 +77,8 @@ test("real password-only admin access, optional MFA, project creation, invitatio
     .click();
   const editorDialog = page.locator(".module-page");
   await editorDialog
-    .getByRole("textbox", { name: /^Propósito/ })
+    .locator('[contenteditable="true"]')
     .fill("Planning persisted by E2E");
-  await editorDialog.getByRole("button", { name: "Adicionar item" }).click();
-  await editorDialog
-    .getByLabel("Título do item", { exact: true })
-    .fill("Research evidence");
-  await editorDialog
-    .getByRole("textbox", { name: "Descrição do item 1", exact: true })
-    .fill("Documented customer interviews");
   await editorDialog
     .getByRole("button", { name: "Salvar informações" })
     .click();
@@ -107,11 +100,8 @@ test("real password-only admin access, optional MFA, project creation, invitatio
   await expect(
     editorDialog.getByRole("button", { name: "Histórico", exact: true }),
   ).toHaveCount(0);
-  await expect(
-    editorDialog.getByLabel("Título do item", { exact: true }),
-  ).toHaveValue("Research evidence");
   await editorDialog
-    .getByRole("textbox", { name: /^Propósito/ })
+    .locator('[contenteditable="true"]')
     .fill("Unsaved local draft");
   const planOverview = await (
     await page.request.get("/api/boss/overview", {
@@ -135,8 +125,7 @@ test("real password-only admin access, optional MFA, project creation, invitatio
       revision: saved.revision,
       fields: {
         ...saved.fields,
-        purpose: "Concurrent saved content",
-        "rich_field_v1:purpose": JSON.stringify({
+        area_document_rich_v1: JSON.stringify({
           type: "doc",
           content: [
             {
@@ -156,15 +145,21 @@ test("real password-only admin access, optional MFA, project creation, invitatio
   await expect(editorDialog.locator("[role=status].notice")).toContainText(
     "Outra pessoa atualizou",
   );
-  await expect(
-    editorDialog.getByRole("textbox", { name: /^Propósito/ }),
-  ).toHaveText("Unsaved local draft");
+  await expect(editorDialog.locator('[contenteditable="true"]')).toHaveText(
+    "Unsaved local draft",
+  );
   await page.setViewportSize({ width: 390, height: 844 });
   expect(
     await editorDialog.evaluate((el) => el.scrollWidth <= el.clientWidth),
   ).toBe(true);
-  page.once("dialog", (dialog) => dialog.accept());
   await editorDialog.getByRole("button", { name: "Cancelar edição" }).click();
+  await page.getByRole("button", { name: "Não salvar", exact: true }).click();
+  await page
+    .getByRole("button", {
+      name: "Acessar DNA, identidade e cultura",
+      exact: true,
+    })
+    .click();
   await expect(
     editorDialog.getByText("Concurrent saved content", { exact: true }),
   ).toBeVisible();

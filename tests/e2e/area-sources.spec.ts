@@ -165,14 +165,10 @@ test("private sources persist independently, link selections, reuse across areas
     await page.screenshot({ path: info.outputPath(`sources-${width}.png`) });
   }
   await panel.getByRole("button", { name: "Fechar fontes" }).click();
-  const purpose = page.getByRole("textbox", { name: "Propósito", exact: true });
+  const purpose = page.locator('[contenteditable="true"]');
   await purpose.fill("Seleção móvel no propósito");
   await purpose.press("ControlOrMeta+a");
   await page
-    .locator(".module-field-card")
-    .filter({
-      has: page.getByRole("heading", { name: "Propósito", exact: true }),
-    })
     .getByRole("button", { name: "Vincular fonte", exact: true })
     .click();
   await panel

@@ -1190,3 +1190,93 @@ test("private source library isolates attachments, reuses references, preserves 
   });
   assert.equal((await call(ownerId, "market")).sources.length, 2);
 });
+
+test("unified area documents preserve semantic originals, history and source anchors across all areas", async () => {
+  const { moduleFields } = await import("../src/lib/module-fields");
+  const { AREA_DOCUMENT_KEY, areaDocument } =
+    await import("../src/lib/planning-document");
+  const { documentText, textDocument } = await import("../src/lib/rich-fields");
+  const { fieldText, quoteState } = await import("../src/lib/source-model");
+  const project = await execute(actor(ownerId), org, "POST", ["projects"], {
+    name: "Unified isolated",
+    modules: Object.keys(moduleFields),
+  });
+  for (const area of Object.keys(moduleFields).filter(
+    (a) => a !== "executive",
+  )) {
+    const path = ["module-content", project.id, area];
+    const first = moduleFields[area][0];
+    const fields = { [first.id]: "Original semantic text" };
+    const items = [
+      {
+        id: randomUUID(),
+        title: "Original structured item",
+        text: "Original detail",
+        source: "Book",
+        period: "2026",
+        responsible: "Team",
+        archived: false,
+      },
+    ];
+    await execute(actor(ownerId), org, "POST", path, {
+      revision: 0,
+      fields,
+      items,
+    });
+    const before = (await execute(actor(ownerId), org, "GET", path, undefined))
+      .document;
+    const converted = areaDocument(area, before);
+    assert.ok(
+      fieldText(before, "document", area).includes("Original semantic text"),
+    );
+    assert.ok(documentText(converted).includes(first.label));
+    assert.ok(documentText(converted).includes("Original detail"));
+    await execute(actor(ownerId), org, "POST", path, {
+      revision: 1,
+      fields: { [AREA_DOCUMENT_KEY]: JSON.stringify(converted) },
+      items: [],
+    });
+    const saved = (await execute(actor(ownerId), org, "GET", path, undefined))
+      .document;
+    assert.equal(saved.fields[first.id], fields[first.id]);
+    assert.deepEqual(saved.items, items);
+    assert.equal(
+      quoteState(fieldText(saved, first.id), "Original semantic text"),
+      "Trecho localizado",
+    );
+    await assert.rejects(
+      execute(actor(ownerId), org, "POST", path, {
+        revision: 2,
+        fields,
+        items,
+      }),
+      /formato/,
+    );
+    const changed = JSON.stringify(textDocument("Revised narrative"));
+    await execute(actor(ownerId), org, "POST", path, {
+      revision: 2,
+      fields: { [AREA_DOCUMENT_KEY]: changed },
+      items: [],
+    });
+    const revised = (await execute(actor(ownerId), org, "GET", path, undefined))
+      .document;
+    assert.equal(
+      documentText(areaDocument(area, revised)),
+      "Revised narrative",
+    );
+    assert.equal(revised.fields[first.id], fields[first.id]);
+    assert.deepEqual(revised.items, items);
+    assert.match(
+      quoteState(fieldText(revised, first.id), "Original semantic text"),
+      /alterado/,
+    );
+    await assert.rejects(
+      execute(actor(ownerId), org, "POST", path, {
+        revision: 3,
+        fields: { [AREA_DOCUMENT_KEY]: '{"type":"script"}' },
+        items: [],
+      }),
+      /inválido/,
+    );
+  }
+});

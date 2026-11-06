@@ -109,7 +109,11 @@ export async function sources(
           .map((l) => ({
             ...l,
             status: quoteState(
-              fieldText(docs.find((d) => d.area === l.area) ?? null, l.field),
+              fieldText(
+                docs.find((d) => d.area === l.area) ?? null,
+                l.field,
+                l.area,
+              ),
               l.quote,
             ),
           })),
@@ -189,6 +193,7 @@ export async function sources(
       !!v.field !== !!v.quote ||
       (v.field &&
         !(v.field === "executive" && area === "executive") &&
+        !(v.field === "document" && area !== "executive") &&
         !moduleFields[area].some((f) => f.id === v.field) &&
         !/^item:[a-f0-9-]{36}$/.test(v.field))
     )

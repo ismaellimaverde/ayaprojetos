@@ -2,11 +2,19 @@ import { fieldDocument, itemDocument, documentText } from "./rich-fields";
 import { updatedAtLabel } from "./document-metadata";
 import { modules } from "./catalog";
 import { moduleFields, type ModuleDocument } from "./module-fields";
-import { summaryFromLegacy, type SummaryDocument } from "./rich-summary";
+import {
+  parseSummary,
+  summaryFromLegacy,
+  type SummaryDocument,
+} from "./rich-summary";
+export const AREA_DOCUMENT_KEY = "area_document_rich_v1";
+
 export function areaDocument(
   area: string,
   document: ModuleDocument,
 ): SummaryDocument {
+  if (document.fields[AREA_DOCUMENT_KEY])
+    return parseSummary(document.fields[AREA_DOCUMENT_KEY]);
   if (area === "executive")
     return summaryFromLegacy(document.fields, document.items);
   const content: SummaryDocument["content"] = [];
