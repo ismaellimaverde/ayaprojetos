@@ -63,6 +63,14 @@ test("all direct area routes share document editing layout independent of Librar
     for (const area of modules) {
       await page.goto(`/?workspace=org&project=area-layout&area=${area.id}`);
       const surface = page.locator(".module-page");
+      await expect(
+        surface.getByRole("button", { name: /Vincular/ }),
+      ).toHaveCount(0);
+      await expect(
+        surface.locator(
+          ".source-annotation, .source-field-links, .source-field-actions",
+        ),
+      ).toHaveCount(0);
       await expect(surface.locator(".document-heading h2")).toHaveText(
         `Projeto de teste — ${area.name}`,
       );

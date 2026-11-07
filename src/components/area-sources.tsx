@@ -15,13 +15,10 @@ import {
   fieldText,
   quoteState,
   type ProjectSource,
-  type SourceSelection,
 } from "@/lib/source-model";
 import type { ModuleDocument } from "@/lib/module-fields";
 export const SourcesContext = createContext<{
-  sources: ProjectSource[];
-  area: string;
-  open: (selection?: SourceSelection, sourceId?: string) => void;
+  open: () => void;
 } | null>(null);
 export function SourcesButton() {
   const ctx = useContext(SourcesContext);
@@ -47,10 +44,8 @@ export function AreaSources({
   const [sources, setSources] = useState<ProjectSource[]>([]),
     [writable, setWritable] = useState(false),
     [opened, setOpened] = useState(false),
-    [selection, setSelection] = useState<SourceSelection>(),
     [selected, setSelected] = useState<string>(),
     [error, setError] = useState("");
-  const [canRemove, setCanRemove] = useState(false);
   const [busy, setBusy] = useState(false),
     [creating, setCreating] = useState(false),
     [draft, setDraft] = useState({
@@ -75,7 +70,6 @@ export function AreaSources({
     const r = await api(path, org);
     setSources(r.sources ?? []);
     setWritable(!!r.writable);
-    setCanRemove(!!r.canRemove);
   }
   useEffect(() => {
     let alive = true;
@@ -84,7 +78,6 @@ export function AreaSources({
         if (alive) {
           setSources(r.sources ?? []);
           setWritable(!!r.writable);
-          setCanRemove(!!r.canRemove);
         }
       })
       .catch(() => {});
@@ -117,10 +110,8 @@ export function AreaSources({
     setOpened(false);
     setCreating(false);
     setAsset(null);
-    setSelection(undefined);
   }
-  function open(value?: SourceSelection, id?: string) {
-    setSelection(value);
+  function open(id?: string) {
     setSelected(id);
     setError("");
     setOpened(true);
@@ -142,17 +133,6 @@ export function AreaSources({
       pending.current = false;
       setBusy(false);
     }
-  }
-  async function link(sourceId: string, general = false) {
-    await perform(async () => {
-      await api(`${path}/links`, org, "POST", {
-        id: crypto.randomUUID(),
-        source_id: sourceId,
-        ...(!general && selection ? selection : { field: "", quote: "" }),
-      });
-      setSelection(undefined);
-      setSelected(sourceId);
-    });
   }
   async function inspect(source: ProjectSource) {
     setSelected(source.id);
@@ -176,7 +156,7 @@ export function AreaSources({
   }
   const current = sources.find((s) => s.id === selected);
   return (
-    <SourcesContext.Provider value={{ sources, area, open }}>
+    <SourcesContext.Provider value={{ open }}>
       {children}
       <dialog
         ref={dialog}
@@ -201,31 +181,13 @@ export function AreaSources({
         </div>
         <p className="muted">
           Materiais internos do projeto. Não entram automaticamente no Business
-          Plan ou no PDF. Os usos listados respeitam seu acesso às áreas. Ao
-          reutilizar uma fonte, ela fica disponível às pessoas com acesso à área
-          de destino.
+          Plan ou no PDF. Os usos históricos listados respeitam seu acesso às
+          áreas.
         </p>
         {error && (
           <p role="alert" className="notice">
             {error}
           </p>
-        )}
-        {selection && (
-          <div className="notice">
-            <strong>Vincular trecho selecionado</strong>
-            <blockquote>{selection.quote}</blockquote>
-            <p>
-              O vínculo é salvo separadamente. Salve também o texto no editor
-              para preservar este trecho.
-            </p>
-            <button
-              type="button"
-              className="btn secondary"
-              onClick={() => setSelection(undefined)}
-            >
-              Usar como referência geral
-            </button>
-          </div>
         )}
         {writable && !creating && (
           <button
@@ -273,15 +235,9 @@ export function AreaSources({
                     ? { filename: file.name, mime: file.type, data }
                     : {}),
                 });
-                await api(`${path}/links`, org, "POST", {
-                  id: crypto.randomUUID(),
-                  source_id: r.id,
-                  ...(selection ?? { field: "", quote: "" }),
-                });
                 setCreating(false);
                 setFile(null);
                 setSelected(r.id);
-                setSelection(undefined);
               });
             }}
           >
@@ -424,25 +380,6 @@ export function AreaSources({
                     ? quoteState(fieldText(document, l.field, area), l.quote)
                     : l.status}
                 </p>
-                {l.area === area && canRemove && (
-                  <button
-                    className="btn secondary"
-                    type="button"
-                    disabled={busy}
-                    onClick={() => {
-                      if (
-                        confirm(
-                          "Remover apenas este vínculo? O texto e a fonte serão preservados.",
-                        )
-                      )
-                        void perform(async () => {
-                          await api(`${path}/links/${l.id}`, org, "DELETE");
-                        });
-                    }}
-                  >
-                    Remover vínculo
-                  </button>
-                )}
               </div>
             ))}
           </section>
@@ -468,7 +405,7 @@ export function AreaSources({
                     ·{" "}
                     {s.links.some((l) => l.area === area)
                       ? "Usada nesta área"
-                      : "Disponível para reutilizar"}
+                      : "Material do projeto"}
                   </p>
                   <div className="row">
                     <button
@@ -479,16 +416,6 @@ export function AreaSources({
                     >
                       Consultar {s.name}
                     </button>
-                    {writable && (
-                      <button
-                        type="button"
-                        className="btn"
-                        disabled={busy}
-                        onClick={() => void link(s.id)}
-                      >
-                        {selection ? "Vincular seleção" : "Referência geral"}
-                      </button>
-                    )}
                   </div>
                 </article>
               ))}

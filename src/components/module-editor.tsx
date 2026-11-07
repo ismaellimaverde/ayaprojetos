@@ -349,9 +349,6 @@ export function ModuleEditor({
                       <RichSummaryEditor
                         key={`${area}:${document.revision}`}
                         label={title}
-                        sourceField={
-                          area === "executive" ? "executive" : "document"
-                        }
                         initial={summary}
                         onValidity={(valid) => {
                           setSummaryInvalid(!valid);

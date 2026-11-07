@@ -1,7 +1,4 @@
 "use client";
-import { SourcesContext } from "./area-sources";
-import { sourceDecorations } from "@/lib/source-decorations";
-import { quoteState } from "@/lib/source-model";
 import { useEditor, EditorContent, useEditorState } from "@tiptap/react";
 import TextAlign from "@tiptap/extension-text-align";
 import StarterKit from "@tiptap/starter-kit";
@@ -99,7 +96,6 @@ export function RichSummaryEditor({
   label = "Resumo executivo",
   describedBy,
   field = false,
-  sourceField,
 }: {
   initial: SummaryDocument;
   onChange: (value: string) => void;
@@ -107,28 +103,13 @@ export function RichSummaryEditor({
   label?: string;
   describedBy?: string;
   field?: boolean;
-  sourceField?: string;
 }) {
   const [error, setError] = useState("");
   const shared = useContext(RichFieldsContext);
   const id = useId();
-  const sourcesContext = useContext(SourcesContext);
-  const linked =
-    sourcesContext?.sources.flatMap((s) =>
-      s.links
-        .filter(
-          (l) =>
-            l.area === sourcesContext.area &&
-            (l.field === sourceField ||
-              (sourceField === "document" && !!l.field)),
-        )
-        .map((l) => ({ ...l, name: s.name })),
-    ) ?? [];
-  const [selectionMessage, setSelectionMessage] = useState("");
   const editor = useEditor({
     immediatelyRender: false,
     extensions: [
-      sourceDecorations,
       StarterKit.configure({
         heading: { levels: [1, 2, 3] },
         blockquote: false,
@@ -183,89 +164,14 @@ export function RichSummaryEditor({
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [id],
   );
-  useEffect(() => {
-    if (editor && !editor.isDestroyed)
-      editor.view.dispatch(
-        editor.state.tr.setMeta(
-          "privateSources",
-          sourcesContext?.sources.flatMap((s) =>
-            s.links
-              .filter(
-                (l) =>
-                  l.area === sourcesContext.area &&
-                  (l.field === sourceField ||
-                    (sourceField === "document" && !!l.field)),
-              )
-              .map((l) => ({ id: l.source_id, quote: l.quote })),
-          ) ?? [],
-        ),
-      );
-  }, [editor, sourcesContext?.sources, sourcesContext?.area, sourceField]);
   if (!editor) return <p>Carregando editor…</p>;
   return (
-    <div
-      className="summary-editor"
-      onClick={(event) => {
-        const target = (event.target as HTMLElement).closest(
-          "[data-source-id]",
-        );
-        if (target)
-          sourcesContext?.open(
-            undefined,
-            target.getAttribute("data-source-id")!,
-          );
-      }}
-    >
+    <div className="summary-editor">
       {!shared && (
         <RichToolbar editor={editor} label="Formatação do documento" />
       )}
       {error && <p role="alert">{error}</p>}
-      {sourceField && sourcesContext && (
-        <div className="source-field-actions">
-          <button
-            type="button"
-            className="source-link-button"
-            onMouseDown={(e) => e.preventDefault()}
-            onClick={() => {
-              const { from, to } = editor.state.selection;
-              const quote = editor.state.doc.textBetween(from, to, "\n").trim();
-              if (!quote || quote.length > 2000) {
-                setSelectionMessage(
-                  "Selecione uma frase ou parágrafo de até 2.000 caracteres.",
-                );
-                return;
-              }
-              setSelectionMessage("");
-              sourcesContext.open({ field: sourceField, quote });
-            }}
-          >
-            Vincular fonte
-          </button>
-          {selectionMessage && <span role="status">{selectionMessage}</span>}
-        </div>
-      )}
       <EditorContent editor={editor} />
-      {linked.length > 0 && (
-        <div className="source-field-links" aria-label="Fontes deste campo">
-          {linked.map((l) => (
-            <button
-              type="button"
-              key={l.id}
-              onClick={() => sourcesContext?.open(undefined, l.source_id)}
-            >
-              Fonte: {l.name} ·{" "}
-              {quoteState(
-                editor.state.doc.textBetween(
-                  0,
-                  editor.state.doc.content.size,
-                  "\n",
-                ),
-                l.quote,
-              )}
-            </button>
-          ))}
-        </div>
-      )}
     </div>
   );
 }
