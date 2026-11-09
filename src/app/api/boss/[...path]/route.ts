@@ -29,14 +29,14 @@ async function handler(
     )
       throw new DomainError(403, "Origem não autorizada");
     if (
-      path[0] === "sources" &&
+      ["sources", "project-files"].includes(path[0]) &&
       Number(req.headers.get("content-length")) > 3000000
     )
       throw new DomainError(413, "Arquivo excede o limite");
     const body =
       req.method === "GET" || req.method === "DELETE"
         ? {}
-        : path[0] === "sources"
+        : ["sources", "project-files"].includes(path[0])
           ? await sourceBody(req)
           : await req.json();
     if (path[0] === "invite-register" && req.method === "POST") {

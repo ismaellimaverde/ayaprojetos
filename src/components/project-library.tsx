@@ -1,4 +1,5 @@
 "use client";
+import { LibraryFiles } from "./library-files";
 import { useEffect, useState } from "react";
 import { api } from "@/lib/client";
 import { updatedAtLabel } from "@/lib/document-metadata";
@@ -232,6 +233,11 @@ export function ProjectLibrary({
           </p>
         </>
       )}
+      <LibraryFiles
+        key={`${org}:${projectId}`}
+        org={org}
+        projectId={projectId}
+      />
     </section>
   );
 }

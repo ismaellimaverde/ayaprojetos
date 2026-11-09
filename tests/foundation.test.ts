@@ -1280,3 +1280,241 @@ test("unified area documents preserve semantic originals, history and source anc
     );
   }
 });
+
+test("project file manager isolates folders, links and attachments without altering planning or sources", async () => {
+  const p = await execute(actor(ownerId), org, "POST", ["projects"], {
+    name: "File manager test",
+  });
+  const q = await execute(actor(ownerId), org, "POST", ["projects"], {
+    name: "Other file manager test",
+  });
+  const path = ["project-files", p.id];
+  const folder = {
+    id: randomUUID(),
+    name: "Imagens de campanha",
+    area: "marketing",
+  };
+  const finance = {
+    id: randomUUID(),
+    name: "Privado financeiro",
+    area: "finance",
+  };
+  await execute(actor(ownerId), org, "POST", [...path, "folders"], folder);
+  await execute(actor(ownerId), org, "POST", [...path, "folders"], folder);
+  await execute(actor(ownerId), org, "POST", [...path, "folders"], finance);
+  const reader = await makeUser("files-reader@example.test");
+  await pool.query(
+    "INSERT INTO boss_private.members(id,org_id,user_id,role) VALUES($1,$2,$3,'member')",
+    [randomUUID(), org, reader],
+  );
+  await execute(actor(ownerId), org, "POST", ["grants"], {
+    project_id: p.id,
+    user_id: reader,
+    role: "viewer",
+    permissions: { marketing: ["view"] },
+  });
+  const image = Buffer.from("89504e470d0a1a0a00000000", "hex");
+  const item = {
+    id: randomUUID(),
+    name: "Imagem interna",
+    folder_id: folder.id,
+    category: "image",
+    filename: "fixture.png",
+    mime: "image/png",
+    data: image.toString("base64"),
+  };
+  await execute(actor(ownerId), org, "POST", [...path, "items"], item);
+  await execute(actor(ownerId), org, "POST", [...path, "items"], item);
+  const video = {
+    id: randomUUID(),
+    name: "Vídeo externo",
+    folder_id: folder.id,
+    category: "video",
+    url: "https://drive.google.com/file/d/example/view",
+  };
+  await execute(actor(ownerId), org, "POST", [...path, "items"], video);
+  await execute(actor(ownerId), org, "POST", [...path, "items"], {
+    id: randomUUID(),
+    name: "Segredo",
+    folder_id: finance.id,
+    category: "document",
+    url: "https://example.test/private",
+  });
+  const listing = await execute(actor(reader), org, "GET", path, undefined);
+  assert.equal(listing.folders.length, 1);
+  assert.equal(listing.files.length, 2);
+  assert.ok(!JSON.stringify(listing).includes("private"));
+  assert.ok(!JSON.stringify(listing).includes("attachment"));
+  assert.ok(
+    listing.files.every(
+      (f: { can_edit: boolean; can_download: boolean }) =>
+        !f.can_edit && !f.can_download,
+    ),
+  );
+  await assert.rejects(
+    execute(actor(reader), org, "GET", [...path, "file", item.id], undefined),
+    /permissão/,
+  );
+  await assert.rejects(
+    execute(actor(reader), org, "POST", [...path, "items"], {
+      ...video,
+      id: randomUUID(),
+    }),
+    /permissão/,
+  );
+  await assert.rejects(
+    execute(actor(reader), org, "POST", [...path, "folders"], {
+      ...folder,
+      id: randomUUID(),
+    }),
+    /permissão/,
+  );
+  await assert.rejects(
+    execute(actor(reader), org, "GET", ["project-files", q.id], undefined),
+  );
+  await assert.rejects(execute(actor(ownerId), other, "GET", path, undefined));
+  await assert.rejects(
+    execute(actor(ownerId), org, "POST", ["project-files", q.id, "items"], {
+      ...video,
+      id: randomUUID(),
+    }),
+    /Pasta/,
+  );
+  await assert.rejects(
+    execute(
+      actor(ownerId),
+      org,
+      "GET",
+      ["project-files", q.id, "file", item.id],
+      undefined,
+    ),
+    /indisponível/,
+  );
+  const binary = await execute(
+    actor(ownerId),
+    org,
+    "GET",
+    [...path, "file", item.id],
+    undefined,
+  );
+  assert.deepEqual(binary.privateFile, image);
+  for (const url of [
+    "http://example.test",
+    "javascript:alert(1)",
+    "https://user:pass@example.test",
+    " https://example.test",
+  ])
+    await assert.rejects(
+      execute(actor(ownerId), org, "POST", [...path, "items"], {
+        ...video,
+        id: randomUUID(),
+        url,
+      }),
+      /HTTPS/,
+    );
+  await assert.rejects(
+    execute(actor(ownerId), org, "POST", [...path, "items"], {
+      ...item,
+      id: randomUUID(),
+      category: "video",
+    }),
+    /Vídeos/,
+  );
+  await assert.rejects(
+    execute(actor(ownerId), org, "POST", [...path, "items"], {
+      ...item,
+      id: randomUUID(),
+      mime: "image/svg+xml",
+    }),
+    /Formato/,
+  );
+  await assert.rejects(
+    execute(actor(ownerId), org, "POST", [...path, "items"], {
+      ...item,
+      id: randomUUID(),
+      data: Buffer.from("not png").toString("base64"),
+    }),
+    /Formato/,
+  );
+  const oversized = Buffer.alloc(2097153);
+  image.copy(oversized);
+  await assert.rejects(
+    execute(actor(ownerId), org, "POST", [...path, "items"], {
+      ...item,
+      id: randomUUID(),
+      data: oversized.toString("base64"),
+    }),
+    /2 MB/,
+  );
+  const second = { ...folder, id: randomUUID(), name: "Outra pasta" };
+  await execute(actor(ownerId), org, "POST", [...path, "folders"], second);
+  await execute(actor(ownerId), org, "PATCH", [...path, "items", item.id], {
+    name: "Imagem renomeada",
+    folder_id: second.id,
+  });
+  await assert.rejects(
+    execute(actor(ownerId), org, "PATCH", [...path, "items", item.id], {
+      name: "Não ampliar acesso",
+      folder_id: finance.id,
+    }),
+    /mesma área/,
+  );
+  const moved = (
+    await execute(actor(ownerId), org, "GET", path, undefined)
+  ).files.find((f: { id: string }) => f.id === item.id);
+  assert.equal(moved.folder_id, second.id);
+  assert.equal(moved.name, "Imagem renomeada");
+  await pool.query(
+    "UPDATE boss_private.grants SET status='revoked' WHERE project_id=$1 AND user_id=$2",
+    [p.id, reader],
+  );
+  await assert.rejects(execute(actor(reader), org, "GET", path, undefined));
+  assert.equal(
+    (
+      await pool.query(
+        "SELECT count(*)::int AS n FROM boss_private.module_content WHERE project_id=$1",
+        [p.id],
+      )
+    ).rows[0].n,
+    0,
+  );
+  assert.equal(
+    (
+      await pool.query(
+        "SELECT count(*)::int AS n FROM boss_private.project_sources WHERE project_id=$1",
+        [p.id],
+      )
+    ).rows[0].n,
+    0,
+  );
+  // Fill the shared quota using only synthetic rows in boss_test; links still cost no attachment bytes.
+  for (let i = 0; i < 25; i++)
+    await pool.query(
+      "INSERT INTO boss_private.project_sources(id,org_id,project_id,area,name,kind,attachment,created_by) VALUES($1,$2,$3,'marketing','quota fixture','image',$4,$5)",
+      [randomUUID(), org, p.id, Buffer.alloc(2 * 1024 * 1024), ownerId],
+    );
+  await assert.rejects(
+    execute(actor(ownerId), org, "POST", [...path, "items"], {
+      ...item,
+      id: randomUUID(),
+    }),
+    /50 MB/,
+  );
+  await pool.query(
+    "UPDATE boss_private.projects SET status='archived' WHERE id=$1",
+    [p.id],
+  );
+  assert.ok(
+    (await execute(actor(ownerId), org, "GET", path, undefined)).areas.every(
+      (a: { can_create: boolean; can_edit: boolean }) =>
+        !a.can_create && !a.can_edit,
+    ),
+  );
+  await assert.rejects(
+    execute(actor(ownerId), org, "PATCH", [...path, "items", item.id], {
+      name: "Archived",
+      folder_id: folder.id,
+    }),
+    /permissão/,
+  );
+});

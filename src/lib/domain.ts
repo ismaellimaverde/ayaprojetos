@@ -1,3 +1,4 @@
+import { libraryFiles } from "./library-files";
 import { AREA_DOCUMENT_KEY } from "./planning-document";
 import { sources } from "./source-domain";
 import { randomUUID, randomBytes, createHash } from "node:crypto";
@@ -203,6 +204,8 @@ export async function execute(
 ) {
   return inOrg(actor, org, async (c, admin) => {
     const [resource, id, sub] = path;
+    if (resource === "project-files")
+      return libraryFiles(c, actor, org, admin, method, path, body);
     if (resource === "sources")
       return sources(c, actor, org, admin, method, path, body);
     if (resource === "project-library") {

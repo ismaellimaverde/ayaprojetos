@@ -1,3 +1,7 @@
+import {
+  projectAttachmentBytes,
+  PROJECT_ATTACHMENT_LIMIT,
+} from "./project-attachments";
 import type { PoolClient } from "pg";
 import {
   digest,
@@ -14,7 +18,7 @@ import {
 } from "./source-model";
 import { moduleFields } from "./module-fields";
 import { z } from "zod";
-function attachment(v: z.infer<typeof sourceInput>) {
+export function validateSourceAttachment(v: z.infer<typeof sourceInput>) {
   if (["book", "link"].includes(v.kind)) {
     if (v.data)
       throw new DomainError(400, "Tipo de fonte incompatível com anexo");
@@ -122,7 +126,7 @@ export async function sources(
   }
   if (method === "POST" && !action) {
     const v = sourceInput.parse(body);
-    const bytes = attachment(v);
+    const bytes = validateSourceAttachment(v);
     const existing = (
       await c.query(
         "SELECT id FROM boss_private.project_sources WHERE id=$1 AND org_id=$2 AND project_id=$3 AND created_by=$4 AND area=$5",
@@ -132,17 +136,19 @@ export async function sources(
     if (existing) return existing;
     const usage = (
       await c.query(
-        "SELECT count(*)::int AS count,coalesce(sum(octet_length(attachment)),0)::bigint AS bytes FROM boss_private.project_sources WHERE org_id=$1 AND project_id=$2",
+        "SELECT count(*)::int AS count FROM boss_private.project_sources WHERE org_id=$1 AND project_id=$2",
         [org, projectId],
       )
     ).rows[0];
     if (
       usage.count >= 100 ||
-      Number(usage.bytes) + (bytes?.length ?? 0) > 50 * 1024 * 1024
+      (bytes !== null &&
+        (await projectAttachmentBytes(c, org, projectId)) + bytes.length >
+          PROJECT_ATTACHMENT_LIMIT)
     )
       throw new DomainError(
         409,
-        "Limite do projeto: 100 fontes e 50 MB de anexos",
+        "Limite do projeto: 100 fontes e 50 MB de anexos, incluindo a Biblioteca",
       );
     await c.query(
       `INSERT INTO boss_private.project_sources(id,org_id,project_id,area,name,kind,origin,note,url,filename,mime,attachment,created_by) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13)`,

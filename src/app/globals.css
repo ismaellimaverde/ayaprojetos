@@ -1759,3 +1759,13 @@ h3 {
     text-decoration: none;
   }
 }
+
+.file-manager { margin-top: 24px; min-width: 0; }
+.file-manager .heading { flex-wrap: wrap; }
+.file-manager h3, .file-manager h4 { overflow-wrap: anywhere; }
+.file-filters { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 16px; margin: 20px 0; }
+.file-filters label, .file-manager select, .file-manager input { min-width: 0; max-width: 100%; }
+.file-grid .panel { min-width: 0; overflow-wrap: anywhere; }
+@media(max-width:650px) { .file-filters { grid-template-columns: 1fr; } .file-manager { padding: 16px; } }
+.file-folders { margin-top: 20px; }
+.file-folders .btn { white-space: normal; text-align: left; overflow-wrap: anywhere; max-width: 100%; }
