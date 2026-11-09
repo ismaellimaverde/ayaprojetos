@@ -129,30 +129,40 @@ test("Library file manager stores private files, groups and HTTPS links without 
   );
   expect(await stored.body()).toEqual(image);
   expect(stored.headers()["cache-control"]).toContain("no-store");
-  await manager
-    .getByRole("button", { name: "Nova pasta", exact: true })
-    .click();
-  form = manager.getByRole("form", { name: "Nova pasta" });
-  await form.getByLabel("Nome", { exact: true }).fill("Entrega");
-  await form
-    .getByLabel("Área responsável pelo acesso")
-    .selectOption("marketing");
-  await form.getByRole("button", { name: "Salvar", exact: true }).click();
-  await expect(form).toHaveCount(0);
-  await manager
-    .getByRole("button", { name: "Organizar Imagem privada", exact: true })
-    .click();
-  form = manager.getByRole("form", { name: "Organizar arquivo" });
-  await form.getByLabel("Nome", { exact: true }).fill("Imagem final");
-  await form
-    .getByRole("combobox", { name: "Pasta", exact: true })
-    .selectOption({ label: "Entrega — Marketing e growth" });
-  await form.getByRole("button", { name: "Salvar", exact: true }).click();
-  await expect(form).toHaveCount(0);
-  await page.reload();
+  await expect(manager.getByRole("button", { name: /Organizar / })).toHaveCount(
+    0,
+  );
   await expect(
-    manager.getByRole("heading", { name: "Imagem final", exact: true }),
-  ).toBeVisible();
+    manager.getByRole("button", { name: "Mostrar todas as categorias" }),
+  ).toHaveCount(0);
+  const photo = manager
+    .locator("article")
+    .filter({
+      has: page.getByRole("heading", { name: "Imagem privada", exact: true }),
+    });
+  page.once("dialog", (d) => d.dismiss());
+  await photo.getByRole("button", { name: "Excluir arquivo" }).click();
+  await expect(photo).toBeVisible();
+  page.once("dialog", (d) => {
+    expect(d.message()).toContain("Imagem privada");
+    expect(d.message()).toContain("lixeira");
+    return d.accept();
+  });
+  await photo.getByRole("button", { name: "Excluir arquivo" }).click();
+  await expect(photo).toHaveCount(0);
+  await page.reload();
+  await manager.getByRole("button", { name: "Lixeira", exact: true }).click();
+  await expect(photo).toBeVisible();
+  await expect(
+    photo.getByRole("button", { name: "Baixar arquivo" }),
+  ).toHaveCount(0);
+  page.once("dialog", (d) => d.accept());
+  await photo.getByRole("button", { name: "Restaurar arquivo" }).click();
+  await expect(photo).toHaveCount(0);
+  await manager
+    .getByRole("button", { name: "Voltar aos arquivos", exact: true })
+    .click();
+  await expect(photo).toBeVisible();
   await manager
     .getByRole("button", { name: "Adicionar arquivo ou link" })
     .click();

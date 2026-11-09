@@ -1,6 +1,13 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
-import { Folder, FileText, Image as ImageIcon, Video } from "lucide-react";
+import {
+  Folder,
+  FileText,
+  Files,
+  Trash2,
+  Image as ImageIcon,
+  Video,
+} from "lucide-react";
 import { api } from "@/lib/client";
 import { modules } from "@/lib/catalog";
 import { updatedAtLabel } from "@/lib/document-metadata";
@@ -17,6 +24,8 @@ type Entry = {
   bytes: number | null;
   updated_at: string;
   can_edit: boolean;
+  can_delete: boolean;
+  deleted_at: string | null;
   can_download: boolean;
 };
 type Access = { id: string; can_create: boolean; can_edit: boolean };
@@ -41,7 +50,9 @@ export function LibraryFiles({
   org: string;
   projectId: string;
 }) {
-  const path = `project-files/${projectId}`;
+  const [trash, setTrash] = useState(false);
+  const basePath = `project-files/${projectId}`;
+  const path = trash ? `${basePath}/trash` : basePath;
   const [listing, setListing] = useState<Listing>({
     folders: [],
     files: [],
@@ -231,13 +242,16 @@ export function LibraryFiles({
     >
       <div className="heading">
         <div>
-          <h3>Gerenciador de arquivos</h3>
+          <h3 className="file-manager-title">
+            <Files aria-hidden size={30} />
+            Gerenciador de arquivos
+          </h3>
           <p className="muted">
             Organize materiais do projeto em pastas. Eles não entram
             automaticamente no Business Plan ou no PDF.
           </p>
         </div>
-        {writable.length > 0 && !form && (
+        {!trash && writable.length > 0 && !form && (
           <div className="row">
             <button
               type="button"
@@ -295,18 +309,32 @@ export function LibraryFiles({
           </button>
         ))}
       </nav>
-      {category && (
-        <div className="row file-category-heading">
-          <h4>{labels[category]}</h4>
-          <button
-            type="button"
-            className="btn secondary"
-            disabled={busy || !!form}
-            onClick={() => setCategory("")}
-          >
-            Mostrar todas as categorias
-          </button>
-        </div>
+      <div className="row file-category-heading">
+        <h4>
+          {category ? labels[category] : "Arquivos do projeto"}
+          {trash ? " · Lixeira" : ""}
+        </h4>
+        <button
+          type="button"
+          className="btn secondary"
+          disabled={busy || !!form}
+          onClick={() => {
+            setLoading(true);
+            setListing((previous) => ({ ...previous, files: [] }));
+            setTrash(!trash);
+            setError("");
+          }}
+        >
+          <Trash2 aria-hidden size={18} />
+          {trash ? "Voltar aos arquivos" : "Lixeira"}
+        </button>
+      </div>
+      {trash && (
+        <p className="notice">
+          Arquivos na lixeira podem ser restaurados por quem tem permissão de
+          exclusão. Continuam ocupando a quota. Nenhum arquivo externo é
+          apagado.
+        </p>
       )}
       {error && (
         <p role="alert" className="notice">
@@ -567,61 +595,78 @@ export function LibraryFiles({
                   {entry.bytes ? ` · ${Math.ceil(entry.bytes / 1024)} KB` : ""}
                 </p>
                 <div className="row">
-                  {entry.url ? (
-                    <a
-                      className="btn secondary"
-                      href={entry.url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      referrerPolicy="no-referrer"
-                    >
-                      Abrir link
-                    </a>
-                  ) : entry.can_download ? (
-                    <button
-                      type="button"
-                      className="btn secondary"
-                      disabled={busy}
-                      onClick={() =>
-                        void perform(async () => {
-                          const r = await fetch(
-                            `/api/boss/${path}/file/${entry.id}`,
-                            {
-                              headers: { "x-organization-id": org },
-                              cache: "no-store",
-                            },
-                          );
-                          if (!r.ok)
-                            throw new Error(
-                              "Não foi possível baixar este arquivo com seu acesso atual",
+                  {!entry.deleted_at &&
+                    (entry.url ? (
+                      <a
+                        className="btn secondary"
+                        href={entry.url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        referrerPolicy="no-referrer"
+                      >
+                        Abrir link
+                      </a>
+                    ) : entry.can_download ? (
+                      <button
+                        type="button"
+                        className="btn secondary"
+                        disabled={busy}
+                        onClick={() =>
+                          void perform(async () => {
+                            const r = await fetch(
+                              `/api/boss/${path}/file/${entry.id}`,
+                              {
+                                headers: { "x-organization-id": org },
+                                cache: "no-store",
+                              },
                             );
-                          const blob = await r.blob();
-                          if (downloadUrl.current)
-                            URL.revokeObjectURL(downloadUrl.current);
-                          const url = URL.createObjectURL(blob);
-                          downloadUrl.current = url;
-                          const a = document.createElement("a");
-                          a.href = url;
-                          a.download = entry.filename || entry.name;
-                          a.click();
-                        })
-                      }
-                    >
-                      Baixar arquivo
-                    </button>
-                  ) : (
-                    <span className="muted subtle">
-                      Download não autorizado
-                    </span>
-                  )}
-                  {entry.can_edit && (
+                            if (!r.ok)
+                              throw new Error(
+                                "Não foi possível baixar este arquivo com seu acesso atual",
+                              );
+                            const blob = await r.blob();
+                            if (downloadUrl.current)
+                              URL.revokeObjectURL(downloadUrl.current);
+                            const url = URL.createObjectURL(blob);
+                            downloadUrl.current = url;
+                            const a = document.createElement("a");
+                            a.href = url;
+                            a.download = entry.filename || entry.name;
+                            a.click();
+                          })
+                        }
+                      >
+                        Baixar arquivo
+                      </button>
+                    ) : (
+                      <span className="muted subtle">
+                        Download não autorizado
+                      </span>
+                    ))}
+                  {entry.can_delete && (
                     <button
                       type="button"
                       className="btn secondary"
                       disabled={busy || !!form}
-                      onClick={() => start("file", entry)}
+                      onClick={() => {
+                        const message = entry.deleted_at
+                          ? `Restaurar “${entry.name}” à pasta original? O acesso anterior será preservado.`
+                          : `Mover “${entry.name}” para a lixeira? O arquivo poderá ser restaurado e continuará ocupando a quota. Links removidos do BOSS não apagam arquivos no Drive ou em outros serviços.`;
+                        if (!confirm(message)) return;
+                        void perform(async () => {
+                          await api(
+                            `${basePath}/${entry.deleted_at ? "restore" : "items"}/${entry.id}`,
+                            org,
+                            entry.deleted_at ? "POST" : "DELETE",
+                            entry.deleted_at ? {} : undefined,
+                          );
+                          await reload();
+                        });
+                      }}
                     >
-                      Organizar {entry.name}
+                      {entry.deleted_at
+                        ? "Restaurar arquivo"
+                        : "Excluir arquivo"}
                     </button>
                   )}
                 </div>

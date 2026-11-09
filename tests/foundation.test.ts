@@ -1464,6 +1464,104 @@ test("project file manager isolates folders, links and attachments without alter
   ).files.find((f: { id: string }) => f.id === item.id);
   assert.equal(moved.folder_id, second.id);
   assert.equal(moved.name, "Imagem renomeada");
+  await assert.rejects(
+    execute(
+      actor(reader),
+      org,
+      "DELETE",
+      [...path, "items", item.id],
+      undefined,
+    ),
+    /permissão/,
+  );
+  await assert.rejects(
+    execute(
+      actor(ownerId),
+      org,
+      "DELETE",
+      ["project-files", q.id, "items", item.id],
+      undefined,
+    ),
+    /indisponível/,
+  );
+  await execute(
+    actor(ownerId),
+    org,
+    "DELETE",
+    [...path, "items", item.id],
+    undefined,
+  );
+  await execute(
+    actor(ownerId),
+    org,
+    "DELETE",
+    [...path, "items", item.id],
+    undefined,
+  );
+  assert.ok(
+    !(await execute(actor(ownerId), org, "GET", path, undefined)).files.some(
+      (f: { id: string }) => f.id === item.id,
+    ),
+  );
+  assert.equal(
+    (await execute(actor(reader), org, "GET", [...path, "trash"], undefined))
+      .files.length,
+    0,
+  );
+  assert.equal(
+    (await execute(actor(ownerId), org, "GET", [...path, "trash"], undefined))
+      .files.length,
+    1,
+  );
+  await assert.rejects(
+    execute(actor(ownerId), org, "GET", [...path, "file", item.id], undefined),
+    /indisponível/,
+  );
+  await assert.rejects(
+    execute(actor(ownerId), org, "PATCH", [...path, "items", item.id], {
+      name: "hidden",
+      folder_id: folder.id,
+    }),
+    /indisponível/,
+  );
+  const preserved = (
+    await pool.query(
+      "SELECT attachment,deleted_at FROM boss_private.library_files WHERE id=$1",
+      [item.id],
+    )
+  ).rows[0];
+  assert.deepEqual(preserved.attachment, image);
+  assert.ok(preserved.deleted_at);
+  await execute(actor(ownerId), org, "POST", [...path, "restore", item.id], {});
+  await execute(actor(ownerId), org, "POST", [...path, "restore", item.id], {});
+  assert.deepEqual(
+    (
+      await execute(
+        actor(ownerId),
+        org,
+        "GET",
+        [...path, "file", item.id],
+        undefined,
+      )
+    ).privateFile,
+    image,
+  );
+  await execute(
+    actor(ownerId),
+    org,
+    "DELETE",
+    [...path, "items", video.id],
+    undefined,
+  );
+  assert.equal(
+    (
+      await pool.query(
+        "SELECT url FROM boss_private.library_files WHERE id=$1",
+        [video.id],
+      )
+    ).rows[0].url,
+    video.url,
+  );
   await pool.query(
     "UPDATE boss_private.grants SET status='revoked' WHERE project_id=$1 AND user_id=$2",
     [p.id, reader],
@@ -1509,6 +1607,20 @@ test("project file manager isolates folders, links and attachments without alter
       (a: { can_create: boolean; can_edit: boolean }) =>
         !a.can_create && !a.can_edit,
     ),
+  );
+  await assert.rejects(
+    execute(
+      actor(ownerId),
+      org,
+      "DELETE",
+      [...path, "items", item.id],
+      undefined,
+    ),
+    /permissão/,
+  );
+  await assert.rejects(
+    execute(actor(ownerId), org, "POST", [...path, "restore", video.id], {}),
+    /permissão/,
   );
   await assert.rejects(
     execute(actor(ownerId), org, "PATCH", [...path, "items", item.id], {

@@ -66,7 +66,7 @@ export async function libraryFiles(
     if (!row) throw new DomainError(404, "Pasta indisponível");
     return row;
   };
-  if (method === "GET" && !action) {
+  if (method === "GET" && (!action || action === "trash")) {
     const folders = (
       await c.query(
         "SELECT id,name,area FROM boss_private.library_folders WHERE org_id=$1 AND project_id=$2 AND area=ANY($3::text[]) ORDER BY lower(name),id",
@@ -75,8 +75,15 @@ export async function libraryFiles(
     ).rows;
     const files = (
       await c.query(
-        "SELECT id,folder_id,area,name,category,url,filename,mime,octet_length(attachment) AS bytes,updated_at FROM boss_private.library_files WHERE org_id=$1 AND project_id=$2 AND area=ANY($3::text[]) ORDER BY lower(name),id",
-        [org, projectId, visible],
+        "SELECT id,folder_id,area,name,category,url,filename,mime,octet_length(attachment) AS bytes,updated_at,deleted_at FROM boss_private.library_files WHERE org_id=$1 AND project_id=$2 AND area=ANY($3::text[]) AND (deleted_at IS NOT NULL)=$4 ORDER BY lower(name),id",
+        [
+          org,
+          projectId,
+          action === "trash"
+            ? visible.filter((a) => can(a, "delete"))
+            : visible,
+          action === "trash",
+        ],
       )
     ).rows;
     return {
@@ -84,7 +91,8 @@ export async function libraryFiles(
       files: files.map((f) => ({
         ...f,
         can_edit: project.status === "active" && !!can(f.area, "edit"),
-        can_download: !!can(f.area, "export"),
+        can_download: !f.deleted_at && !!can(f.area, "export"),
+        can_delete: project.status === "active" && !!can(f.area, "delete"),
       })),
       areas: visible.map((area) => ({
         id: area,
@@ -199,13 +207,48 @@ export async function libraryFiles(
     return { id: v.id };
   }
   if (
+    (action === "items" && method === "DELETE") ||
+    (action === "restore" && method === "POST")
+  ) {
+    z.uuid().parse(target);
+    const row = (
+      await c.query(
+        "SELECT id,area,deleted_at FROM boss_private.library_files WHERE id=$1 AND org_id=$2 AND project_id=$3 AND area=ANY($4::text[])",
+        [target, org, projectId, visible],
+      )
+    ).rows[0];
+    if (!row) throw new DomainError(404, "Arquivo indisponível");
+    writing(row.area, "delete");
+    const removing = method === "DELETE";
+    if (Boolean(row.deleted_at) === removing) return { ok: true };
+    await c.query(
+      "UPDATE boss_private.library_files SET deleted_at=$1,deleted_by=$2,updated_at=now() WHERE id=$3 AND org_id=$4 AND project_id=$5",
+      [
+        removing ? new Date() : null,
+        removing ? actor.userId : null,
+        target,
+        org,
+        projectId,
+      ],
+    );
+    await audit(
+      c,
+      org,
+      actor.userId,
+      removing ? "library.file.trashed" : "library.file.restored",
+      target,
+      { project_id: projectId, area: row.area },
+    );
+    return { ok: true };
+  }
+  if (
     (action === "file" && method === "GET") ||
     (action === "items" && method === "PATCH")
   ) {
     z.uuid().parse(target);
     const row = (
       await c.query(
-        "SELECT id,area FROM boss_private.library_files WHERE id=$1 AND org_id=$2 AND project_id=$3 AND area=ANY($4::text[])",
+        "SELECT id,area FROM boss_private.library_files WHERE id=$1 AND org_id=$2 AND project_id=$3 AND area=ANY($4::text[]) AND deleted_at IS NULL",
         [target, org, projectId, visible],
       )
     ).rows[0];

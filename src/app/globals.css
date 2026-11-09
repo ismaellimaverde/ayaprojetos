@@ -1781,3 +1781,6 @@ h3 {
 .file-category-heading { justify-content: space-between; }
 .file-manager .file-filters { grid-template-columns: minmax(0,1fr); }
 @media(max-width:650px) { .file-categories { grid-template-columns: 1fr; } .file-category { padding: 14px; } }
+
+.file-manager h3.file-manager-title { display: flex; align-items: center; gap: 12px; font-size: clamp(1.4rem, 2.5vw, 1.9rem); font-weight: 700; line-height: 1.2; }
+.file-manager-title svg { flex-shrink: 0; }
