@@ -1769,3 +1769,15 @@ h3 {
 @media(max-width:650px) { .file-filters { grid-template-columns: 1fr; } .file-manager { padding: 16px; } }
 .file-folders { margin-top: 20px; }
 .file-folders .btn { white-space: normal; text-align: left; overflow-wrap: anywhere; max-width: 100%; }
+
+.file-categories { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 12px; margin: 20px 0; }
+.file-category { display: flex; flex-direction: column; align-items: flex-start; gap: 8px; padding: 18px; border: 1px solid #d5d8e0; border-radius: 18px; background: #fff; color: #1d1e21; text-align: left; min-width: 0; cursor: pointer; font: inherit; }
+.file-category span { font-size: .85rem; overflow-wrap: anywhere; }
+.file-category:hover:not(:disabled) { background: #fff0ea; }
+.file-category[aria-pressed="true"] { background: #ffd5bb; border-color: #1d1e21; }
+.file-category:focus-visible { outline: 3px solid #1d1e21; outline-offset: 3px; }
+.file-category:disabled { cursor: default; opacity: .65; }
+.file-guidance { list-style: disc; padding-left: 22px; display: grid; gap: 8px; }
+.file-category-heading { justify-content: space-between; }
+.file-manager .file-filters { grid-template-columns: minmax(0,1fr); }
+@media(max-width:650px) { .file-categories { grid-template-columns: 1fr; } .file-category { padding: 14px; } }

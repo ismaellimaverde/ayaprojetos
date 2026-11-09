@@ -15,7 +15,16 @@ export async function api(
     },
     ...(body ? { body: JSON.stringify(body) } : {}),
   });
-  const data = await r.json();
+  let data;
+  try {
+    data = await r.json();
+  } catch {
+    throw new Error(
+      r.status === 413
+        ? "O envio excedeu o limite do servidor. Escolha um arquivo de até 2 MiB ou use um link HTTPS."
+        : `Não foi possível concluir a operação (HTTP ${r.status}). Confira sua conexão e tente novamente.`,
+    );
+  }
   if (!r.ok) throw new Error(data.message || "Operação indisponível");
   return data;
 }

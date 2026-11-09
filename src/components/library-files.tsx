@@ -22,7 +22,7 @@ type Entry = {
 type Access = { id: string; can_create: boolean; can_edit: boolean };
 type Listing = { folders: Group[]; files: Entry[]; areas: Access[] };
 const labels: Record<string, string> = {
-  image: "Imagens",
+  image: "Fotos",
   video: "Vídeos",
   document: "Documentos",
 };
@@ -64,6 +64,7 @@ export function LibraryFiles({
     mode: "link",
   });
   const [file, setFile] = useState<File | null>(null);
+  const [continueToFile, setContinueToFile] = useState(false);
   const pending = useRef(false),
     downloadUrl = useRef<string | null>(null);
   async function reload() {
@@ -115,9 +116,12 @@ export function LibraryFiles({
   function start(kind: "folder" | "file", entry?: Entry) {
     setError("");
     setFile(null);
+    const needsFolder =
+      kind === "file" && !entry && !listing.folders.some(canCreateIn);
+    setContinueToFile(needsFolder);
     setDraft({
       id: entry?.id ?? crypto.randomUUID(),
-      name: entry?.name ?? "",
+      name: entry?.name ?? (needsFolder ? labels[category || "image"] : ""),
       area: entry?.area ?? writable[0]?.id ?? "",
       folder_id:
         entry?.folder_id ??
@@ -126,19 +130,35 @@ export function LibraryFiles({
         "",
       category: entry?.category || category || "image",
       url: "",
-      mode: "link",
+      mode:
+        (entry?.category || category || "image") === "video"
+          ? "link"
+          : "upload",
     });
-    setForm(entry ? "edit" : kind);
+    setForm(entry ? "edit" : needsFolder ? "folder" : kind);
   }
   async function save() {
     await perform(async () => {
-      if (form === "folder")
+      if (form === "folder") {
         await api(`${path}/folders`, org, "POST", {
           id: draft.id,
           name: draft.name,
           area: draft.area,
         });
-      else if (form === "edit")
+        await reload();
+        if (continueToFile) {
+          setFolder(draft.id);
+          setDraft({
+            ...draft,
+            id: crypto.randomUUID(),
+            name: "",
+            folder_id: draft.id,
+          });
+          setForm("file");
+          setContinueToFile(false);
+          return;
+        }
+      } else if (form === "edit")
         await api(`${path}/items/${draft.id}`, org, "PATCH", {
           name: draft.name,
           folder_id: draft.folder_id,
@@ -146,8 +166,35 @@ export function LibraryFiles({
       else {
         let upload = {};
         if (draft.mode === "upload") {
-          if (!file || file.size > SOURCE_LIMIT)
-            throw new Error("Escolha um arquivo de até 2 MB");
+          if (!file) throw new Error("Selecione o arquivo que deseja enviar.");
+          if (!file.size)
+            throw new Error("O arquivo está vazio. Escolha outro arquivo.");
+          if (file.size > SOURCE_LIMIT)
+            throw new Error(
+              "O arquivo excede 2 MiB. Use um link HTTPS ou escolha um arquivo menor.",
+            );
+          const known: Record<string, string> = {
+            png: "image/png",
+            jpg: "image/jpeg",
+            jpeg: "image/jpeg",
+            gif: "image/gif",
+            webp: "image/webp",
+            pdf: "application/pdf",
+          };
+          const mime =
+            file.type ||
+            known[file.name.split(".").pop()?.toLowerCase() || ""] ||
+            "";
+          const allowed =
+            draft.category === "document"
+              ? ["application/pdf"]
+              : ["image/png", "image/jpeg", "image/gif", "image/webp"];
+          if (!allowed.includes(mime))
+            throw new Error(
+              draft.category === "document"
+                ? "Envie um PDF. Para Word, Excel e outros documentos, escolha Link HTTPS."
+                : "Envie uma foto PNG, JPEG, GIF ou WebP. Para outros formatos, escolha Link HTTPS.",
+            );
           const data = await new Promise<string>((resolve, reject) => {
             const r = new FileReader();
             r.onload = () => resolve(String(r.result).split(",")[1]);
@@ -155,7 +202,7 @@ export function LibraryFiles({
               reject(new Error("Não foi possível ler o arquivo"));
             r.readAsDataURL(file);
           });
-          upload = { data, filename: file.name, mime: file.type };
+          upload = { data, filename: file.name, mime };
         }
         await api(`${path}/items`, org, "POST", {
           id: draft.id,
@@ -199,23 +246,68 @@ export function LibraryFiles({
             >
               Nova pasta
             </button>
-            <button
-              type="button"
-              className="btn"
-              disabled={!listing.folders.some(canCreateIn)}
-              onClick={() => start("file")}
-            >
+            <button type="button" className="btn" onClick={() => start("file")}>
               Adicionar arquivo ou link
             </button>
           </div>
         )}
       </div>
-      <p className="muted subtle">
-        Uploads: imagens PNG, JPEG, GIF, WebP e documentos PDF, até 2 MB cada.
-        Limite compartilhado de 50 MB por projeto, incluindo Fontes. Vídeos e
-        outros formatos: link HTTPS. Links do Google Drive mantêm as permissões
-        do Drive; o BOSS não copia o vídeo nem muda seu compartilhamento.
-      </p>
+      <ul className="muted subtle file-guidance">
+        <li>
+          <strong>Documentos:</strong> upload privado de PDF ou link HTTPS para
+          qualquer documento, incluindo Word e Excel.
+        </li>
+        <li>
+          <strong>Fotos:</strong> upload privado de PNG, JPEG, GIF e WebP ou
+          link HTTPS.
+        </li>
+        <li>
+          <strong>Vídeos:</strong> somente link HTTPS, incluindo Google Drive. O
+          BOSS não copia vídeos nem muda o compartilhamento.
+        </li>
+        <li>
+          <strong>Limites:</strong> 2 MiB por upload e 50 MiB de anexos por
+          projeto, compartilhados com Fontes.
+        </li>
+      </ul>
+      <nav className="file-categories" aria-label="Categorias de arquivos">
+        {["document", "image", "video"].map((id) => (
+          <button
+            key={id}
+            type="button"
+            className="file-category"
+            aria-pressed={category === id}
+            disabled={busy || !!form}
+            onClick={() => {
+              setCategory(id);
+              setSearch("");
+            }}
+          >
+            {icon(id)}
+            <strong>{labels[id]}</strong>
+            <span>
+              {id === "document"
+                ? "PDF ou link de documento"
+                : id === "image"
+                  ? "PNG, JPEG, GIF, WebP ou link"
+                  : "Link do Drive ou outro serviço"}
+            </span>
+          </button>
+        ))}
+      </nav>
+      {category && (
+        <div className="row file-category-heading">
+          <h4>{labels[category]}</h4>
+          <button
+            type="button"
+            className="btn secondary"
+            disabled={busy || !!form}
+            onClick={() => setCategory("")}
+          >
+            Mostrar todas as categorias
+          </button>
+        </div>
+      )}
       {error && (
         <p role="alert" className="notice">
           {error}
@@ -247,6 +339,16 @@ export function LibraryFiles({
                     ? "Organizar arquivo"
                     : "Novo arquivo ou link"}
               </h4>
+              {continueToFile && (
+                <p className="notice">
+                  Primeiro, crie uma pasta e escolha a área que controla seu
+                  acesso. Depois você poderá{" "}
+                  {draft.category === "video"
+                    ? "adicionar o link"
+                    : "selecionar o arquivo"}
+                  .
+                </p>
+              )}
               <label>
                 Nome
                 <input
@@ -308,27 +410,10 @@ export function LibraryFiles({
               )}
               {form === "file" && (
                 <>
-                  <label>
-                    Categoria
-                    <select
-                      value={draft.category || "image"}
-                      disabled={busy}
-                      onChange={(e) => {
-                        setDraft({
-                          ...draft,
-                          category: e.target.value,
-                          mode: "link",
-                        });
-                        setFile(null);
-                      }}
-                    >
-                      {Object.entries(labels).map(([id, label]) => (
-                        <option key={id} value={id}>
-                          {label}
-                        </option>
-                      ))}
-                    </select>
-                  </label>
+                  <p className="row">
+                    {icon(draft.category)}
+                    <strong>{labels[draft.category]}</strong>
+                  </p>
                   <label>
                     Como adicionar
                     <select
@@ -362,7 +447,7 @@ export function LibraryFiles({
                     </label>
                   ) : (
                     <label>
-                      Arquivo privado (até 2 MB)
+                      Arquivo privado (até 2 MiB)
                       <input
                         required
                         key="upload-input"
@@ -373,7 +458,16 @@ export function LibraryFiles({
                             ? "application/pdf"
                             : "image/png,image/jpeg,image/gif,image/webp"
                         }
-                        onChange={(e) => setFile(e.target.files?.[0] ?? null)}
+                        onChange={(e) => {
+                          const selected = e.target.files?.[0] ?? null;
+                          setFile(selected);
+                          setError("");
+                          if (selected && !draft.name)
+                            setDraft({
+                              ...draft,
+                              name: selected.name.slice(0, 160),
+                            });
+                        }}
                       />
                     </label>
                   )}
@@ -381,7 +475,11 @@ export function LibraryFiles({
               )}
               <div className="row">
                 <button className="btn" disabled={busy}>
-                  {busy ? "Salvando…" : "Salvar"}
+                  {busy
+                    ? "Salvando…"
+                    : continueToFile
+                      ? "Criar pasta e continuar"
+                      : "Salvar"}
                 </button>
                 <button
                   type="button"
@@ -394,6 +492,7 @@ export function LibraryFiles({
                     )
                       return;
                     setForm(null);
+                    setContinueToFile(false);
                     setFile(null);
                   }}
                 >
@@ -432,34 +531,6 @@ export function LibraryFiles({
           )}
           <div className="file-filters">
             <label>
-              Pasta exibida
-              <select
-                value={folder}
-                onChange={(e) => setFolder(e.target.value)}
-              >
-                <option value="">Todas as pastas</option>
-                {listing.folders.map((g) => (
-                  <option key={g.id} value={g.id}>
-                    {g.name} — {modules.find((m) => m.id === g.area)?.name}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label>
-              Categoria exibida
-              <select
-                value={category}
-                onChange={(e) => setCategory(e.target.value)}
-              >
-                <option value="">Todas</option>
-                {Object.entries(labels).map(([id, label]) => (
-                  <option key={id} value={id}>
-                    {label}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label>
               Buscar arquivo
               <input
                 value={search}
@@ -469,7 +540,12 @@ export function LibraryFiles({
             </label>
           </div>
           {!listing.folders.length && (
-            <p>Nenhuma pasta disponível para seu acesso.</p>
+            <p>
+              Nenhuma pasta disponível para seu acesso.{" "}
+              {writable.length > 0
+                ? "Escolha uma categoria e clique em Adicionar arquivo ou link para criar sua primeira pasta e continuar."
+                : "Solicite acesso à área responsável para adicionar arquivos."}
+            </p>
           )}
           {listing.folders.length > 0 && !entries.length && (
             <p>Nenhum arquivo nesta seleção.</p>

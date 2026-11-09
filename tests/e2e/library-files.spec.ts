@@ -41,13 +41,16 @@ test("Library file manager stores private files, groups and HTTPS links without 
   await form.getByRole("button", { name: "Salvar", exact: true }).click();
   await expect(form).toHaveCount(0);
   await manager
+    .getByRole("button", {
+      name: "Vídeos Link do Drive ou outro serviço",
+      exact: true,
+    })
+    .click();
+  await manager
     .getByRole("button", { name: "Adicionar arquivo ou link" })
     .click();
   form = manager.getByRole("form", { name: "Novo arquivo ou link" });
   await form.getByLabel("Nome", { exact: true }).fill("Vídeo do Drive");
-  await form
-    .getByRole("combobox", { name: "Categoria", exact: true })
-    .selectOption("video");
   await expect(form.getByLabel("Como adicionar").locator("option")).toHaveCount(
     1,
   );
@@ -59,13 +62,16 @@ test("Library file manager stores private files, groups and HTTPS links without 
     manager.getByRole("heading", { name: "Vídeo do Drive", exact: true }),
   ).toBeVisible();
   await manager
+    .getByRole("button", {
+      name: "Fotos PNG, JPEG, GIF, WebP ou link",
+      exact: true,
+    })
+    .click();
+  await manager
     .getByRole("button", { name: "Adicionar arquivo ou link" })
     .click();
   form = manager.getByRole("form", { name: "Novo arquivo ou link" });
   await form.getByLabel("Nome", { exact: true }).fill("Imagem privada");
-  await form
-    .getByRole("combobox", { name: "Categoria", exact: true })
-    .selectOption("image");
   await form.getByLabel("Como adicionar").selectOption("upload");
   const image = Buffer.from(
     "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+jRZkAAAAASUVORK5CYII=",
@@ -85,7 +91,12 @@ test("Library file manager stores private files, groups and HTTPS links without 
   for (const width of [1440, 390]) {
     await page.setViewportSize({ width, height: 900 });
     await manager.scrollIntoViewIfNeeded();
-    await manager.getByLabel("Categoria exibida").selectOption("image");
+    await manager
+      .getByRole("button", {
+        name: "Fotos PNG, JPEG, GIF, WebP ou link",
+        exact: true,
+      })
+      .click();
     await expect(
       manager.getByRole("heading", { name: "Vídeo do Drive", exact: true }),
     ).toHaveCount(0);
@@ -163,3 +174,192 @@ test("Library file manager stores private files, groups and HTTPS links without 
   ).toEqual([]);
   expect(controlWarnings).toEqual([]);
 });
+
+for (const width of [1440, 390]) {
+  test(`First upload is guided from category cards at ${width}px, with retry and validation`, async ({
+    page,
+  }, info) => {
+    await page.setViewportSize({ width, height: 900 });
+    const f = JSON.parse(await readFile(".data/e2e.json", "utf8"));
+    await page.goto("/login");
+    await page.getByLabel("E-mail", { exact: true }).fill(f.email);
+    await page.getByLabel("Senha", { exact: true }).fill(f.password);
+    await page.getByRole("button", { name: "Entrar no BOSS" }).click();
+    await expect(
+      page.getByRole("button", { name: "Novo projeto" }),
+    ).toBeVisible();
+    const headers = {
+      "x-organization-id": f.org,
+      origin: "http://localhost:3100",
+    };
+    const created = await page.request.post("/api/boss/projects", {
+      headers,
+      data: { name: `First upload ${width}` },
+    });
+    expect(created.ok()).toBe(true);
+    const project = (await created.json()).id;
+    const apiPath = `/api/boss/project-files/${project}`;
+    await page.goto(`/?workspace=${f.org}&project=${project}&view=library`);
+    const manager = page.getByRole("region", {
+      name: "Gerenciador de arquivos",
+    });
+    await expect(
+      manager.getByRole("button", { name: "Adicionar arquivo ou link" }),
+    ).toBeEnabled();
+    const docs = manager.getByRole("button", {
+      name: "Documentos PDF ou link de documento",
+      exact: true,
+    });
+    await docs.focus();
+    await docs.press("Enter");
+    await expect(docs).toHaveAttribute("aria-pressed", "true");
+    await manager
+      .getByRole("button", { name: "Adicionar arquivo ou link" })
+      .click();
+    let form = manager.getByRole("form", { name: "Nova pasta" });
+    await expect(form.getByLabel("Nome", { exact: true })).toHaveValue(
+      "Documentos",
+    );
+    page.once("dialog", (d) => d.dismiss());
+    await form.getByRole("button", { name: "Cancelar", exact: true }).click();
+    await expect(form).toBeVisible();
+    page.once("dialog", (d) => d.accept());
+    await form.getByRole("button", { name: "Cancelar", exact: true }).click();
+    expect(
+      (await (await page.request.get(apiPath, { headers })).json()).folders,
+    ).toHaveLength(0);
+    await manager
+      .getByRole("button", { name: "Adicionar arquivo ou link" })
+      .click();
+    form = manager.getByRole("form", { name: "Nova pasta" });
+    await form
+      .getByLabel("Área responsável pelo acesso")
+      .selectOption("marketing");
+    await form.getByRole("button", { name: "Criar pasta e continuar" }).click();
+    form = manager.getByRole("form", { name: "Novo arquivo ou link" });
+    await expect(form.getByLabel("Como adicionar")).toHaveValue("upload");
+    await expect(
+      form.getByRole("combobox", { name: "Categoria", exact: true }),
+    ).toHaveCount(0);
+    const input = form.getByLabel("Arquivo privado");
+    await input.setInputFiles({
+      name: "empty.pdf",
+      mimeType: "application/pdf",
+      buffer: Buffer.alloc(0),
+    });
+    await form.getByRole("button", { name: "Salvar", exact: true }).click();
+    await expect(manager.getByRole("alert")).toContainText("vazio");
+    await input.setInputFiles({
+      name: "large.pdf",
+      mimeType: "application/pdf",
+      buffer: Buffer.alloc(2 * 1024 * 1024 + 1),
+    });
+    await form.getByRole("button", { name: "Salvar", exact: true }).click();
+    await expect(manager.getByRole("alert")).toContainText("excede 2 MiB");
+    await input.setInputFiles({
+      name: "word.docx",
+      mimeType:
+        "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+      buffer: Buffer.from("not a PDF"),
+    });
+    await form.getByRole("button", { name: "Salvar", exact: true }).click();
+    await expect(manager.getByRole("alert")).toContainText("Envie um PDF");
+    await input.setInputFiles({
+      name: "fake.pdf",
+      mimeType: "application/pdf",
+      buffer: Buffer.from("not a PDF"),
+    });
+    await form.getByRole("button", { name: "Salvar", exact: true }).click();
+    await expect(manager.getByRole("alert")).toContainText("Formato do anexo");
+    // Exercise full-size JSON/base64 transport, not just a tiny image fixture.
+    const pdf = Buffer.concat([
+      Buffer.from("%PDF-1.4\n%"),
+      Buffer.alloc(2 * 1024 * 1024 - 30, 32),
+      Buffer.from("\ntrailer\n<<>>\n%%EOF\n"),
+    ]);
+    expect(pdf.length).toBeLessThanOrEqual(2 * 1024 * 1024);
+    await input.setInputFiles([]);
+    await expect(input).toHaveValue("");
+    await input.setInputFiles({
+      name: "fixture.pdf",
+      mimeType: "application/pdf",
+      buffer: pdf,
+    });
+    await form.getByLabel("Nome", { exact: true }).fill("PDF privado");
+    let attempts = 0;
+    await page.route(`**${apiPath}/items`, async (route) => {
+      attempts++;
+      if (attempts === 1)
+        await route.fulfill({
+          status: 503,
+          contentType: "text/html",
+          body: "Service unavailable",
+        });
+      else {
+        await new Promise((r) => setTimeout(r, 200));
+        await route.continue();
+      }
+    });
+    await form.getByRole("button", { name: "Salvar", exact: true }).click();
+    await expect(manager.getByRole("alert")).toContainText("HTTP 503");
+    await expect(form).toBeVisible();
+    await form.getByRole("button", { name: "Salvar", exact: true }).click();
+    await form.dispatchEvent("submit");
+    await expect(form).toHaveCount(0);
+    expect(attempts).toBe(2);
+    await page.reload();
+    await expect(
+      manager.getByRole("heading", { name: "PDF privado", exact: true }),
+    ).toBeVisible();
+    const listing = await (await page.request.get(apiPath, { headers })).json();
+    expect(listing.folders).toHaveLength(1);
+    expect(listing.files).toHaveLength(1);
+    const downloaded = await page.request.get(
+      `${apiPath}/file/${listing.files[0].id}`,
+      { headers },
+    );
+    expect(downloaded.ok()).toBe(true);
+    expect(await downloaded.body()).toEqual(pdf);
+    expect(downloaded.headers()["cache-control"]).toContain("no-store");
+    await manager
+      .getByRole("button", {
+        name: "Vídeos Link do Drive ou outro serviço",
+        exact: true,
+      })
+      .click();
+    await manager
+      .getByRole("button", { name: "Adicionar arquivo ou link" })
+      .click();
+    form = manager.getByRole("form", { name: "Novo arquivo ou link" });
+    await expect(form.locator('input[type="file"]')).toHaveCount(0);
+    await expect(
+      form.getByLabel("Como adicionar").locator("option"),
+    ).toHaveCount(1);
+    await form.getByRole("button", { name: "Cancelar", exact: true }).click();
+    await manager
+      .getByRole("button", {
+        name: "Documentos PDF ou link de documento",
+        exact: true,
+      })
+      .click();
+    expect(
+      await page.evaluate(
+        () => document.documentElement.scrollWidth <= innerWidth,
+      ),
+    ).toBe(true);
+    await manager.scrollIntoViewIfNeeded();
+    await page.screenshot({
+      path: info.outputPath(`category-cards-${width}.png`),
+      fullPage: true,
+    });
+    expect(
+      (
+        await (
+          await page.request.get(`/api/boss/project-library/${project}`, {
+            headers,
+          })
+        ).json()
+      ).documents,
+    ).toEqual([]);
+  });
+}
