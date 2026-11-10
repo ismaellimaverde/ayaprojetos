@@ -1,0 +1,414 @@
+# MISSÃO — CONSTRUIR UM BUSINESS OPERATING SYSTEM (BUSINESS OS)
+
+Você é uma equipe sênior de engenharia de software, arquitetura SaaS, produto digital, UX/UI, gestão estratégica, finanças corporativas, operações, marketing, vendas e inteligência de negócios.
+
+Sua missão é projetar e implementar uma plataforma web profissional que funcione como o núcleo central de gestão de todas as minhas empresas, marcas, unidades de negócio e projetos.
+
+A plataforma será um Business Operating System, um ambiente vivo em que planejamento estratégico, execução, indicadores, financeiro, marketing, comercial, pessoas, processos e documentação compartilham dados e se atualizam de maneira consistente.
+
+Não quero um protótipo visual desconectado, nem um conjunto de formulários estáticos. Quero uma aplicação funcional, com persistência real, arquitetura evolutiva, permissões, regras de negócio, dados relacionais, dashboards calculados e capacidade de integração com sistemas externos.
+
+## 1. VISÃO DO PRODUTO
+
+A plataforma deve permitir:
+- Criar múltiplas empresas, negócios, marcas ou projetos em um mesmo ambiente.
+- Utilizar um template mestre de Business Plan para cada novo projeto.
+- Personalizar os módulos conforme o tipo e maturidade do negócio.
+- Alimentar dados estruturados em cada área.
+- Transformar registros operacionais em dashboards e KPIs.
+- Vincular estratégia, metas, iniciativas, projetos, tarefas, responsáveis, custos e resultados.
+- Visualizar a situação de cada projeto e do portfólio consolidado.
+- Documentar DNA empresarial, cultura, decisões, processos e playbooks.
+- Conectar APIs externas e importar dados com proveniência e histórico.
+- Consultar histórico, comparar períodos, elaborar cenários e acompanhar desvios.
+
+PRINCÍPIO CENTRAL: um dado registrado na origem deve alimentar automaticamente todos os indicadores, painéis e relatórios que dependem dele, respeitando regras explícitas de cálculo e sem criar duplicidade de informações.
+
+## 2. MODELO ORGANIZACIONAL
+
+Criar uma hierarquia flexível:
+Workspace -> Organização/Empresa -> Unidade de Negócio/Marca -> Projeto/Iniciativa.
+
+Permitir projetos independentes e projetos vinculados a uma empresa. Não presumir que todo projeto é uma empresa.
+
+Cada entidade terá identificação, status, responsáveis, período de atividade, moeda, timezone, categoria, objetivos, permissões e relacionamentos apropriados.
+
+Construir um TEMPLATE MESTRE versionado que permita instanciar um Business Plan completo, selecionar módulos e preservar futuras personalizações de cada projeto.
+
+O template não deve sobrescrever dados existentes quando for atualizado.
+
+## 3. ESTRUTURA PROFISSIONAL DO BUSINESS PLAN
+
+Criar os seguintes módulos navegáveis, com formulários, documentos, indicadores e links entre informações.
+
+### A. Resumo Executivo
+Visão do negócio, descrição, problema, solução, oportunidade, proposta de valor, diferenciais, estágio, mercado, modelo de receita, investimentos, objetivos prioritários e principais indicadores.
+
+### B. DNA, Identidade e Cultura
+Propósito, missão, visão, valores, princípios inegociáveis, posicionamento, personalidade da marca, manifesto, cultura, crenças, comportamentos, diretrizes de decisão, código de conduta e narrativa institucional.
+
+### C. Planejamento Estratégico
+Análises SWOT, PESTEL, concorrência, forças competitivas, cenários, premissas, prioridades, objetivos estratégicos, OKRs, iniciativas, metas trimestrais e anuais, riscos, decisões e roadmap.
+
+### D. Mercado e Inteligência Competitiva
+TAM/SAM/SOM, segmentos, ICP, personas, tendências, concorrentes, benchmarking, diferenciais, necessidades, canais, posicionamento e oportunidades. Exigir fontes e datas para estimativas externas.
+
+### E. Produtos e Serviços
+Portfólio, ofertas, descrição, público-alvo, diferenciais, ciclo de vida, precificação, margem, custos diretos, roadmap, propostas de valor, pacotes e indicadores de desempenho.
+
+### F. Marketing e Growth
+Estratégia de aquisição, marca, canais orgânicos e pagos, campanhas, calendário editorial, conteúdo, SEO, mídias sociais, funis, orçamento, leads, MQLs, atribuição, CAC, CPL, ROAS, ROI e resultados por campanha.
+
+Prever integração com Meta Marketing API e outros provedores. Armazenar IDs externos, períodos, contas, campanhas, conjuntos, anúncios, métricas, moeda, horário da sincronização e origem dos dados.
+
+Diferenciar métricas importadas das métricas calculadas internamente.
+
+### G. Comercial e Vendas
+Estratégia comercial, modelo de vendas, canais, metas, pipeline configurável, oportunidades, contatos, empresas clientes, propostas, negócios ganhos/perdidos, contratos, receitas previstas, forecast, atividades, taxa de conversão, ciclo de vendas e produtividade.
+
+### H. Clientes, Atendimento e Customer Success
+Base de clientes, onboarding, contratos, relacionamento, tickets, satisfação, NPS, CSAT, retenção, churn, expansão, upsell, cross-sell, receita recorrente, LTV e acompanhamento da jornada.
+
+### I. Operações e Entrega
+Processos, fluxos operacionais, capacidade, recursos, fornecedores, compras, estoque quando aplicável, qualidade, produtividade, SLAs, entregáveis, gargalos, custos operacionais e melhoria contínua.
+
+### J. Projetos, Tarefas e Execução
+Portfólio de projetos, iniciativas, entregas, marcos, tarefas, subtarefas, checklists, responsáveis, prioridades, dependências, prazos, comentários, anexos e histórico.
+
+Oferecer visualizações em lista, Kanban, calendário, timeline e, quando viável, Gantt. Relacionar tarefas a objetivos, indicadores, centros de custo e projetos.
+
+### K. Financeiro e Controladoria
+Construir um módulo financeiro gerencial consistente, incluindo:
+
+- Plano de contas hierárquico e configurável.
+- Centros de custo e centros de resultado.
+- Receitas e despesas.
+- Contas a pagar e a receber.
+- Lançamentos realizados, previstos e recorrentes.
+- Competência e regime de caixa como visões separadas.
+- Fluxo de caixa realizado e projetado.
+- Orçamento planejado versus realizado.
+- DRE gerencial com regras configuráveis.
+- Custos fixos e variáveis.
+- Custos diretos e indiretos.
+- Capex e Opex.
+- Margem bruta, margem de contribuição e margem operacional.
+- EBITDA quando dados e classificação permitirem.
+- Capital de giro e necessidades de caixa.
+- Ponto de equilíbrio.
+- Rentabilidade por produto, projeto e unidade.
+- Metas de receita, despesas, lucro e caixa.
+- Projeções e cenários conservador, base e otimista.
+- Indicadores de runway e burn rate quando aplicáveis.
+- Conciliação e importação de extratos em fase apropriada.
+
+Cada lançamento deve conter valor, moeda, datas relevantes, categoria, conta, centro de custo, entidade vinculada, status, origem, descrição, anexos quando aplicável e trilha de auditoria.
+
+Permitir estornos e ajustes rastreáveis. Não alterar retrospectivamente lançamentos contabilmente relevantes sem registro de correção.
+
+Não confundir recebimento com receita reconhecida, pagamento com despesa por competência ou faturamento com caixa disponível.
+
+### L. Pessoas, RH e Estrutura Organizacional
+Organograma, equipes, posições, responsabilidades, matriz RACI, capacidade, custos de pessoal, contratação, onboarding, desenvolvimento, avaliações, metas, competências e políticas internas.
+
+### M. Governança, Jurídico e Compliance
+Contratos, obrigações, documentos societários, riscos, responsáveis, controles internos, políticas de acesso, privacidade, LGPD, prazos, aprovações, registro de decisões e governança.
+
+Não apresentar o sistema como substituto de contabilidade, consultoria jurídica ou obrigações fiscais oficiais.
+
+### N. Tecnologia, Dados e Automação
+Arquitetura tecnológica, ferramentas utilizadas, integrações, sistemas externos, acessos, APIs, webhooks, fontes de dados, automações, documentação técnica, incidentes e indicadores tecnológicos.
+
+### O. Riscos, Sustentabilidade e Continuidade
+Matriz de riscos, probabilidade, impacto, ações mitigadoras, contingências, dependências críticas, sustentabilidade e continuidade operacional.
+
+### P. Documentação e Base de Conhecimento
+Editor de documentos com pastas, categorias, pesquisa, tags, links internos, controle de versões, permissões e histórico.
+
+Templates para manual de cultura, playbooks comerciais, SOPs, políticas, onboarding, manuais operacionais, scripts de atendimento, processos, reuniões, decisões e aprendizados.
+
+Relacionar documentação aos módulos, tarefas, equipes e projetos correspondentes.
+
+### Q. Indicadores, Inteligência e Relatórios
+Central de KPIs, relatórios gerenciais, análises de tendências, comparativos, desvios, alertas, resultados por período e desempenho por empresa e projeto.
+
+## 4. BUSINESS PLAN VIVO
+
+Cada módulo deve ter:
+1. Visão geral.
+2. Diagnóstico e dados estruturados.
+3. Planejamento, objetivos e metas.
+4. Execução e atividades.
+5. Indicadores calculados.
+6. Documentação vinculada.
+7. Histórico e evolução.
+8. Responsáveis e permissões.
+
+A plataforma deve vincular:
+Objetivos -> Key Results -> Iniciativas -> Projetos -> Tarefas -> Custos -> Resultados -> KPIs.
+
+Permitir registros com campo de origem, versão, período e autor.
+
+Uma mudança na meta não deve reescrever o resultado histórico; uma alteração na classificação de um lançamento pode recalcular indicadores, preservando histórico de mudanças.
+
+## 5. DASHBOARDS E MÉTRICAS
+
+Criar quatro camadas de visualização:
+- Dashboard do portfólio: visão consolidada de todas as empresas e projetos permitidos.
+- Dashboard da empresa: visão executiva e estratégica.
+- Dashboard do projeto: orçamento, execução, progresso, resultados e riscos.
+- Dashboard da área: indicadores especializados de marketing, comercial, financeiro, operações, pessoas etc.
+
+Todos devem oferecer filtros por entidade, período, responsável, categoria e fonte quando aplicáveis.
+
+Criar catálogo de métricas contendo:
+- Identificador, nome, descrição, unidade e fórmula.
+- Fonte dos dados e dependências.
+- Granularidade temporal.
+- Agregação e filtros permitidos.
+- Meta, resultado, variação e tendência.
+- Responsável e atualização.
+- Estado de qualidade dos dados.
+
+Métricas calculadas devem usar fórmulas versionadas e regras centralizadas no backend, não cálculos independentes em cada componente de interface.
+
+Não inventar KPIs sem dados suficientes. Exibir estados como 'Sem dados', 'Integração pendente' ou 'Dados parciais', em vez de zeros enganosos.
+
+## 6. EXEMPLOS DE INTELIGÊNCIA CRUZADA
+
+Exemplo 1 — Marketing:
+Uma campanha importa investimento e resultados da Meta. O sistema atualiza o painel de mídia e pode relacionar os custos ao financeiro mediante conciliação explícita, evitando duplicação automática do gasto.
+
+Exemplo 2 — Vendas:
+Uma oportunidade muda para 'ganha'. O forecast comercial é atualizado. Uma receita financeira só é reconhecida quando existir o fato ou lançamento financeiro correspondente, seguindo a política de reconhecimento definida.
+
+Exemplo 3 — Financeiro:
+Um pagamento é registrado. O fluxo de caixa muda, o realizado do centro de custo é atualizado, o orçamento do projeto reflete o impacto e os dashboards dependentes são recalculados.
+
+Exemplo 4 — Execução:
+Uma tarefa de iniciativa estratégica é concluída. Atualizar o avanço da iniciativa com regras explícitas. Não presumir que conclusão de tarefas equivale ao atingimento de resultados de negócio.
+
+Exemplo 5 — Gestão:
+A diretoria pode visualizar quais projetos consomem orçamento, quais geram receitas, quais estão atrasados e como esses fatores afetam as metas consolidadas.
+
+## 7. GESTÃO DE OBJETIVOS, METAS E EXECUÇÃO
+
+Implementar:
+- Objetivos de longo, médio e curto prazo.
+- OKRs, KPIs e metas operacionais diferenciados.
+- Metas financeiras e não financeiras.
+- Baseline, valor-alvo, período e responsável.
+- Check-ins e histórico do progresso.
+- Relação entre objetivos e iniciativas.
+- Alertas de atraso, desvio de orçamento e risco.
+- Aprovações e planos de ação.
+- Periodicidade de revisão estratégica.
+
+Oferecer visão de saúde do projeto com critérios configuráveis e explicáveis. Nunca usar uma pontuação de saúde arbitrária sem disponibilizar os pesos e as fontes.
+
+## 8. INTEGRAÇÕES E AUTOMAÇÕES
+
+Desenvolver uma arquitetura extensível de conectores, começando pelo conector de Meta Ads.
+
+Preparar uma interface de integrações para:
+- Meta Marketing API.
+- Google Ads.
+- Google Analytics.
+- Plataformas de pagamento.
+- Bancos/Open Finance quando houver autorização e viabilidade.
+- CRMs externos.
+- Planilhas.
+- Webhooks e APIs personalizadas.
+
+Não assumir que essas integrações estarão disponíveis sem credenciais, permissões, aprovação do provedor ou requisitos de conformidade.
+
+Cada conector deve ter:
+- Configuração segura e autorização apropriada.
+- Escopos mínimos necessários.
+- Sincronização inicial e incremental.
+- Paginação, limites de taxa, retentativas e tratamento de falhas.
+- Idempotência e prevenção de duplicatas.
+- Logs e histórico das sincronizações.
+- Mapeamento de entidades e moedas.
+- Última atualização e estado de conexão.
+- Reprocessamento controlado.
+
+Criar jobs assíncronos para importações e recálculos pesados. Não utilizar credenciais reais sem autorização explícita.
+
+## 9. EXPERIÊNCIA DE USUÁRIO
+
+Projetar interface SaaS premium, moderna, objetiva, responsiva e acessível, com:
+- Sidebar principal com navegação por empresa/projeto.
+- Seletor global de workspace e projeto.
+- Home executiva personalizável.
+- Cards de KPI com tendência e comparação.
+- Gráficos interativos e filtros compartilhados.
+- Tabelas com busca, ordenação e paginação.
+- Edição inline quando apropriada.
+- Formulários padronizados com validação.
+- Central de notificações.
+- Busca global.
+- Estados de loading, vazio e erro.
+- Tema claro e escuro.
+- Layout desktop-first, adaptado ao mobile.
+- Calendário e central de tarefas.
+- Documentação vinculada e navegação contextual.
+
+Tratar simplicidade operacional como requisito: um usuário deve conseguir registrar dados sem navegar por excessivas telas ou repetir informações.
+
+## 10. ARQUITETURA TÉCNICA
+
+Avalie o repositório existente antes de escolher ferramentas. Se for um projeto novo, utilize como proposta inicial:
+- Next.js com TypeScript.
+- React e Tailwind CSS.
+- Biblioteca consistente de componentes acessíveis.
+- PostgreSQL.
+- Prisma ou ORM equivalente.
+- Autenticação segura e RBAC.
+- API tipada e validada.
+- Filas/jobs para processamento em segundo plano.
+- Cache e invalidação coerentes com atualizações.
+- Testes unitários, de integração e end-to-end.
+- Observabilidade e logs estruturados.
+- Migrações versionadas e ambiente de desenvolvimento reproduzível.
+
+Preferir monólito modular bem organizado no começo, em vez de microsserviços prematuros.
+
+Se Supabase for escolhido para autenticação, banco ou storage, avaliar implicações de isolamento, políticas de acesso e migrações antes de implementar.
+
+A arquitetura deve separar:
+- Interface e componentes visuais.
+- Casos de uso e serviços.
+- Entidades e regras de domínio.
+- Persistência e repositórios.
+- Motor de métricas.
+- Integrações externas.
+- Autenticação/autorização.
+- Eventos e jobs.
+- Documentos e anexos.
+
+## 11. MODELO DE DADOS E SEGURANÇA
+
+Projetar entidades para usuários, workspaces, empresas, unidades, projetos, permissões, planos estratégicos, objetivos, indicadores, tarefas, clientes, oportunidades, campanhas, lançamentos, contas financeiras, orçamentos, documentos, integrações e auditoria.
+
+Usar IDs estáveis, chaves estrangeiras, índices adequados, constraints, transações e timestamps consistentes.
+
+Garantir isolamento entre workspaces/tenants em cada consulta e mutação. Testar acesso cruzado e escalonamento indevido de privilégios.
+
+Criar papéis iniciais como proprietário, administrador, gestor, editor, financeiro e visualizador, com permissões granulares.
+
+Proteger secrets e tokens, criptografar dados sensíveis quando apropriado, registrar operações críticas, definir políticas de backup, retenção e restauração, e cumprir requisitos aplicáveis da LGPD.
+
+Prever versionamento, migrações seguras e exportação dos dados.
+
+## 12. AUTOMAÇÕES E IA — FASE EVOLUTIVA
+
+Projetar extensões futuras para:
+- Resumo executivo automatizado.
+- Explicação de variações financeiras.
+- Identificação de desvios de metas.
+- Sugestões de prioridades.
+- Consulta conversacional aos dados com controle de acesso.
+- Criação assistida de planos e playbooks.
+- Alertas proativos.
+- Previsões fundamentadas em históricos e premissas.
+
+Toda resposta analítica da IA deve distinguir fatos, estimativas e recomendações, citar registros internos relevantes e respeitar permissões. Nenhuma ação financeira ou destrutiva deve ser executada autonomamente sem aprovação.
+
+## 13. ETAPAS DE IMPLEMENTAÇÃO
+
+Não tente implementar todas as áreas integralmente em uma única etapa.
+
+FASE 0 — Descoberta e arquitetura:
+Inspecionar repositório, identificar restrições, produzir PRD, mapa de navegação, matriz de módulos, modelo de domínio, ERD, catálogo inicial de KPIs, arquitetura, backlog e critérios de aceite.
+
+FASE 1 — Fundação funcional:
+Autenticação, workspaces, multiempresa/multiprojeto, RBAC, layout, navegação, onboarding e template mestre.
+
+FASE 2 — Núcleo gerencial:
+Planejamento estratégico, metas, projetos, tarefas, documentos e dashboards básicos com dados reais.
+
+FASE 3 — Financeiro:
+Plano de contas, centros de custo, lançamentos, orçamentos, fluxo de caixa, DRE gerencial e dashboards.
+
+FASE 4 — Comercial e marketing:
+Pipeline, contatos, oportunidades, campanhas, indicadores e importação de dados externos.
+
+FASE 5 — Conectores e automação:
+Meta Marketing API, sincronização segura, jobs, alertas e regras de atualização cruzada.
+
+FASE 6 — Expansão:
+Operações, pessoas, clientes, governança, análises avançadas, inteligência artificial e funcionalidades adicionais.
+
+Cada fase deverá produzir um incremento executável, navegável e testável, mantendo coerência com a visão completa.
+
+## 14. QUALIDADE E CRITÉRIOS DE ACEITE
+
+Exigir:
+- Dados persistidos no banco de dados.
+- Operações CRUD completas nos módulos implementados.
+- Autenticação e isolamento verificáveis.
+- Migrações reproduzíveis.
+- Validação de entrada.
+- Tratamento de falhas.
+- Testes de autorização, cálculos, dashboards e integrações.
+- Estados vazios corretos.
+- Dados de exemplo explicitamente marcados como demonstração.
+- Documentação de instalação e configuração.
+- Ausência de credenciais hardcoded.
+- Nenhum KPI com números fictícios apresentados como dados reais.
+- Nenhum botão ou fluxo simulado apresentado como funcional.
+
+Cenários mínimos de teste:
+1. Criar um workspace e dois projetos independentes.
+2. Instanciar o Business Plan em cada projeto.
+3. Registrar uma meta financeira e um orçamento.
+4. Registrar receitas e despesas de um projeto.
+5. Confirmar atualização dos indicadores financeiros e consolidados.
+6. Alterar filtros de período e validar os totais.
+7. Criar objetivo, iniciativa e tarefas vinculadas.
+8. Documentar um playbook e vinculá-lo à área.
+9. Verificar que um usuário sem permissão não acessa dados financeiros.
+10. Simular importação de campanhas sem credenciais reais.
+11. Verificar idempotência da importação.
+12. Testar lançamentos retroativos, alterações e estornos.
+13. Testar separação entre empresas e moedas diferentes.
+14. Executar os testes e relatar resultados reais.
+
+## 15. DOCUMENTAÇÃO E GOVERNANÇA DO DESENVOLVIMENTO
+
+Manter no repositório:
+- README.md
+- AGENTS.md com convenções e comandos.
+- docs/PRD.md
+- docs/ARCHITECTURE.md
+- docs/DATA_MODEL.md
+- docs/KPI_CATALOG.md
+- docs/INTEGRATIONS.md
+- docs/ROADMAP.md
+- docs/DECISIONS.md
+- docs/TESTING.md
+
+Atualizar documentação conforme as implementações.
+
+Registrar decisões técnicas relevantes, hipóteses, limitações e pendências.
+
+Não afirmar que algo está implementado sem demonstrar arquivos, rotas, testes ou comportamento verificável.
+
+## 16. INSTRUÇÃO DE EXECUÇÃO INICIAL
+
+Comece examinando o ambiente e o código existente.
+
+Em seguida:
+1. Apresente um diagnóstico objetivo do repositório e das principais premissas.
+2. Defina o MVP e a arquitetura proposta.
+3. Estruture o backlog por dependência e valor de negócio.
+4. Crie a documentação inicial.
+5. Implemente a Fase 1 funcional se houver ambiente e permissões adequados.
+6. Rode os comandos de verificação disponíveis.
+7. Informe os arquivos alterados, testes realizados, problemas e próximos passos.
+
+Tome decisões técnicas razoáveis quando houver lacunas não bloqueantes e documente as premissas. Solicite confirmação apenas para escolhas irreversíveis, integrações que exigem credenciais reais, custos externos ou decisões estratégicas que alterem significativamente o escopo.
+
+RESULTADO FINAL ESPERADO:
+Uma plataforma central de gestão empresarial, multiempresa, modular e progressivamente inteligente, em que o Business Plan é um sistema operacional vivo: cada área possui seus próprios dados, indicadores e processos, todos conectados a uma visão executiva consolidada, auditável e acionável.

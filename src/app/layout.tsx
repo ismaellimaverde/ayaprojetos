@@ -1,0 +1,19 @@
+import "@fontsource/montserrat/700.css";
+import "@fontsource-variable/archivo";
+import "./globals.css";
+import type { Metadata } from "next";
+export const metadata: Metadata = {
+  title: "BOSS · AYA Projetos",
+  description: "Business Operation Sales System",
+};
+export default function RootLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
+  return (
+    <html lang="pt-BR">
+      <body>{children}</body>
+    </html>
+  );
+}

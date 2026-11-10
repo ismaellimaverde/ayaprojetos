@@ -1,0 +1,16 @@
+[
+  {
+    "file": "requirements/original.txt",
+    "library_file_id": "libfile_a924deefc8c88191aa156216a9e31e1f",
+    "access": "complete Library text read; UTF-8 reconstruction",
+    "bytes": 21568,
+    "sha256": "e244a63b6229adaa2844437b3f4f9007356eb8a64cae28bf1efcee65ccb5ad45"
+  },
+  {
+    "file": "requirements/update.txt",
+    "library_file_id": "libfile_bfdf7c7a94288191a5dfe05d01b45754",
+    "access": "complete Library text read; UTF-8 reconstruction",
+    "bytes": 10575,
+    "sha256": "fef744f4e9b1c65f3604c14678d15dd95dda25fd68409dd8f2fe9d4392e71854"
+  }
+]
