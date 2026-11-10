@@ -19,6 +19,7 @@ import {
   useSyncExternalStore,
 } from "react";
 import {
+  Menu,
   PanelLeftClose,
   PanelLeftOpen,
   LayoutDashboard,
@@ -292,11 +293,13 @@ export default function Home() {
     if (
       mainCollapsed &&
       document.activeElement?.closest(
-        ".project-shortcuts, .brand-home, .primary-sidebar footer",
+        compact
+          ? "#primary-navigation, .brand-home, .primary-sidebar footer"
+          : ".project-shortcuts, .brand-home, .primary-sidebar footer",
       )
     )
       document.getElementById("main-menu-toggle")?.focus();
-  }, [areasCollapsed, mainCollapsed]);
+  }, [areasCollapsed, mainCollapsed, compact]);
   async function run(path: string, method: string, body?: unknown) {
     setMessage("");
     try {
@@ -376,7 +379,17 @@ export default function Home() {
     <div
       className={`shell workspace-shell ${dark ? "dark" : ""} ${mainCollapsed ? "main-collapsed" : ""} ${selected && ["plan", "library"].includes(tab) ? "has-project" : ""} ${areasCollapsed ? "areas-collapsed" : ""}`}
     >
-      <aside className="sidebar primary-sidebar" aria-label="Menu principal">
+      <aside
+        className="sidebar primary-sidebar"
+        aria-label="Menu principal"
+        onKeyDown={(e) => {
+          if (compact && e.key === "Escape") {
+            e.stopPropagation();
+            setMainCollapseChoice(true);
+            document.getElementById("main-menu-toggle")?.focus();
+          }
+        }}
+      >
         <button
           id="main-menu-toggle"
           className="menu-collapse"
@@ -394,7 +407,9 @@ export default function Home() {
               : "Recolher menu principal"
           }
         >
-          {mainCollapsed ? (
+          {compact ? (
+            <Menu size={20} aria-hidden />
+          ) : mainCollapsed ? (
             <PanelLeftOpen size={20} />
           ) : (
             <PanelLeftClose size={20} />
@@ -415,7 +430,11 @@ export default function Home() {
         >
           <Brand />
         </Link>
-        <nav id="primary-navigation" aria-label="Navegação principal">
+        <nav
+          id="primary-navigation"
+          hidden={compact && mainCollapsed}
+          aria-label="Navegação principal"
+        >
           {[
             {
               id: "portfolio",
@@ -532,6 +551,13 @@ export default function Home() {
         <aside
           className="sidebar area-sidebar"
           aria-label="Navegação das áreas"
+          onKeyDown={(e) => {
+            if (compact && e.key === "Escape") {
+              e.stopPropagation();
+              setAreaCollapseChoice(true);
+              document.getElementById("area-menu-toggle")?.focus();
+            }
+          }}
         >
           <button
             id="area-menu-toggle"
@@ -546,7 +572,9 @@ export default function Home() {
             onClick={() => setAreaCollapseChoice(!areasCollapsed)}
             title={areasCollapsed ? "Expandir áreas" : "Recolher áreas"}
           >
-            {areasCollapsed ? (
+            {compact ? (
+              <Menu size={20} aria-hidden />
+            ) : areasCollapsed ? (
               <PanelLeftOpen size={20} />
             ) : (
               <PanelLeftClose size={20} />

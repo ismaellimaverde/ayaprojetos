@@ -259,3 +259,113 @@ test("revoked project disappearing during refresh does not trap platform navigat
     page.getByRole("button", { name: "Abrir Business Plan", exact: true }),
   ).toHaveCount(0);
 });
+
+for (const width of [320, 390, 768]) {
+  test(`mobile hamburger menus are independent and preserve editing at ${width}px`, async ({
+    page,
+  }, info) => {
+    await page.setViewportSize({ width, height: 900 });
+    await page.route("**/api/boss/**", async (route) => {
+      const path = new URL(route.request().url()).pathname;
+      if (path.endsWith("/me"))
+        return route.fulfill({
+          json: {
+            user: { name: "Pessoa de teste" },
+            organizations: [{ id: "org", name: "Workspace de teste" }],
+          },
+        });
+      if (path.includes("module-content"))
+        return route.fulfill({
+          json: {
+            document: {
+              revision: 1,
+              fields: {
+                summary_rich_v1: JSON.stringify({
+                  type: "doc",
+                  content: [
+                    {
+                      type: "paragraph",
+                      content: [{ type: "text", text: "Texto salvo" }],
+                    },
+                  ],
+                }),
+              },
+              items: [],
+            },
+            permissions: ["view", "edit", "export"],
+            archived: false,
+          },
+        });
+      if (path.includes("project-library"))
+        return route.fulfill({ json: { documents: [] } });
+      return route.fulfill({
+        json: {
+          admin: false,
+          companies: [],
+          projects: [
+            {
+              id: "project",
+              name: "Projeto teste",
+              status: "active",
+              modules: ["executive", "dna"],
+              template_version: 1,
+            },
+          ],
+        },
+      });
+    });
+    await page.goto("/?workspace=org&project=project&area=executive");
+    const editor = page.getByRole("textbox", {
+      name: "Resumo executivo",
+      exact: true,
+    });
+    await expect(editor).toHaveText("Texto salvo");
+    await editor.fill("Rascunho preservado");
+    const main = page.locator("#main-menu-toggle"),
+      areas = page.locator("#area-menu-toggle");
+    await expect(main.locator("svg.lucide-menu")).toHaveCount(1);
+    await expect(areas.locator("svg.lucide-menu")).toHaveCount(1);
+    await expect(page.locator("#primary-navigation")).toBeHidden();
+    await expect(page.locator("#area-navigation")).toBeHidden();
+    for (const control of [main, areas]) {
+      await expect(control).toHaveAttribute("aria-expanded", "false");
+      expect((await control.boundingBox())!.height).toBeGreaterThanOrEqual(44);
+    }
+    await main.focus();
+    await main.press("Enter");
+    await expect(page.locator("#primary-navigation")).toBeVisible();
+    await expect(page.locator("#area-navigation")).toBeHidden();
+    await areas.click();
+    await expect(page.locator("#primary-navigation")).toBeVisible();
+    await expect(page.locator("#area-navigation")).toBeVisible();
+    await page
+      .locator("#area-navigation")
+      .getByRole("button", { name: "Biblioteca", exact: true })
+      .click();
+    await expect(page.getByRole("alertdialog")).toBeVisible();
+    await page.getByRole("button", { name: "Cancelar", exact: true }).click();
+    await expect(editor).toHaveText("Rascunho preservado");
+    await areas.focus();
+    await areas.press("Escape");
+    await expect(page.locator("#area-navigation")).toBeHidden();
+    await expect(areas).toBeFocused();
+    await expect(page.locator("#primary-navigation")).toBeVisible();
+    await page
+      .locator("#primary-navigation")
+      .getByRole("button", { name: "Projetos", exact: true })
+      .focus();
+    await page.keyboard.press("Escape");
+    await expect(page.locator("#primary-navigation")).toBeHidden();
+    await expect(main).toBeFocused();
+    await expect(editor).toHaveText("Rascunho preservado");
+    expect(
+      await page.evaluate(
+        () => document.documentElement.scrollWidth <= innerWidth,
+      ),
+    ).toBe(true);
+    await page.screenshot({
+      path: info.outputPath(`mobile-menus-${width}.png`),
+      fullPage: true,
+    });
+  });
+}
