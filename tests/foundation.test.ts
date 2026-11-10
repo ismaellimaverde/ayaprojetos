@@ -1299,9 +1299,14 @@ test("project file manager isolates folders, links and attachments without alter
     name: "Privado financeiro",
     area: "finance",
   };
-  await execute(actor(ownerId), org, "POST", [...path, "folders"], folder);
-  await execute(actor(ownerId), org, "POST", [...path, "folders"], folder);
-  await execute(actor(ownerId), org, "POST", [...path, "folders"], finance);
+  // Synthetic legacy area-scoped folders: new API creates project-scoped folders only.
+  const legacyFolder = async (f: { id: string; name: string; area: string }) =>
+    pool.query(
+      "INSERT INTO boss_private.library_folders(id,org_id,project_id,area,scope,name,created_by) VALUES($1,$2,$3,$4,'area',$5,$6)",
+      [f.id, org, p.id, f.area, f.name, ownerId],
+    );
+  await legacyFolder(folder);
+  await legacyFolder(finance);
   const reader = await makeUser("files-reader@example.test");
   await pool.query(
     "INSERT INTO boss_private.members(id,org_id,user_id,role) VALUES($1,$2,$3,'member')",
@@ -1367,7 +1372,6 @@ test("project file manager isolates folders, links and attachments without alter
       ...folder,
       id: randomUUID(),
     }),
-    /permissão/,
   );
   await assert.rejects(
     execute(actor(reader), org, "GET", ["project-files", q.id], undefined),
@@ -1447,7 +1451,7 @@ test("project file manager isolates folders, links and attachments without alter
     /2 MB/,
   );
   const second = { ...folder, id: randomUUID(), name: "Outra pasta" };
-  await execute(actor(ownerId), org, "POST", [...path, "folders"], second);
+  await legacyFolder(second);
   await execute(actor(ownerId), org, "PATCH", [...path, "items", item.id], {
     name: "Imagem renomeada",
     folder_id: second.id,
@@ -1629,4 +1633,222 @@ test("project file manager isolates folders, links and attachments without alter
     }),
     /permissão/,
   );
+});
+
+test("general project files allow existing limited members without area association, with revoked and archived access enforced", async () => {
+  const p = await execute(actor(ownerId), org, "POST", ["projects"], {
+    name: "General files",
+  });
+  const q = await execute(actor(ownerId), org, "POST", ["projects"], {
+    name: "Unrelated files",
+  });
+  const member = await makeUser("general-files@example.test");
+  await pool.query(
+    "INSERT INTO boss_private.members(id,org_id,user_id,role) VALUES($1,$2,$3,'member')",
+    [randomUUID(), org, member],
+  );
+  await execute(actor(ownerId), org, "POST", ["grants"], {
+    project_id: p.id,
+    user_id: member,
+    role: "viewer",
+    permissions: { marketing: ["view"] },
+  });
+  const path = ["project-files", p.id];
+  const folder = { id: randomUUID(), name: "Project only" };
+  await execute(actor(member), org, "POST", [...path, "folders"], folder);
+  await execute(actor(member), org, "POST", [...path, "folders"], folder);
+  const listing = await execute(actor(member), org, "GET", path, undefined);
+  assert.equal(listing.folders.length, 1);
+  assert.equal(listing.folders[0].area, null);
+  assert.equal(listing.folders[0].scope, "project");
+  const data = Buffer.from("%PDF-1.4\nsynthetic\n%%EOF");
+  const item = {
+    id: randomUUID(),
+    folder_id: folder.id,
+    name: "Shared PDF",
+    category: "document",
+    filename: "test.pdf",
+    mime: "application/pdf",
+    data: data.toString("base64"),
+  };
+  await execute(actor(member), org, "POST", [...path, "items"], item);
+  await execute(actor(member), org, "POST", [...path, "items"], item);
+  assert.deepEqual(
+    (
+      await execute(
+        actor(member),
+        org,
+        "GET",
+        [...path, "file", item.id],
+        undefined,
+      )
+    ).privateFile,
+    data,
+  );
+  assert.equal(
+    (
+      await pool.query(
+        "SELECT area,scope FROM boss_private.library_files WHERE id=$1",
+        [item.id],
+      )
+    ).rows[0].area,
+    null,
+  );
+  await assert.rejects(
+    execute(actor(member), org, "GET", ["project-files", q.id], undefined),
+  );
+  await assert.rejects(
+    execute(
+      { ...actor(member), sessionId: randomUUID() },
+      org,
+      "GET",
+      path,
+      undefined,
+    ),
+    /Sessão revogada/,
+  );
+  await execute(
+    actor(member),
+    org,
+    "DELETE",
+    [...path, "items", item.id],
+    undefined,
+  );
+  await execute(
+    actor(member),
+    org,
+    "DELETE",
+    [...path, "items", item.id],
+    undefined,
+  );
+  assert.equal(
+    (await execute(actor(member), org, "GET", [...path, "trash"], undefined))
+      .files.length,
+    1,
+  );
+  assert.deepEqual(
+    (
+      await pool.query(
+        "SELECT attachment FROM boss_private.library_files WHERE id=$1",
+        [item.id],
+      )
+    ).rows[0].attachment,
+    data,
+  );
+  await execute(actor(member), org, "POST", [...path, "restore", item.id], {});
+  await execute(actor(member), org, "POST", [...path, "restore", item.id], {});
+  await pool.query(
+    "UPDATE boss_private.projects SET status='archived' WHERE id=$1",
+    [p.id],
+  );
+  assert.equal(
+    (await execute(actor(member), org, "GET", path, undefined)).can_create,
+    false,
+  );
+  await assert.rejects(
+    execute(
+      actor(member),
+      org,
+      "DELETE",
+      [...path, "items", item.id],
+      undefined,
+    ),
+    /permissão/,
+  );
+  await assert.rejects(
+    execute(actor(member), org, "POST", [...path, "folders"], {
+      id: randomUUID(),
+      name: "Blocked",
+    }),
+    /permissão/,
+  );
+  await assert.rejects(
+    execute(actor(member), org, "POST", [...path, "restore", item.id], {}),
+    /permissão/,
+  );
+  await pool.query(
+    "UPDATE boss_private.grants SET status='revoked' WHERE project_id=$1 AND user_id=$2",
+    [p.id, member],
+  );
+  await assert.rejects(execute(actor(member), org, "GET", path, undefined));
+  await assert.rejects(
+    execute(actor(member), org, "GET", [...path, "file", item.id], undefined),
+  );
+  await assert.rejects(
+    execute(actor(member), org, "POST", [...path, "restore", item.id], {}),
+  );
+});
+
+test("candidate library migrations convert approved existing files to project scope while preserving bytes and provenance", async () => {
+  const { readFile } = await import("node:fs/promises");
+  const c = await pool.connect();
+  try {
+    await c.query("BEGIN");
+    await c.query("CREATE SCHEMA boss_scope_fixture");
+    await c.query("SET LOCAL search_path TO boss_scope_fixture,pg_catalog");
+    await c.query(
+      'CREATE TABLE "user"(id text PRIMARY KEY); CREATE TABLE projects(id uuid PRIMARY KEY,org_id uuid,UNIQUE(id,org_id));',
+    );
+    await c.query(await readFile("migrations/005_library_files.sql", "utf8"));
+    const project = randomUUID(),
+      orgId = randomUUID(),
+      folderId = randomUUID(),
+      fileId = randomUUID();
+    const bytes = Buffer.from("private synthetic fixture");
+    await c.query("INSERT INTO \"user\" VALUES('fixture')");
+    await c.query("INSERT INTO projects VALUES($1,$2)", [project, orgId]);
+    await c.query(
+      "INSERT INTO library_folders(id,org_id,project_id,area,name,created_by) VALUES($1,$2,$3,'finance','Legacy','fixture')",
+      [folderId, orgId, project],
+    );
+    await c.query(
+      "INSERT INTO library_files(id,org_id,project_id,folder_id,area,name,category,filename,mime,attachment,created_by) VALUES($1,$2,$3,$4,'finance','Legacy file','document','fixture.pdf','application/pdf',$5,'fixture')",
+      [fileId, orgId, project, folderId, bytes],
+    );
+    const before = (
+      await c.query("SELECT * FROM library_files WHERE id=$1", [fileId])
+    ).rows[0];
+    await c.query(await readFile("migrations/006_library_trash.sql", "utf8"));
+    await c.query(
+      await readFile("migrations/007_library_project_scope.sql", "utf8"),
+    );
+    const after = (
+      await c.query("SELECT * FROM library_files WHERE id=$1", [fileId])
+    ).rows[0];
+    assert.deepEqual(after, {
+      ...before,
+      deleted_at: null,
+      deleted_by: null,
+      area: null,
+      scope: "project",
+      legacy_area: before.area,
+    });
+    const general = randomUUID();
+    await c.query(
+      "INSERT INTO library_folders(id,org_id,project_id,scope,name,created_by) VALUES($1,$2,$3,'project','General','fixture')",
+      [general, orgId, project],
+    );
+    const legacyParent = randomUUID();
+    await c.query(
+      "INSERT INTO library_folders(id,org_id,project_id,scope,area,name,created_by) VALUES($1,$2,$3,'area','finance','Legacy boundary','fixture')",
+      [legacyParent, orgId, project],
+    );
+    await c.query("SAVEPOINT invalid_scope");
+    await assert.rejects(
+      c.query(
+        "INSERT INTO library_files(id,org_id,project_id,folder_id,scope,name,category,url,created_by) VALUES($1,$2,$3,$4,'project','Invalid parent','document','https://example.test','fixture')",
+        [randomUUID(), orgId, project, legacyParent],
+      ),
+      /foreign key/,
+    );
+    await c.query("ROLLBACK TO SAVEPOINT invalid_scope");
+    await c.query(
+      "INSERT INTO library_files(id,org_id,project_id,folder_id,scope,name,category,url,created_by) VALUES($1,$2,$3,$4,'project','Valid','document','https://example.test','fixture')",
+      [randomUUID(), orgId, project, general],
+    );
+    await c.query("ROLLBACK");
+  } finally {
+    await c.query("ROLLBACK");
+    c.release();
+  }
 });

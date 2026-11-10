@@ -1784,3 +1784,20 @@ h3 {
 
 .file-manager h3.file-manager-title { display: flex; align-items: center; gap: 12px; font-size: clamp(1.4rem, 2.5vw, 1.9rem); font-weight: 700; line-height: 1.2; }
 .file-manager-title svg { flex-shrink: 0; }
+
+/* Project files: compact rows, with private raster previews and clear actions. */
+.file-list { display: grid; gap: 0; }
+.file-list-row { display: flex; align-items: center; gap: .75rem; padding: .65rem .25rem; border-bottom: 1px solid var(--border, #e5e7eb); min-width: 0; }
+.file-list-info { flex: 1; min-width: 0; overflow-wrap: anywhere; }
+.file-list-info h4, .file-list-info p { margin: 0; }
+.file-list-updated { display: block; font-size: .75rem; }
+.file-list-row > .row { flex-shrink: 0; gap: .4rem; }
+.file-download { min-width: 44px; min-height: 44px; padding: .65rem; }
+.file-thumbnail { display: grid; place-items: center; width: 44px; height: 44px; flex: 0 0 44px; overflow: hidden; border-radius: 8px; background: #f5f5f5; }
+.file-thumbnail canvas { display: none; width: 44px; height: 44px; }
+.file-thumbnail[data-ready] canvas { display: block; }
+.file-thumbnail[data-ready] .file-thumbnail-fallback { display: none; }
+@media (max-width: 600px) {
+  .file-list-row { flex-wrap: wrap; }
+  .file-list-row > .row { width: 100%; justify-content: flex-end; }
+}

@@ -47,9 +47,10 @@ export async function libraryFiles(
   const [, projectId, action, target] = path;
   const project = await projectAccess(c, actor, org, projectId, admin);
   const visible: string[] = project.modules;
-  const can = (area: string, permission: string) =>
-    visible.includes(area) && project.permissions[area]?.includes(permission);
-  const writing = (area: string, permission: string) => {
+  const can = (area: string | null, permission: string) =>
+    area === null ||
+    (visible.includes(area) && project.permissions[area]?.includes(permission));
+  const writing = (area: string | null, permission: string) => {
     if (project.status !== "active" || !can(area, permission))
       throw new DomainError(
         403,
@@ -59,7 +60,7 @@ export async function libraryFiles(
   const folder = async (id: string) => {
     const row = (
       await c.query(
-        "SELECT id,name,area FROM boss_private.library_folders WHERE id=$1 AND org_id=$2 AND project_id=$3 AND area=ANY($4::text[])",
+        "SELECT id,name,area,scope FROM boss_private.library_folders WHERE id=$1 AND org_id=$2 AND project_id=$3 AND (scope='project' OR area=ANY($4::text[]))",
         [id, org, projectId, visible],
       )
     ).rows[0];
@@ -69,13 +70,13 @@ export async function libraryFiles(
   if (method === "GET" && (!action || action === "trash")) {
     const folders = (
       await c.query(
-        "SELECT id,name,area FROM boss_private.library_folders WHERE org_id=$1 AND project_id=$2 AND area=ANY($3::text[]) ORDER BY lower(name),id",
+        "SELECT id,name,area,scope FROM boss_private.library_folders WHERE org_id=$1 AND project_id=$2 AND (scope='project' OR area=ANY($3::text[])) ORDER BY lower(name),id",
         [org, projectId, visible],
       )
     ).rows;
     const files = (
       await c.query(
-        "SELECT id,folder_id,area,name,category,url,filename,mime,octet_length(attachment) AS bytes,updated_at,deleted_at FROM boss_private.library_files WHERE org_id=$1 AND project_id=$2 AND area=ANY($3::text[]) AND (deleted_at IS NOT NULL)=$4 ORDER BY lower(name),id",
+        "SELECT id,folder_id,area,scope,name,category,url,filename,mime,octet_length(attachment) AS bytes,updated_at,deleted_at FROM boss_private.library_files WHERE org_id=$1 AND project_id=$2 AND (scope='project' OR area=ANY($3::text[])) AND (deleted_at IS NOT NULL)=$4 ORDER BY lower(name),id",
         [
           org,
           projectId,
@@ -87,7 +88,11 @@ export async function libraryFiles(
       )
     ).rows;
     return {
-      folders,
+      can_create: project.status === "active",
+      folders: folders.map((f) => ({
+        ...f,
+        can_create: project.status === "active" && !!can(f.area, "create"),
+      })),
       files: files.map((f) => ({
         ...f,
         can_edit: project.status === "active" && !!can(f.area, "edit"),
@@ -103,14 +108,14 @@ export async function libraryFiles(
   }
   if (action === "folders" && method === "POST" && !target) {
     const v = z
-      .object({ id: z.uuid(), name: name.max(120), area: z.string().max(80) })
+      .object({ id: z.uuid(), name: name.max(120) })
       .strict()
       .parse(body);
-    writing(v.area, "create");
+    writing(null, "create");
     const old = (
       await c.query(
-        "SELECT id FROM boss_private.library_folders WHERE id=$1 AND org_id=$2 AND project_id=$3 AND area=$4 AND created_by=$5",
-        [v.id, org, projectId, v.area, actor.userId],
+        "SELECT id FROM boss_private.library_folders WHERE id=$1 AND org_id=$2 AND project_id=$3 AND scope='project' AND created_by=$4",
+        [v.id, org, projectId, actor.userId],
       )
     ).rows[0];
     if (old) return old;
@@ -126,12 +131,12 @@ export async function libraryFiles(
     )
       throw new DomainError(409, "Limite de 50 pastas por projeto");
     await c.query(
-      "INSERT INTO boss_private.library_folders(id,org_id,project_id,area,name,created_by) VALUES($1,$2,$3,$4,$5,$6)",
-      [v.id, org, projectId, v.area, v.name, actor.userId],
+      "INSERT INTO boss_private.library_folders(id,org_id,project_id,area,scope,name,created_by) VALUES($1,$2,$3,NULL,'project',$4,$5)",
+      [v.id, org, projectId, v.name, actor.userId],
     );
     await audit(c, org, actor.userId, "library.folder.created", v.id, {
       project_id: projectId,
-      area: v.area,
+      scope: "project",
     });
     return { id: v.id };
   }
@@ -160,7 +165,7 @@ export async function libraryFiles(
     }
     const old = (
       await c.query(
-        "SELECT id FROM boss_private.library_files WHERE id=$1 AND org_id=$2 AND project_id=$3 AND area=$4 AND created_by=$5",
+        "SELECT id FROM boss_private.library_files WHERE id=$1 AND org_id=$2 AND project_id=$3 AND area IS NOT DISTINCT FROM $4::text AND created_by=$5",
         [v.id, org, projectId, group.area, actor.userId],
       )
     ).rows[0];
@@ -184,7 +189,7 @@ export async function libraryFiles(
         "Limite: 200 arquivos e 50 MB de anexos por projeto, incluindo Fontes",
       );
     await c.query(
-      "INSERT INTO boss_private.library_files(id,org_id,project_id,folder_id,area,name,category,url,filename,mime,attachment,created_by) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12)",
+      "INSERT INTO boss_private.library_files(id,org_id,project_id,folder_id,area,name,category,url,filename,mime,attachment,created_by,scope) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13)",
       [
         v.id,
         org,
@@ -198,6 +203,7 @@ export async function libraryFiles(
         v.mime,
         bytes,
         actor.userId,
+        group.scope,
       ],
     );
     await audit(c, org, actor.userId, "library.file.created", v.id, {
@@ -213,7 +219,7 @@ export async function libraryFiles(
     z.uuid().parse(target);
     const row = (
       await c.query(
-        "SELECT id,area,deleted_at FROM boss_private.library_files WHERE id=$1 AND org_id=$2 AND project_id=$3 AND area=ANY($4::text[])",
+        "SELECT id,area,deleted_at FROM boss_private.library_files WHERE id=$1 AND org_id=$2 AND project_id=$3 AND (scope='project' OR area=ANY($4::text[]))",
         [target, org, projectId, visible],
       )
     ).rows[0];
@@ -248,7 +254,7 @@ export async function libraryFiles(
     z.uuid().parse(target);
     const row = (
       await c.query(
-        "SELECT id,area FROM boss_private.library_files WHERE id=$1 AND org_id=$2 AND project_id=$3 AND area=ANY($4::text[]) AND deleted_at IS NULL",
+        "SELECT id,area FROM boss_private.library_files WHERE id=$1 AND org_id=$2 AND project_id=$3 AND (scope='project' OR area=ANY($4::text[])) AND deleted_at IS NULL",
         [target, org, projectId, visible],
       )
     ).rows[0];

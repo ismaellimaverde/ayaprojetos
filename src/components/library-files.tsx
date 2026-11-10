@@ -2,6 +2,7 @@
 import { useEffect, useRef, useState } from "react";
 import {
   Folder,
+  Download,
   FileText,
   Files,
   Trash2,
@@ -9,10 +10,17 @@ import {
   Video,
 } from "lucide-react";
 import { api } from "@/lib/client";
-import { modules } from "@/lib/catalog";
 import { updatedAtLabel } from "@/lib/document-metadata";
+import { PrivateFileThumbnail } from "./private-file-thumbnail";
+import { libraryFileType } from "@/lib/library-file-type";
 import { SOURCE_LIMIT } from "@/lib/source-model";
-type Group = { id: string; name: string; area: string };
+type Group = {
+  id: string;
+  name: string;
+  area: string | null;
+  scope: "area" | "project";
+  can_create: boolean;
+};
 type Entry = {
   id: string;
   folder_id: string;
@@ -21,6 +29,7 @@ type Entry = {
   category: string;
   url: string;
   filename: string;
+  mime: string;
   bytes: number | null;
   updated_at: string;
   can_edit: boolean;
@@ -29,7 +38,12 @@ type Entry = {
   can_download: boolean;
 };
 type Access = { id: string; can_create: boolean; can_edit: boolean };
-type Listing = { folders: Group[]; files: Entry[]; areas: Access[] };
+type Listing = {
+  folders: Group[];
+  files: Entry[];
+  areas: Access[];
+  can_create: boolean;
+};
 const labels: Record<string, string> = {
   image: "Fotos",
   video: "Vídeos",
@@ -57,6 +71,7 @@ export function LibraryFiles({
     folders: [],
     files: [],
     areas: [],
+    can_create: false,
   });
   const [loading, setLoading] = useState(true),
     [error, setError] = useState(""),
@@ -84,6 +99,7 @@ export function LibraryFiles({
       folders: r.folders ?? [],
       files: r.files ?? [],
       areas: r.areas ?? [],
+      can_create: r.can_create === true,
     });
   }
   useEffect(() => {
@@ -95,6 +111,7 @@ export function LibraryFiles({
             folders: r.folders ?? [],
             files: r.files ?? [],
             areas: r.areas ?? [],
+            can_create: r.can_create === true,
           });
       })
       .catch((e) => {
@@ -122,8 +139,7 @@ export function LibraryFiles({
       setBusy(false);
     }
   }
-  const writable = listing.areas.filter((a) => a.can_create);
-  const canCreateIn = (g: Group) => writable.some((a) => a.id === g.area);
+  const canCreateIn = (g: Group) => g.can_create;
   function start(kind: "folder" | "file", entry?: Entry) {
     setError("");
     setFile(null);
@@ -133,7 +149,7 @@ export function LibraryFiles({
     setDraft({
       id: entry?.id ?? crypto.randomUUID(),
       name: entry?.name ?? (needsFolder ? labels[category || "image"] : ""),
-      area: entry?.area ?? writable[0]?.id ?? "",
+      area: entry?.area ?? "",
       folder_id:
         entry?.folder_id ??
         listing.folders.find((g) => g.id === folder && canCreateIn(g))?.id ??
@@ -154,7 +170,6 @@ export function LibraryFiles({
         await api(`${path}/folders`, org, "POST", {
           id: draft.id,
           name: draft.name,
-          area: draft.area,
         });
         await reload();
         if (continueToFile) {
@@ -251,7 +266,7 @@ export function LibraryFiles({
             automaticamente no Business Plan ou no PDF.
           </p>
         </div>
-        {!trash && writable.length > 0 && !form && (
+        {!trash && listing.can_create && !form && (
           <div className="row">
             <button
               type="button"
@@ -369,8 +384,8 @@ export function LibraryFiles({
               </h4>
               {continueToFile && (
                 <p className="notice">
-                  Primeiro, crie uma pasta e escolha a área que controla seu
-                  acesso. Depois você poderá{" "}
+                  Primeiro, dê um nome à pasta geral do projeto. Depois você
+                  poderá{" "}
                   {draft.category === "video"
                     ? "adicionar o link"
                     : "selecionar o arquivo"}
@@ -387,30 +402,7 @@ export function LibraryFiles({
                   onChange={(e) => setDraft({ ...draft, name: e.target.value })}
                 />
               </label>
-              {form === "folder" ? (
-                <>
-                  <label>
-                    Área responsável pelo acesso
-                    <select
-                      value={draft.area}
-                      disabled={busy}
-                      onChange={(e) =>
-                        setDraft({ ...draft, area: e.target.value })
-                      }
-                    >
-                      {writable.map((a) => (
-                        <option key={a.id} value={a.id}>
-                          {modules.find((m) => m.id === a.id)?.name ?? a.id}
-                        </option>
-                      ))}
-                    </select>
-                  </label>
-                  <p className="muted subtle">
-                    Apenas pessoas autorizadas nesta área poderão ver a pasta e
-                    seus arquivos. A área da pasta não muda depois de criada.
-                  </p>
-                </>
-              ) : (
+              {form !== "folder" && (
                 <label>
                   Pasta
                   <select
@@ -429,8 +421,10 @@ export function LibraryFiles({
                       )
                       .map((g) => (
                         <option key={g.id} value={g.id}>
-                          {g.name} —{" "}
-                          {modules.find((m) => m.id === g.area)?.name}
+                          {g.name}
+                          {g.scope === "area"
+                            ? " — acesso legado restrito"
+                            : ""}
                         </option>
                       ))}
                   </select>
@@ -551,7 +545,7 @@ export function LibraryFiles({
                   {g.name}
                   <span className="subtle">
                     {" "}
-                    · {modules.find((m) => m.id === g.area)?.name}
+                    {g.scope === "area" ? "· Acesso legado restrito" : ""}
                   </span>
                 </button>
               ))}
@@ -570,30 +564,44 @@ export function LibraryFiles({
           {!listing.folders.length && (
             <p>
               Nenhuma pasta disponível para seu acesso.{" "}
-              {writable.length > 0
+              {listing.can_create
                 ? "Escolha uma categoria e clique em Adicionar arquivo ou link para criar sua primeira pasta e continuar."
-                : "Solicite acesso à área responsável para adicionar arquivos."}
+                : "Este projeto está disponível somente para leitura."}
             </p>
           )}
           {listing.folders.length > 0 && !entries.length && (
             <p>Nenhum arquivo nesta seleção.</p>
           )}
-          <div className="grid file-grid">
+          <div className="file-list" aria-label="Lista de arquivos">
             {entries.map((entry) => (
-              <article className="panel" key={entry.id}>
-                <div className="row">
-                  {icon(entry.category)}
-                  <span className="subtle">{labels[entry.category]}</span>
+              <article className="file-list-row" key={entry.id}>
+                <PrivateFileThumbnail
+                  url={
+                    !entry.url &&
+                    !entry.deleted_at &&
+                    entry.can_download &&
+                    entry.mime?.startsWith("image/")
+                      ? `/api/boss/${basePath}/file/${entry.id}`
+                      : null
+                  }
+                  org={org}
+                  mime={entry.mime}
+                  version={entry.updated_at}
+                  fallback={icon(entry.category)}
+                  name={entry.name}
+                />
+                <div className="file-list-info">
+                  <h4>{entry.name}</h4>
+                  <p className="muted subtle">
+                    <strong>{libraryFileType(entry)}</strong>
+                    {entry.bytes
+                      ? ` · ${Math.ceil(entry.bytes / 1024)} KB`
+                      : ""}
+                    <span className="file-list-updated">
+                      {updatedAtLabel(entry.updated_at)}
+                    </span>
+                  </p>
                 </div>
-                <h4>{entry.name}</h4>
-                <p className="muted subtle">
-                  <Folder aria-hidden size={14} />{" "}
-                  {listing.folders.find((g) => g.id === entry.folder_id)?.name}
-                </p>
-                <p className="muted subtle">
-                  {updatedAtLabel(entry.updated_at)}
-                  {entry.bytes ? ` · ${Math.ceil(entry.bytes / 1024)} KB` : ""}
-                </p>
                 <div className="row">
                   {!entry.deleted_at &&
                     (entry.url ? (
@@ -609,7 +617,9 @@ export function LibraryFiles({
                     ) : entry.can_download ? (
                       <button
                         type="button"
-                        className="btn secondary"
+                        className="btn secondary file-download"
+                        aria-label="Baixar arquivo"
+                        title="Baixar arquivo"
                         disabled={busy}
                         onClick={() =>
                           void perform(async () => {
@@ -636,7 +646,7 @@ export function LibraryFiles({
                           })
                         }
                       >
-                        Baixar arquivo
+                        <Download aria-hidden size={19} />
                       </button>
                     ) : (
                       <span className="muted subtle">

@@ -35,9 +35,7 @@ test("Library file manager stores private files, groups and HTTPS links without 
     .click();
   let form = manager.getByRole("form", { name: "Nova pasta" });
   await form.getByLabel("Nome", { exact: true }).fill("Campanha");
-  await form
-    .getByLabel("Área responsável pelo acesso")
-    .selectOption("marketing");
+  await expect(form.getByLabel("Área responsável pelo acesso")).toHaveCount(0);
   await form.getByRole("button", { name: "Salvar", exact: true }).click();
   await expect(form).toHaveCount(0);
   await manager
@@ -74,7 +72,14 @@ test("Library file manager stores private files, groups and HTTPS links without 
   await form.getByLabel("Nome", { exact: true }).fill("Imagem privada");
   await form.getByLabel("Como adicionar").selectOption("upload");
   const image = Buffer.from(
-    "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+jRZkAAAAASUVORK5CYII=",
+    await page.evaluate(() => {
+      const canvas = document.createElement("canvas");
+      canvas.width = canvas.height = 16;
+      const context = canvas.getContext("2d")!;
+      context.fillStyle = "#EF9C83";
+      context.fillRect(0, 0, 16, 16);
+      return canvas.toDataURL("image/png").split(",")[1];
+    }),
     "base64",
   );
   await form.getByLabel("Arquivo privado").setInputFiles({
@@ -88,6 +93,25 @@ test("Library file manager stores private files, groups and HTTPS links without 
   await expect(
     manager.getByRole("heading", { name: "Imagem privada", exact: true }),
   ).toBeVisible();
+  const imageRow = manager.locator("article").filter({
+    has: page.getByRole("heading", { name: "Imagem privada", exact: true }),
+  });
+  await imageRow.scrollIntoViewIfNeeded();
+  await expect(imageRow.locator('[data-ready="true"]')).toBeVisible();
+  await expect(imageRow).toContainText("PNG");
+  await expect(imageRow).not.toContainText("Campanha");
+  const thumbnailRoute = `**/api/boss/project-files/${project}/file/*`;
+  await page.route(thumbnailRoute, (route) =>
+    route.fulfill({ status: 403, body: "Forbidden" }),
+  );
+  await page.reload();
+  await imageRow.scrollIntoViewIfNeeded();
+  await expect(imageRow.locator(".file-thumbnail-fallback")).toBeVisible();
+  await expect(imageRow.locator("canvas")).toBeHidden();
+  await page.unroute(thumbnailRoute);
+  await page.reload();
+  await imageRow.scrollIntoViewIfNeeded();
+  await expect(imageRow.locator('[data-ready="true"]')).toBeVisible();
   for (const width of [1440, 390]) {
     await page.setViewportSize({ width, height: 900 });
     await manager.scrollIntoViewIfNeeded();
@@ -113,6 +137,15 @@ test("Library file manager stores private files, groups and HTTPS links without 
       fullPage: true,
     });
   }
+  await expect(
+    imageRow.getByRole("button", { name: "Baixar arquivo", exact: true }),
+  ).toHaveAttribute("title", "Baixar arquivo");
+  await imageRow
+    .getByRole("button", { name: "Baixar arquivo", exact: true })
+    .focus();
+  await expect(
+    imageRow.getByRole("button", { name: "Baixar arquivo", exact: true }),
+  ).toBeFocused();
   const download = page.waitForEvent("download");
   await manager
     .getByRole("button", { name: "Baixar arquivo", exact: true })
@@ -135,11 +168,9 @@ test("Library file manager stores private files, groups and HTTPS links without 
   await expect(
     manager.getByRole("button", { name: "Mostrar todas as categorias" }),
   ).toHaveCount(0);
-  const photo = manager
-    .locator("article")
-    .filter({
-      has: page.getByRole("heading", { name: "Imagem privada", exact: true }),
-    });
+  const photo = manager.locator("article").filter({
+    has: page.getByRole("heading", { name: "Imagem privada", exact: true }),
+  });
   page.once("dialog", (d) => d.dismiss());
   await photo.getByRole("button", { name: "Excluir arquivo" }).click();
   await expect(photo).toBeVisible();
@@ -242,9 +273,9 @@ for (const width of [1440, 390]) {
       .getByRole("button", { name: "Adicionar arquivo ou link" })
       .click();
     form = manager.getByRole("form", { name: "Nova pasta" });
-    await form
-      .getByLabel("Área responsável pelo acesso")
-      .selectOption("marketing");
+    await expect(form.getByLabel("Área responsável pelo acesso")).toHaveCount(
+      0,
+    );
     await form.getByRole("button", { name: "Criar pasta e continuar" }).click();
     form = manager.getByRole("form", { name: "Novo arquivo ou link" });
     await expect(form.getByLabel("Como adicionar")).toHaveValue("upload");
@@ -321,6 +352,11 @@ for (const width of [1440, 390]) {
     await expect(
       manager.getByRole("heading", { name: "PDF privado", exact: true }),
     ).toBeVisible();
+    const pdfRow = manager.locator("article").filter({
+      has: page.getByRole("heading", { name: "PDF privado", exact: true }),
+    });
+    await expect(pdfRow).toContainText("PDF");
+    await expect(pdfRow.locator("canvas")).toBeHidden();
     const listing = await (await page.request.get(apiPath, { headers })).json();
     expect(listing.folders).toHaveLength(1);
     expect(listing.files).toHaveLength(1);
