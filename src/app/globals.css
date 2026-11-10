@@ -1825,3 +1825,5 @@ h3 {
 .private-preview-controls .heading h3 { overflow-wrap: anywhere; }
 .private-preview-controls .btn { min-height: 44px; flex-shrink: 0; background: #fff; color: #1d1e21; border: 1px solid #d5d8e0; }
 .boss-dialog.private-file-preview canvas { max-width: 100%; max-height: none; margin: 0 auto; }
+.private-preview-controls .heading { flex-wrap: wrap; }
+.private-preview-controls .heading h3 { max-width: 100%; }

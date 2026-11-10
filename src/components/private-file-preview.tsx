@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useId } from "react";
 import { SOURCE_LIMIT } from "@/lib/file-size";
 
 export function PrivateFilePreview({
@@ -15,6 +15,7 @@ export function PrivateFilePreview({
   mime: string;
   onClose: () => void;
 }) {
+  const descriptionId = useId();
   const dialog = useRef<HTMLDialogElement>(null);
   const canvas = useRef<HTMLCanvasElement>(null);
   const controls = useRef<HTMLDivElement>(null);
@@ -40,6 +41,8 @@ export function PrivateFilePreview({
       );
       surface.style.width = `${Math.floor(dimensions.width * scale)}px`;
       surface.style.height = `${Math.floor(dimensions.height * scale)}px`;
+      if (dialog.current)
+        dialog.current.style.width = `${Math.max(208, Math.floor(dimensions.width * scale)) + 32}px`;
     };
     fit();
     window.addEventListener("resize", fit);
@@ -178,6 +181,7 @@ export function PrivateFilePreview({
       ref={dialog}
       className="boss-dialog private-file-preview"
       aria-label={`Visualizar arquivo: ${name}`}
+      aria-describedby={mime === "application/pdf" ? descriptionId : undefined}
       onCancel={(e) => {
         e.preventDefault();
         onClose();
@@ -195,13 +199,12 @@ export function PrivateFilePreview({
             Fechar visualização
           </button>
         </div>
-        {mime === "application/pdf" && (
-          <p className="muted">
-            Prévia da primeira página, sem links ou ações do PDF. Baixe o
-            arquivo para consultar todas as páginas.
-          </p>
-        )}
       </div>
+      {mime === "application/pdf" && (
+        <p id={descriptionId} hidden>
+          Visualização somente da primeira página do PDF.
+        </p>
+      )}
       {state && <p role="status">{state}</p>}
       <canvas
         ref={canvas}

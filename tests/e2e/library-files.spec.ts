@@ -651,7 +651,21 @@ test("Private PDF preview renders a bounded canvas, handles denied reads and pre
       exact: true,
     });
     await expect(dialog.locator("canvas")).toBeVisible();
-    await expect(dialog).toContainText("Prévia da primeira página");
+    await expect(dialog).toHaveAccessibleDescription(
+      "Visualização somente da primeira página do PDF.",
+    );
+    await expect(dialog.locator(".private-preview-controls p")).toHaveCount(0);
+    await expect(
+      dialog.getByText(
+        "Prévia da primeira página, sem links ou ações do PDF.",
+        { exact: false },
+      ),
+    ).toHaveCount(0);
+    await expect(
+      dialog.getByText("Baixe o arquivo para consultar todas as páginas.", {
+        exact: false,
+      }),
+    ).toHaveCount(0);
     await expect(dialog.locator("iframe, a")).toHaveCount(0);
     expect(
       await dialog
@@ -788,11 +802,9 @@ test("Preview fits portrait, landscape and square images and multipage PDFs with
   for (const width of [1440, 390]) {
     await page.setViewportSize({ width, height: 900 });
     for (const fixture of fixtures) {
-      const row = manager
-        .locator("article")
-        .filter({
-          has: page.getByRole("heading", { name: fixture.name, exact: true }),
-        });
+      const row = manager.locator("article").filter({
+        has: page.getByRole("heading", { name: fixture.name, exact: true }),
+      });
       const button = row.getByRole("button", {
         name: "Visualizar arquivo",
         exact: true,
@@ -813,6 +825,8 @@ test("Preview fits portrait, landscape and square images and multipage PDFs with
       const close = modal.getByRole("button", { name: "Fechar visualização" });
       const box = (await modal.boundingBox())!,
         control = (await close.boundingBox())!;
+      const rendered = (await canvas.boundingBox())!;
+      expect(box.width).toBeLessThanOrEqual(Math.max(208, rendered.width) + 34);
       expect(box.x).toBeGreaterThanOrEqual(0);
       expect(box.x + box.width).toBeLessThanOrEqual(width);
       expect(control.x - box.x).toBeGreaterThanOrEqual(12);
