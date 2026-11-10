@@ -374,18 +374,6 @@ export default function Home() {
       className={`shell workspace-shell dark ${mainCollapsed ? "main-collapsed" : ""} ${selected && ["plan", "library"].includes(tab) ? "has-project" : ""} ${areasCollapsed ? "areas-collapsed" : ""}`}
     >
       <header className="platform-userbar">
-        <Link
-          href="/security"
-          title={name}
-          onClick={(e) => {
-            e.preventDefault();
-            navigate(() => router.push("/security"));
-          }}
-        >
-          {name}
-        </Link>
-      </header>
-      <aside className="sidebar primary-sidebar" aria-label="Menu principal">
         <button
           id="main-menu-toggle"
           className="menu-collapse"
@@ -410,6 +398,34 @@ export default function Home() {
           )}
           <span className="collapse-label">Menu principal</span>
         </button>
+
+        <Link
+          href="/security"
+          title={name}
+          onClick={(e) => {
+            e.preventDefault();
+            navigate(() => router.push("/security"));
+          }}
+        >
+          {name}
+        </Link>
+        <button
+          className="btn secondary"
+          aria-label="Sair"
+          title="Sair"
+          onClick={() =>
+            navigate(() => {
+              void authClient.signOut().then(() => {
+                router.push("/login");
+                router.refresh();
+              });
+            })
+          }
+        >
+          <LogOut size={16} aria-hidden />
+        </button>
+      </header>
+      <aside className="sidebar primary-sidebar" aria-label="Menu principal">
         <Link
           href="/"
           className="brand-home"
@@ -661,20 +677,6 @@ export default function Home() {
                 Novo workspace
               </button>
             )}
-            <button
-              className="btn secondary"
-              aria-label="Sair"
-              onClick={() =>
-                navigate(() => {
-                  void authClient.signOut().then(() => {
-                    router.push("/login");
-                    router.refresh();
-                  });
-                })
-              }
-            >
-              <LogOut size={16} />
-            </button>
           </div>
         </header>
         <main

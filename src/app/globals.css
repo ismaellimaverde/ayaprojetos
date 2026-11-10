@@ -1844,3 +1844,14 @@ h3 {
   .workspace-controls .btn { min-height: 44px; padding: 8px; font-size: 12px; white-space: nowrap; }
   .workspace-controls .btn[aria-label="Sair"] { width: 44px; min-width: 44px; padding: 0; }
 }
+
+.platform-userbar { flex-wrap: nowrap; gap: 8px; padding: 8px 12px; }
+.platform-userbar #main-menu-toggle { margin-right: auto; display: inline-flex; align-items: center; gap: 8px; flex: 0 0 auto; min-height: 44px; padding: 8px 12px; border: 1px solid #646873; border-radius: 16px; background: #292b30; color: #fff; }
+.platform-userbar a { min-width: 0; flex: 0 1 auto; }
+.platform-userbar .btn[aria-label="Sair"] { width: 44px; min-width: 44px; height: 44px; padding: 0; flex: 0 0 44px; background: #292b30; color: #fff; border: 1px solid #646873; }
+.platform-userbar :focus-visible { outline: 2px solid #ef9c83; outline-offset: 2px; }
+@media (max-width: 600px) {
+  .platform-userbar { gap: 6px; padding: 6px 8px; }
+  .platform-userbar #main-menu-toggle { width: 44px; padding: 0; justify-content: center; }
+  .platform-userbar .collapse-label { display: none; }
+}

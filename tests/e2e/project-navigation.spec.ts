@@ -260,7 +260,7 @@ test("revoked project disappearing during refresh does not trap platform navigat
   ).toHaveCount(0);
 });
 
-for (const width of [320, 390, 768]) {
+for (const width of [320, 390, 768, 1280]) {
   test(`restored menus and compact workspace controls preserve editing at ${width}px`, async ({
     page,
   }, info) => {
@@ -324,7 +324,6 @@ for (const width of [320, 390, 768]) {
     const controls = [
       topbar.getByRole("combobox"),
       topbar.getByRole("button", { name: "Novo workspace", exact: true }),
-      topbar.getByRole("button", { name: "Sair", exact: true }),
     ];
     const boxes = await Promise.all(
       controls.map((control) => control.boundingBox()),
@@ -338,6 +337,31 @@ for (const width of [320, 390, 768]) {
         ),
       ).toBeLessThan(3);
     }
+    const userbar = page.locator(".platform-userbar");
+    const headerBoxes = await Promise.all(
+      [
+        userbar.locator("#main-menu-toggle"),
+        userbar.getByRole("link"),
+        userbar.getByRole("button", { name: "Sair", exact: true }),
+      ].map((control) => control.boundingBox()),
+    );
+    for (const box of headerBoxes) {
+      expect(box!.x).toBeGreaterThanOrEqual(0);
+      expect(box!.x + box!.width).toBeLessThanOrEqual(width);
+      expect(
+        Math.abs(
+          box!.y +
+            box!.height / 2 -
+            (headerBoxes[0]!.y + headerBoxes[0]!.height / 2),
+        ),
+      ).toBeLessThan(3);
+    }
+    expect(headerBoxes[2]!.x + headerBoxes[2]!.width).toBeGreaterThan(
+      width - 25,
+    );
+    await expect(
+      topbar.getByRole("button", { name: "Sair", exact: true }),
+    ).toHaveCount(0);
     await expect(
       page.getByRole("button", { name: "Alternar tema" }),
     ).toHaveCount(0);
@@ -358,8 +382,16 @@ for (const width of [320, 390, 768]) {
     await page.goto("/?workspace=org&project=project&area=executive");
     await expect(editor).toHaveText("Texto salvo");
     await editor.fill("Rascunho preservado");
+    await userbar.getByRole("button", { name: "Sair", exact: true }).click();
+    await expect(page.getByRole("alertdialog")).toBeVisible();
+    await page.getByRole("button", { name: "Cancelar", exact: true }).click();
+    await expect(editor).toHaveText("Rascunho preservado");
     const main = page.locator("#main-menu-toggle"),
       areas = page.locator("#area-menu-toggle");
+    if (width > 900) {
+      await expect(areas).toHaveAttribute("aria-expanded", "true");
+      await areas.click();
+    }
     await expect(main.locator("svg.lucide-panel-left-open")).toHaveCount(1);
     await expect(areas.locator("svg.lucide-panel-left-open")).toHaveCount(1);
     await expect(page.locator("#primary-navigation")).toBeVisible();
