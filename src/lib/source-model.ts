@@ -4,7 +4,7 @@ import { z } from "zod";
 import { documentText, fieldDocument, itemDocument } from "./rich-fields";
 import { summaryFromLegacy } from "./rich-summary";
 import type { ModuleDocument } from "./module-fields";
-export const SOURCE_LIMIT = 2 * 1024 * 1024;
+export { SOURCE_LIMIT } from "./file-size";
 export const sourceInput = z
   .object({
     id: z.uuid(),

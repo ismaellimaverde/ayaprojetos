@@ -1,3 +1,4 @@
+import { fileLimitLabel } from "./file-size";
 import type { PoolClient } from "pg";
 import { z } from "zod";
 import { projectAccess, DomainError, audit, type Actor } from "./domain";
@@ -186,7 +187,7 @@ export async function libraryFiles(
     )
       throw new DomainError(
         409,
-        "Limite: 200 arquivos e 50 MB de anexos por projeto, incluindo Fontes",
+        `Limite: 200 arquivos e ${fileLimitLabel(PROJECT_ATTACHMENT_LIMIT)} de anexos por projeto, incluindo Fontes`,
       );
     await c.query(
       "INSERT INTO boss_private.library_files(id,org_id,project_id,folder_id,area,name,category,url,filename,mime,attachment,created_by,scope) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13)",

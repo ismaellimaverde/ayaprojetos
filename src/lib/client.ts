@@ -1,3 +1,4 @@
+import { fileLimitLabel, SOURCE_LIMIT } from "./file-size";
 import { createAuthClient } from "better-auth/react";
 import { twoFactorClient } from "better-auth/client/plugins";
 export const authClient = createAuthClient({ plugins: [twoFactorClient()] });
@@ -21,7 +22,7 @@ export async function api(
   } catch {
     throw new Error(
       r.status === 413
-        ? "O envio excedeu o limite do servidor. Escolha um arquivo de até 2 MiB ou use um link HTTPS."
+        ? `O envio excedeu o limite do servidor. Escolha um arquivo de até ${fileLimitLabel(SOURCE_LIMIT)} ou use um link HTTPS.`
         : `Não foi possível concluir a operação (HTTP ${r.status}). Confira sua conexão e tente novamente.`,
     );
   }

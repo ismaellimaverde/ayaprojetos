@@ -1448,7 +1448,7 @@ test("project file manager isolates folders, links and attachments without alter
       id: randomUUID(),
       data: oversized.toString("base64"),
     }),
-    /2 MB/,
+    /2,10 MB/,
   );
   const second = { ...folder, id: randomUUID(), name: "Outra pasta" };
   await legacyFolder(second);
@@ -1600,7 +1600,7 @@ test("project file manager isolates folders, links and attachments without alter
       ...item,
       id: randomUUID(),
     }),
-    /50 MB/,
+    /52,43 MB/,
   );
   await pool.query(
     "UPDATE boss_private.projects SET status='archived' WHERE id=$1",
@@ -1851,4 +1851,28 @@ test("candidate library migrations convert approved existing files to project sc
     await c.query("ROLLBACK");
     c.release();
   }
+});
+
+test("attachment boundary remains exactly 2097152 bytes with decimal display", async () => {
+  const { validateSourceAttachment } = await import("../src/lib/source-domain");
+  const { sourceInput } = await import("../src/lib/source-model");
+  const bytes = Buffer.alloc(2097152, 32);
+  Buffer.from("%PDF-1.4\n").copy(bytes);
+  const input = sourceInput.parse({
+    id: randomUUID(),
+    name: "Boundary fixture",
+    kind: "pdf",
+    mime: "application/pdf",
+    filename: "fixture.pdf",
+    data: bytes.toString("base64"),
+  });
+  assert.equal(validateSourceAttachment(input)?.length, 2097152);
+  assert.throws(
+    () =>
+      validateSourceAttachment({
+        ...input,
+        data: Buffer.concat([bytes, Buffer.from(" ")]).toString("base64"),
+      }),
+    /2,10 MB \(2.097.152 bytes\)/,
+  );
 });

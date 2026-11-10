@@ -1,3 +1,4 @@
+import { fileLimitLabel } from "./file-size";
 import {
   projectAttachmentBytes,
   PROJECT_ATTACHMENT_LIMIT,
@@ -38,7 +39,10 @@ export function validateSourceAttachment(v: z.infer<typeof sourceInput>) {
     throw new DomainError(400, "Anexo inválido");
   const b = Buffer.from(v.data, "base64");
   if (b.length > SOURCE_LIMIT || b.toString("base64") !== v.data)
-    throw new DomainError(400, "Anexo excede 2 MB ou é inválido");
+    throw new DomainError(
+      400,
+      `Anexo excede ${fileLimitLabel(SOURCE_LIMIT)} ou é inválido`,
+    );
   const hex = b.subarray(0, 12).toString("hex"),
     ascii = b.subarray(0, 12).toString("ascii");
   const valid: Record<string, boolean> = {
@@ -148,7 +152,7 @@ export async function sources(
     )
       throw new DomainError(
         409,
-        "Limite do projeto: 100 fontes e 50 MB de anexos, incluindo a Biblioteca",
+        `Limite do projeto: 100 fontes e ${fileLimitLabel(PROJECT_ATTACHMENT_LIMIT)} de anexos, incluindo a Biblioteca`,
       );
     await c.query(
       `INSERT INTO boss_private.project_sources(id,org_id,project_id,area,name,kind,origin,note,url,filename,mime,attachment,created_by) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13)`,

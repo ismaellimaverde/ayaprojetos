@@ -1,16 +1,24 @@
 "use client";
+import {
+  fileLimitLabel,
+  formatFileMB,
+  PROJECT_ATTACHMENT_LIMIT,
+} from "@/lib/file-size";
 import { useEffect, useRef, useState } from "react";
 import {
   Folder,
   Download,
+  Hourglass,
   FileText,
   Files,
   Trash2,
   Image as ImageIcon,
   Video,
 } from "lucide-react";
+import { matchesFileName } from "@/lib/file-search";
 import { api } from "@/lib/client";
 import { updatedAtLabel } from "@/lib/document-metadata";
+import { PrivateFilePreview } from "./private-file-preview";
 import { PrivateFileThumbnail } from "./private-file-thumbnail";
 import { libraryFileType } from "@/lib/library-file-type";
 import { SOURCE_LIMIT } from "@/lib/source-model";
@@ -65,6 +73,7 @@ export function LibraryFiles({
   projectId: string;
 }) {
   const [trash, setTrash] = useState(false);
+  const [preview, setPreview] = useState<Entry | null>(null);
   const basePath = `project-files/${projectId}`;
   const path = trash ? `${basePath}/trash` : basePath;
   const [listing, setListing] = useState<Listing>({
@@ -197,7 +206,7 @@ export function LibraryFiles({
             throw new Error("O arquivo está vazio. Escolha outro arquivo.");
           if (file.size > SOURCE_LIMIT)
             throw new Error(
-              "O arquivo excede 2 MiB. Use um link HTTPS ou escolha um arquivo menor.",
+              `O arquivo excede o limite de ${fileLimitLabel(SOURCE_LIMIT)}. Use um link HTTPS ou escolha um arquivo menor.`,
             );
           const known: Record<string, string> = {
             png: "image/png",
@@ -248,13 +257,22 @@ export function LibraryFiles({
     (f) =>
       (!folder || f.folder_id === folder) &&
       (!category || f.category === category) &&
-      f.name.toLocaleLowerCase().includes(search.toLocaleLowerCase()),
+      matchesFileName(f.name, search),
   );
   return (
     <section
       className="panel file-manager"
       aria-label="Gerenciador de arquivos"
     >
+      {preview && (
+        <PrivateFilePreview
+          path={`/api/boss/${basePath}/file/${preview.id}`}
+          org={org}
+          name={preview.name}
+          mime={preview.mime}
+          onClose={() => setPreview(null)}
+        />
+      )}
       <div className="heading">
         <div>
           <h3 className="file-manager-title">
@@ -295,8 +313,9 @@ export function LibraryFiles({
           BOSS não copia vídeos nem muda o compartilhamento.
         </li>
         <li>
-          <strong>Limites:</strong> 2 MiB por upload e 50 MiB de anexos por
-          projeto, compartilhados com Fontes.
+          <strong>Limites:</strong> {fileLimitLabel(SOURCE_LIMIT)} por upload e{" "}
+          {fileLimitLabel(PROJECT_ATTACHMENT_LIMIT)} de anexos por projeto,
+          compartilhados com Fontes.
         </li>
       </ul>
       <nav className="file-categories" aria-label="Categorias de arquivos">
@@ -325,9 +344,16 @@ export function LibraryFiles({
         ))}
       </nav>
       <div className="row file-category-heading">
-        <h4>
-          {category ? labels[category] : "Arquivos do projeto"}
-          {trash ? " · Lixeira" : ""}
+        <h4 className="row">
+          {trash ? (
+            <>
+              <Trash2 aria-hidden size={18} /> Lixeira
+            </>
+          ) : category ? (
+            labels[category]
+          ) : (
+            "Arquivos do projeto"
+          )}
         </h4>
         <button
           type="button"
@@ -347,8 +373,7 @@ export function LibraryFiles({
       {trash && (
         <p className="notice">
           Arquivos na lixeira podem ser restaurados por quem tem permissão de
-          exclusão. Continuam ocupando a quota. Nenhum arquivo externo é
-          apagado.
+          exclusão.
         </p>
       )}
       {error && (
@@ -469,7 +494,7 @@ export function LibraryFiles({
                     </label>
                   ) : (
                     <label>
-                      Arquivo privado (até 2 MiB)
+                      Arquivo privado (até {fileLimitLabel(SOURCE_LIMIT)})
                       <input
                         required
                         key="upload-input"
@@ -555,6 +580,7 @@ export function LibraryFiles({
             <label>
               Buscar arquivo
               <input
+                type="search"
                 value={search}
                 maxLength={160}
                 onChange={(e) => setSearch(e.target.value)}
@@ -570,7 +596,11 @@ export function LibraryFiles({
             </p>
           )}
           {listing.folders.length > 0 && !entries.length && (
-            <p>Nenhum arquivo nesta seleção.</p>
+            <p role="status">
+              {search.trim()
+                ? "Nenhum arquivo corresponde à busca nesta seleção."
+                : "Nenhum arquivo nesta seleção."}
+            </p>
           )}
           <div className="file-list" aria-label="Lista de arquivos">
             {entries.map((entry) => (
@@ -595,7 +625,7 @@ export function LibraryFiles({
                   <p className="muted subtle">
                     <strong>{libraryFileType(entry)}</strong>
                     {entry.bytes
-                      ? ` · ${Math.ceil(entry.bytes / 1024)} KB`
+                      ? ` · aprox. ${formatFileMB(entry.bytes)}`
                       : ""}
                     <span className="file-list-updated">
                       {updatedAtLabel(entry.updated_at)}
@@ -603,6 +633,26 @@ export function LibraryFiles({
                   </p>
                 </div>
                 <div className="row">
+                  {!entry.deleted_at &&
+                    !entry.url &&
+                    entry.can_download &&
+                    [
+                      "application/pdf",
+                      "image/png",
+                      "image/jpeg",
+                      "image/gif",
+                      "image/webp",
+                    ].includes(entry.mime) && (
+                      <button
+                        type="button"
+                        className="btn secondary file-download"
+                        aria-label="Visualizar arquivo"
+                        title="Visualizar arquivo"
+                        onClick={() => setPreview(entry)}
+                      >
+                        <Hourglass aria-hidden size={19} />
+                      </button>
+                    )}
                   {!entry.deleted_at &&
                     (entry.url ? (
                       <a

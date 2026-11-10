@@ -30,6 +30,11 @@ test("Library file manager stores private files, groups and HTTPS links without 
   });
   const manager = page.getByRole("region", { name: "Gerenciador de arquivos" });
   await expect(manager).toBeVisible();
+  await expect(
+    page
+      .getByRole("region", { name: "Biblioteca do projeto" })
+      .locator("header .document-breadcrumb"),
+  ).toHaveCount(0);
   await manager
     .getByRole("button", { name: "Nova pasta", exact: true })
     .click();
@@ -99,6 +104,37 @@ test("Library file manager stores private files, groups and HTTPS links without 
   await imageRow.scrollIntoViewIfNeeded();
   await expect(imageRow.locator('[data-ready="true"]')).toBeVisible();
   await expect(imageRow).toContainText("PNG");
+  const previewButton = imageRow.getByRole("button", {
+    name: "Visualizar arquivo",
+    exact: true,
+  });
+  await previewButton.click();
+  const previewDialog = page.getByRole("dialog", {
+    name: "Visualizar arquivo: Imagem privada",
+    exact: true,
+  });
+  await expect(previewDialog.locator("canvas")).toBeVisible();
+  await previewDialog.press("Escape");
+  await expect(previewDialog).toHaveCount(0);
+  await expect(previewButton).toBeFocused();
+  await previewButton.click();
+  await expect(previewDialog.locator("canvas")).toBeVisible();
+  await previewDialog
+    .getByRole("button", { name: "Fechar visualização" })
+    .click();
+  const search = manager.getByLabel("Buscar arquivo", { exact: true });
+  await search.fill("IMÁGEM");
+  await expect(imageRow).toBeVisible();
+  await expect(
+    manager.getByRole("heading", { name: "Vídeo do Drive", exact: true }),
+  ).toHaveCount(0);
+  await search.fill("inexistente");
+  await expect(imageRow).toHaveCount(0);
+  await expect(manager.getByRole("status")).toHaveText(
+    "Nenhum arquivo corresponde à busca nesta seleção.",
+  );
+  await search.fill("");
+  await expect(imageRow).toBeVisible();
   await expect(imageRow).not.toContainText("Campanha");
   const thumbnailRoute = `**/api/boss/project-files/${project}/file/*`;
   await page.route(thumbnailRoute, (route) =>
@@ -132,6 +168,12 @@ test("Library file manager stores private files, groups and HTTPS links without 
         () => document.documentElement.scrollWidth <= innerWidth,
       ),
     ).toBe(true);
+    const filterBox = await manager.locator(".file-filters").boundingBox();
+    const listBox = await manager.locator(".file-list").boundingBox();
+    expect(filterBox!.width / listBox!.width).toBeCloseTo(
+      width > 650 ? 0.5 : 1,
+      1,
+    );
     await page.screenshot({
       path: info.outputPath(`file-manager-${width}.png`),
       fullPage: true,
@@ -184,6 +226,42 @@ test("Library file manager stores private files, groups and HTTPS links without 
   await page.reload();
   await manager.getByRole("button", { name: "Lixeira", exact: true }).click();
   await expect(photo).toBeVisible();
+  await search.fill("IMÁGEM");
+  await expect(photo).toBeVisible();
+  await search.fill("vídeo");
+  await expect(photo).toHaveCount(0);
+  await expect(manager.getByRole("status")).toContainText(
+    "corresponde à busca",
+  );
+  await search.fill("");
+  await expect(photo).toBeVisible();
+  const trashTitle = manager.getByRole("heading", {
+    name: "Lixeira",
+    exact: true,
+  });
+  await expect(trashTitle).toBeVisible();
+  await expect(trashTitle.locator('svg[aria-hidden="true"]')).toHaveCount(1);
+  await expect(
+    manager.getByRole("heading", { name: / · Lixeira/ }),
+  ).toHaveCount(0);
+  await expect(manager.locator("p.notice")).toHaveText(
+    "Arquivos na lixeira podem ser restaurados por quem tem permissão de exclusão.",
+  );
+  await expect(manager).not.toContainText("Continuam ocupando a quota.");
+  await expect(manager).not.toContainText("Nenhum arquivo externo é apagado.");
+  for (const width of [1440, 390]) {
+    await page.setViewportSize({ width, height: 900 });
+    await trashTitle.scrollIntoViewIfNeeded();
+    await expect(trashTitle).toBeVisible();
+    expect(
+      await page.evaluate(
+        () => document.documentElement.scrollWidth <= innerWidth,
+      ),
+    ).toBe(true);
+    await page.screenshot({
+      path: info.outputPath(`trash-heading-${width}.png`),
+    });
+  }
   await expect(
     photo.getByRole("button", { name: "Baixar arquivo" }),
   ).toHaveCount(0);
@@ -296,7 +374,9 @@ for (const width of [1440, 390]) {
       buffer: Buffer.alloc(2 * 1024 * 1024 + 1),
     });
     await form.getByRole("button", { name: "Salvar", exact: true }).click();
-    await expect(manager.getByRole("alert")).toContainText("excede 2 MiB");
+    await expect(manager.getByRole("alert")).toContainText(
+      "2,10 MB (2.097.152 bytes)",
+    );
     await input.setInputFiles({
       name: "word.docx",
       mimeType:
@@ -409,3 +489,146 @@ for (const width of [1440, 390]) {
     ).toEqual([]);
   });
 }
+
+test("Private PDF preview renders a bounded canvas, handles denied reads and preserves downloads", async ({
+  page,
+}) => {
+  const f = JSON.parse(await readFile(".data/e2e.json", "utf8"));
+  await page.goto("/login");
+  await page.getByLabel("E-mail", { exact: true }).fill(f.email);
+  await page.getByLabel("Senha", { exact: true }).fill(f.password);
+  await page.getByRole("button", { name: "Entrar no BOSS" }).click();
+  await expect(
+    page.getByRole("button", { name: "Novo projeto" }),
+  ).toBeVisible();
+  const headers = {
+    "x-organization-id": f.org,
+    origin: "http://localhost:3100",
+  };
+  const p = await page.request.post("/api/boss/projects", {
+    headers,
+    data: { name: "Prévia isolada" },
+  });
+  const project = (await p.json()).id;
+  const folder = crypto.randomUUID();
+  const id = crypto.randomUUID();
+  const base = `/api/boss/project-files/${project}`;
+  expect(
+    (
+      await page.request.post(`${base}/folders`, {
+        headers,
+        data: { id: folder, name: "Prévia" },
+      })
+    ).ok(),
+  ).toBe(true);
+  const stream = "0.9 0.6 0.5 rg 0 0 100 100 re f\n";
+  const objects = [
+    "<< /Type /Catalog /Pages 2 0 R >>",
+    "<< /Type /Pages /Kids [3 0 R] /Count 1 >>",
+    "<< /Type /Page /Parent 2 0 R /MediaBox [0 0 200 200] /Contents 4 0 R >>",
+    `<< /Length ${stream.length} >>\nstream\n${stream}endstream`,
+  ];
+  let pdf = "%PDF-1.4\n";
+  const offsets = [0];
+  objects.forEach((object, i) => {
+    offsets.push(Buffer.byteLength(pdf));
+    pdf += `${i + 1} 0 obj\n${object}\nendobj\n`;
+  });
+  const xref = Buffer.byteLength(pdf);
+  pdf += `xref\n0 5\n0000000000 65535 f \n${offsets
+    .slice(1)
+    .map((o) => `${String(o).padStart(10, "0")} 00000 n \n`)
+    .join("")}trailer\n<< /Size 5 /Root 1 0 R >>\nstartxref\n${xref}\n%%EOF\n`;
+  expect(
+    (
+      await page.request.post(`${base}/items`, {
+        headers,
+        data: {
+          id,
+          folder_id: folder,
+          name: "PDF seguro",
+          category: "document",
+          mime: "application/pdf",
+          filename: "fixture.pdf",
+          data: Buffer.from(pdf).toString("base64"),
+        },
+      })
+    ).ok(),
+  ).toBe(true);
+  expect(
+    (
+      await page.request.post(`${base}/items`, {
+        headers,
+        data: {
+          id: crypto.randomUUID(),
+          folder_id: folder,
+          name: "Link externo",
+          category: "document",
+          url: "https://example.org/document.pdf",
+        },
+      })
+    ).ok(),
+  ).toBe(true);
+  await page.goto(`/?workspace=${f.org}&project=${project}&view=library`);
+  const manager = page.getByRole("region", { name: "Gerenciador de arquivos" });
+  const row = manager.locator("article").filter({
+    has: page.getByRole("heading", { name: "PDF seguro", exact: true }),
+  });
+  await expect(
+    manager
+      .locator("article")
+      .filter({
+        has: page.getByRole("heading", { name: "Link externo", exact: true }),
+      })
+      .getByRole("button", { name: "Visualizar arquivo" }),
+  ).toHaveCount(0);
+  const button = row.getByRole("button", {
+    name: "Visualizar arquivo",
+    exact: true,
+  });
+  for (const width of [1440, 390]) {
+    await page.setViewportSize({ width, height: 900 });
+    await button.click();
+    const dialog = page.getByRole("dialog", {
+      name: "Visualizar arquivo: PDF seguro",
+      exact: true,
+    });
+    await expect(dialog.locator("canvas")).toBeVisible();
+    await expect(dialog).toContainText("Prévia da primeira página");
+    await expect(dialog.locator("iframe, a")).toHaveCount(0);
+    expect(
+      await dialog
+        .locator("canvas")
+        .evaluate((c: HTMLCanvasElement) => Math.max(c.width, c.height)),
+    ).toBeLessThanOrEqual(1200);
+    await dialog.press("Escape");
+    await expect(button).toBeFocused();
+  }
+  await page.route(`**${base}/file/${id}`, async (route) => {
+    await new Promise((resolve) => setTimeout(resolve, 500));
+    await route.abort();
+  });
+  await button.click();
+  const loadingDialog = page.getByRole("dialog", {
+    name: "Visualizar arquivo: PDF seguro",
+    exact: true,
+  });
+  await expect(loadingDialog.getByRole("status")).toContainText("Carregando");
+  await loadingDialog.press("Escape");
+  await expect(loadingDialog).toHaveCount(0);
+  await page.unroute(`**${base}/file/${id}`);
+  await page.route(`**${base}/file/${id}`, (route) =>
+    route.fulfill({ status: 403, body: "Forbidden" }),
+  );
+  await button.click();
+  const dialog = page.getByRole("dialog", {
+    name: "Visualizar arquivo: PDF seguro",
+    exact: true,
+  });
+  await expect(dialog.getByRole("status")).toContainText("indisponível");
+  await expect(dialog.locator("canvas")).toBeHidden();
+  await dialog.getByRole("button", { name: "Fechar visualização" }).click();
+  await page.unroute(`**${base}/file/${id}`);
+  const downloaded = await page.request.get(`${base}/file/${id}`, { headers });
+  expect(await downloaded.body()).toEqual(Buffer.from(pdf));
+});

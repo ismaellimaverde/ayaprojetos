@@ -138,9 +138,6 @@ export function ProjectLibrary({
   return (
     <section aria-label="Biblioteca do projeto" className="stack library-index">
       <header className="document-heading library-heading">
-        <p className="document-breadcrumb">
-          {projectName || "Projeto"} / Biblioteca
-        </p>
         <h2>Biblioteca</h2>
         <p className="muted">
           Documentos formados pelo conteúdo salvo em cada área. O Business Plan

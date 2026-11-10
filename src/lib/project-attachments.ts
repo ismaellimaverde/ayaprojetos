@@ -16,4 +16,4 @@ export async function projectAttachmentBytes(
     ).rows[0].bytes,
   );
 }
-export const PROJECT_ATTACHMENT_LIMIT = 50 * 1024 * 1024;
+export { PROJECT_ATTACHMENT_LIMIT } from "./file-size";

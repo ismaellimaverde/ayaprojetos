@@ -1,4 +1,5 @@
 "use client";
+import { fileLimitLabel } from "@/lib/file-size";
 import Image from "next/image";
 import {
   createContext,
@@ -219,7 +220,9 @@ export function AreaSources({
                 let data: string | undefined;
                 if (file) {
                   if (file.size > SOURCE_LIMIT)
-                    throw new Error("Limite de 2 MB por anexo");
+                    throw new Error(
+                      `Limite de ${fileLimitLabel(SOURCE_LIMIT)} por anexo`,
+                    );
                   data = await new Promise<string>((resolve, reject) => {
                     const reader = new FileReader();
                     reader.onload = () =>
@@ -279,7 +282,7 @@ export function AreaSources({
             )}
             {["image", "audio", "pdf"].includes(draft.kind) && (
               <label>
-                Anexo privado (até 2 MB)
+                Anexo privado (até {fileLimitLabel(SOURCE_LIMIT)})
                 <input
                   key={draft.kind}
                   type="file"
