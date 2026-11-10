@@ -8,7 +8,7 @@ import { useEffect, useRef, useState } from "react";
 import {
   Folder,
   Download,
-  Hourglass,
+  Search,
   ArrowLeft,
   FileText,
   Files,
@@ -659,7 +659,7 @@ export function LibraryFiles({
                         title="Visualizar arquivo"
                         onClick={() => setPreview(entry)}
                       >
-                        <Hourglass aria-hidden size={19} />
+                        <Search aria-hidden size={19} />
                       </button>
                     )}
                   {!entry.deleted_at &&
@@ -715,7 +715,17 @@ export function LibraryFiles({
                   {entry.can_delete && (
                     <button
                       type="button"
-                      className="btn secondary"
+                      className={`btn secondary ${entry.deleted_at ? "" : "file-download"}`}
+                      aria-label={
+                        entry.deleted_at
+                          ? "Restaurar arquivo"
+                          : "Excluir arquivo"
+                      }
+                      title={
+                        entry.deleted_at
+                          ? "Restaurar arquivo"
+                          : "Excluir arquivo"
+                      }
                       disabled={busy || !!form}
                       onClick={() => {
                         const message = entry.deleted_at
@@ -733,9 +743,11 @@ export function LibraryFiles({
                         });
                       }}
                     >
-                      {entry.deleted_at
-                        ? "Restaurar arquivo"
-                        : "Excluir arquivo"}
+                      {entry.deleted_at ? (
+                        "Restaurar arquivo"
+                      ) : (
+                        <Trash2 aria-hidden size={19} />
+                      )}
                     </button>
                   )}
                 </div>

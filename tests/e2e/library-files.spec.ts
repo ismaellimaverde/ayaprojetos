@@ -108,6 +108,7 @@ test("Library file manager stores private files, groups and HTTPS links without 
     name: "Visualizar arquivo",
     exact: true,
   });
+  await expect(previewButton.locator("svg.lucide-search")).toHaveCount(1);
   await previewButton.click();
   const previewDialog = page.getByRole("dialog", {
     name: "Visualizar arquivo: Imagem privada",
@@ -213,8 +214,17 @@ test("Library file manager stores private files, groups and HTTPS links without 
   const photo = manager.locator("article").filter({
     has: page.getByRole("heading", { name: "Imagem privada", exact: true }),
   });
+  const deleteButton = photo.getByRole("button", {
+    name: "Excluir arquivo",
+    exact: true,
+  });
+  await expect(deleteButton).toHaveText("");
+  await expect(deleteButton).toHaveAttribute("title", "Excluir arquivo");
+  await expect(deleteButton.locator("svg.lucide-trash-2")).toHaveCount(1);
+  await deleteButton.focus();
+  await expect(deleteButton).toBeFocused();
   page.once("dialog", (d) => d.dismiss());
-  await photo.getByRole("button", { name: "Excluir arquivo" }).click();
+  await deleteButton.press("Enter");
   await expect(photo).toBeVisible();
   page.once("dialog", (d) => {
     expect(d.message()).toContain("Imagem privada");
@@ -678,4 +688,151 @@ test("Private PDF preview renders a bounded canvas, handles denied reads and pre
   await page.unroute(`**${base}/file/${id}`);
   const downloaded = await page.request.get(`${base}/file/${id}`, { headers });
   expect(await downloaded.body()).toEqual(Buffer.from(pdf));
+});
+
+test("Preview fits portrait, landscape and square images and multipage PDFs within each viewport", async ({
+  page,
+}, info) => {
+  const f = JSON.parse(await readFile(".data/e2e.json", "utf8"));
+  await page.goto("/login");
+  await page.getByLabel("E-mail", { exact: true }).fill(f.email);
+  await page.getByLabel("Senha", { exact: true }).fill(f.password);
+  await page.getByRole("button", { name: "Entrar no BOSS" }).click();
+  await expect(
+    page.getByRole("button", { name: "Novo projeto" }),
+  ).toBeVisible();
+  const headers = {
+    "x-organization-id": f.org,
+    origin: "http://localhost:3100",
+  };
+  const project = (
+    await (
+      await page.request.post("/api/boss/projects", {
+        headers,
+        data: { name: "Preview dimensions" },
+      })
+    ).json()
+  ).id;
+  const folder = crypto.randomUUID();
+  const base = `/api/boss/project-files/${project}`;
+  expect(
+    (
+      await page.request.post(`${base}/folders`, {
+        headers,
+        data: { id: folder, name: "Geometria" },
+      })
+    ).ok(),
+  ).toBe(true);
+  const fixtures: { name: string; ratio: number }[] = [];
+  for (const [w, h] of [
+    [300, 1000],
+    [1000, 300],
+    [600, 600],
+  ]) {
+    for (const kind of ["image", "document"]) {
+      const name = `${kind} ${w}x${h}`;
+      let data: string;
+      if (kind === "image")
+        data = await page.evaluate(
+          ([width, height]) => {
+            const c = document.createElement("canvas");
+            c.width = width;
+            c.height = height;
+            const ctx = c.getContext("2d")!;
+            ctx.fillStyle = "#EF9C83";
+            ctx.fillRect(0, 0, width, height);
+            return c.toDataURL("image/png").split(",")[1];
+          },
+          [w, h],
+        );
+      else {
+        const stream = "0.9 0.6 0.5 rg 0 0 100 100 re f\n";
+        const objects = [
+          "<< /Type /Catalog /Pages 2 0 R >>",
+          "<< /Type /Pages /Kids [3 0 R 4 0 R] /Count 2 >>",
+          `<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ${w} ${h}] /Contents 5 0 R >>`,
+          `<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ${w} ${h}] /Contents 5 0 R >>`,
+          `<< /Length ${stream.length} >>\nstream\n${stream}endstream`,
+        ];
+        let pdf = "%PDF-1.4\n";
+        const offsets: number[] = [];
+        objects.forEach((o, i) => {
+          offsets.push(Buffer.byteLength(pdf));
+          pdf += `${i + 1} 0 obj\n${o}\nendobj\n`;
+        });
+        const xref = Buffer.byteLength(pdf);
+        pdf += `xref\n0 6\n0000000000 65535 f \n${offsets.map((o) => `${String(o).padStart(10, "0")} 00000 n \n`).join("")}trailer\n<< /Size 6 /Root 1 0 R >>\nstartxref\n${xref}\n%%EOF\n`;
+        data = Buffer.from(pdf).toString("base64");
+      }
+      expect(
+        (
+          await page.request.post(`${base}/items`, {
+            headers,
+            data: {
+              id: crypto.randomUUID(),
+              folder_id: folder,
+              name,
+              category: kind,
+              mime: kind === "image" ? "image/png" : "application/pdf",
+              filename: kind === "image" ? "fixture.png" : "fixture.pdf",
+              data,
+            },
+          })
+        ).ok(),
+      ).toBe(true);
+      fixtures.push({ name, ratio: w / h });
+    }
+  }
+  await page.goto(`/?workspace=${f.org}&project=${project}&view=library`);
+  const manager = page.getByRole("region", { name: "Gerenciador de arquivos" });
+  for (const width of [1440, 390]) {
+    await page.setViewportSize({ width, height: 900 });
+    for (const fixture of fixtures) {
+      const row = manager
+        .locator("article")
+        .filter({
+          has: page.getByRole("heading", { name: fixture.name, exact: true }),
+        });
+      const button = row.getByRole("button", {
+        name: "Visualizar arquivo",
+        exact: true,
+      });
+      await button.click();
+      const modal = page.getByRole("dialog", {
+        name: `Visualizar arquivo: ${fixture.name}`,
+        exact: true,
+      });
+      const canvas = modal.locator("canvas");
+      await expect(canvas).toBeVisible();
+      await expect
+        .poll(async () => {
+          const b = await canvas.boundingBox();
+          return b!.width / b!.height;
+        })
+        .toBeCloseTo(fixture.ratio, 1);
+      const close = modal.getByRole("button", { name: "Fechar visualização" });
+      const box = (await modal.boundingBox())!,
+        control = (await close.boundingBox())!;
+      expect(box.x).toBeGreaterThanOrEqual(0);
+      expect(box.x + box.width).toBeLessThanOrEqual(width);
+      expect(control.x - box.x).toBeGreaterThanOrEqual(12);
+      expect(
+        box.x + box.width - control.x - control.width,
+      ).toBeGreaterThanOrEqual(12);
+      expect(control.y - box.y).toBeGreaterThanOrEqual(12);
+      expect(control.height).toBeGreaterThanOrEqual(44);
+      expect(
+        await page.evaluate(
+          () => document.documentElement.scrollWidth <= innerWidth,
+        ),
+      ).toBe(true);
+      if (fixture.name.startsWith("image 300"))
+        await page.screenshot({
+          path: info.outputPath(`fitted-preview-${width}.png`),
+        });
+      await close.click();
+      await expect(modal).toHaveCount(0);
+      await expect(button).toBeFocused();
+    }
+  }
 });

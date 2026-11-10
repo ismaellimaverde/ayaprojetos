@@ -1818,3 +1818,10 @@ h3 {
 .file-folder-section .file-folders { margin-top: 0; }
 .file-entry-form > label { width: 50%; }
 @media (max-width: 650px) { .file-entry-form > label { width: 100%; } }
+/* Preview bounds follow the rendered content rather than a fixed-width empty frame. */
+.boss-dialog.private-file-preview { width: max-content; min-width: min(240px, calc(100vw - 32px)); max-width: calc(100vw - 32px); padding: 16px; background: #fff; color: #1d1e21; overflow: auto; }
+.private-preview-controls { max-width: min(640px, calc(100vw - 64px)); margin-bottom: 12px; }
+.private-preview-controls .heading { margin: 0; gap: 12px; }
+.private-preview-controls .heading h3 { overflow-wrap: anywhere; }
+.private-preview-controls .btn { min-height: 44px; flex-shrink: 0; background: #fff; color: #1d1e21; border: 1px solid #d5d8e0; }
+.boss-dialog.private-file-preview canvas { max-width: 100%; max-height: none; margin: 0 auto; }

@@ -17,6 +17,39 @@ export function PrivateFilePreview({
 }) {
   const dialog = useRef<HTMLDialogElement>(null);
   const canvas = useRef<HTMLCanvasElement>(null);
+  const controls = useRef<HTMLDivElement>(null);
+  const [dimensions, setDimensions] = useState<{
+    width: number;
+    height: number;
+  } | null>(null);
+  useEffect(() => {
+    const surface = canvas.current;
+    if (!surface || !dimensions) return;
+    const fit = () => {
+      const availableWidth = Math.max(160, window.innerWidth - 64);
+      const availableHeight = Math.max(
+        80,
+        window.innerHeight * 0.9 -
+          (controls.current?.getBoundingClientRect().height || 60) -
+          48,
+      );
+      const scale = Math.min(
+        1,
+        availableWidth / dimensions.width,
+        availableHeight / dimensions.height,
+      );
+      surface.style.width = `${Math.floor(dimensions.width * scale)}px`;
+      surface.style.height = `${Math.floor(dimensions.height * scale)}px`;
+    };
+    fit();
+    window.addEventListener("resize", fit);
+    const observer = new ResizeObserver(fit);
+    if (controls.current) observer.observe(controls.current);
+    return () => {
+      window.removeEventListener("resize", fit);
+      observer.disconnect();
+    };
+  }, [dimensions]);
   const [state, setState] = useState("Carregando visualização…");
   useEffect(() => {
     const opener = document.activeElement as HTMLElement | null;
@@ -118,7 +151,10 @@ export function PrivateFilePreview({
           throw new Error(
             "Este formato não tem visualização. Use o download ou abra o original.",
           );
-        if (!abort.signal.aborted) setState("");
+        if (!abort.signal.aborted) {
+          setDimensions({ width: surface.width, height: surface.height });
+          setState("");
+        }
       } catch (e) {
         if (!abort.signal.aborted)
           setState(
@@ -147,23 +183,25 @@ export function PrivateFilePreview({
         onClose();
       }}
     >
-      <div className="heading">
-        <h3>{name}</h3>
-        <button
-          type="button"
-          className="btn secondary"
-          onClick={onClose}
-          autoFocus
-        >
-          Fechar visualização
-        </button>
+      <div ref={controls} className="private-preview-controls">
+        <div className="heading">
+          <h3>{name}</h3>
+          <button
+            type="button"
+            className="btn secondary"
+            onClick={onClose}
+            autoFocus
+          >
+            Fechar visualização
+          </button>
+        </div>
+        {mime === "application/pdf" && (
+          <p className="muted">
+            Prévia da primeira página, sem links ou ações do PDF. Baixe o
+            arquivo para consultar todas as páginas.
+          </p>
+        )}
       </div>
-      {mime === "application/pdf" && (
-        <p className="muted">
-          Prévia da primeira página, sem links ou ações do PDF. Baixe o arquivo
-          para consultar todas as páginas.
-        </p>
-      )}
       {state && <p role="status">{state}</p>}
       <canvas
         ref={canvas}
