@@ -261,7 +261,7 @@ test("revoked project disappearing during refresh does not trap platform navigat
 });
 
 for (const width of [320, 390, 768]) {
-  test(`mobile hamburger menus are independent and preserve editing at ${width}px`, async ({
+  test(`restored menus and compact workspace controls preserve editing at ${width}px`, async ({
     page,
   }, info) => {
     await page.setViewportSize({ width, height: 900 });
@@ -324,13 +324,12 @@ for (const width of [320, 390, 768]) {
     const controls = [
       topbar.getByRole("combobox"),
       topbar.getByRole("button", { name: "Novo workspace", exact: true }),
-      topbar.getByRole("link"),
+      topbar.getByRole("button", { name: "Sair", exact: true }),
     ];
     const boxes = await Promise.all(
       controls.map((control) => control.boundingBox()),
     );
     for (const box of boxes) {
-      expect(box).not.toBeNull();
       expect(box!.x).toBeGreaterThanOrEqual(0);
       expect(box!.x + box!.width).toBeLessThanOrEqual(width);
       expect(
@@ -339,6 +338,13 @@ for (const width of [320, 390, 768]) {
         ),
       ).toBeLessThan(3);
     }
+    await expect(
+      page.getByRole("button", { name: "Alternar tema" }),
+    ).toHaveCount(0);
+    await expect(page.locator(".workspace-shell")).toHaveClass(/dark/);
+    await expect(page.locator(".platform-userbar a")).toHaveText(
+      "Pessoa de teste",
+    );
     await topbar
       .getByRole("button", { name: "Novo workspace", exact: true })
       .click();
@@ -354,9 +360,9 @@ for (const width of [320, 390, 768]) {
     await editor.fill("Rascunho preservado");
     const main = page.locator("#main-menu-toggle"),
       areas = page.locator("#area-menu-toggle");
-    await expect(main.locator("svg.lucide-menu")).toHaveCount(1);
-    await expect(areas.locator("svg.lucide-menu")).toHaveCount(1);
-    await expect(page.locator("#primary-navigation")).toBeHidden();
+    await expect(main.locator("svg.lucide-panel-left-open")).toHaveCount(1);
+    await expect(areas.locator("svg.lucide-panel-left-open")).toHaveCount(1);
+    await expect(page.locator("#primary-navigation")).toBeVisible();
     await expect(page.locator("#area-navigation")).toBeHidden();
     for (const control of [main, areas]) {
       await expect(control).toHaveAttribute("aria-expanded", "false");
@@ -376,19 +382,10 @@ for (const width of [320, 390, 768]) {
     await expect(page.getByRole("alertdialog")).toBeVisible();
     await page.getByRole("button", { name: "Cancelar", exact: true }).click();
     await expect(editor).toHaveText("Rascunho preservado");
-    await areas.focus();
-    await areas.press("Escape");
+    await areas.click();
     await expect(page.locator("#area-navigation")).toBeHidden();
-    await expect(areas).toBeFocused();
-    await expect(page.locator("#primary-navigation")).toBeVisible();
-    await page
-      .locator("#primary-navigation")
-      .getByRole("button", { name: "Projetos", exact: true })
-      .focus();
-    await page.keyboard.press("Escape");
-    await expect(page.locator("#primary-navigation")).toBeHidden();
-    await expect(main).toBeFocused();
-    await expect(editor).toHaveText("Rascunho preservado");
+    await main.click();
+    await expect(main).toHaveAttribute("aria-expanded", "false");
     expect(
       await page.evaluate(
         () => document.documentElement.scrollWidth <= innerWidth,

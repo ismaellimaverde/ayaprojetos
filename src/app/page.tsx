@@ -19,7 +19,6 @@ import {
   useSyncExternalStore,
 } from "react";
 import {
-  Menu,
   PanelLeftClose,
   PanelLeftOpen,
   LayoutDashboard,
@@ -29,8 +28,6 @@ import {
   ShieldCheck,
   ArrowUpRight,
   Plus,
-  Sun,
-  Moon,
   LogOut,
   History,
 } from "lucide-react";
@@ -172,7 +169,6 @@ export default function Home() {
     [companyEdit, setCompanyEdit] = useState<Company | null>(null),
     [message, setMessage] = useState(""),
     [busy, setBusy] = useState(true),
-    [dark, setDark] = useState(false),
     [query, setQuery] = useState("");
   const mainCollapsed =
     mainCollapseChoice ??
@@ -293,13 +289,11 @@ export default function Home() {
     if (
       mainCollapsed &&
       document.activeElement?.closest(
-        compact
-          ? "#primary-navigation, .brand-home, .primary-sidebar footer"
-          : ".project-shortcuts, .brand-home, .primary-sidebar footer",
+        ".project-shortcuts, .brand-home, .primary-sidebar footer",
       )
     )
       document.getElementById("main-menu-toggle")?.focus();
-  }, [areasCollapsed, mainCollapsed, compact]);
+  }, [areasCollapsed, mainCollapsed]);
   async function run(path: string, method: string, body?: unknown) {
     setMessage("");
     try {
@@ -377,19 +371,21 @@ export default function Home() {
     ) : null;
   return (
     <div
-      className={`shell workspace-shell ${dark ? "dark" : ""} ${mainCollapsed ? "main-collapsed" : ""} ${selected && ["plan", "library"].includes(tab) ? "has-project" : ""} ${areasCollapsed ? "areas-collapsed" : ""}`}
+      className={`shell workspace-shell dark ${mainCollapsed ? "main-collapsed" : ""} ${selected && ["plan", "library"].includes(tab) ? "has-project" : ""} ${areasCollapsed ? "areas-collapsed" : ""}`}
     >
-      <aside
-        className="sidebar primary-sidebar"
-        aria-label="Menu principal"
-        onKeyDown={(e) => {
-          if (compact && e.key === "Escape") {
-            e.stopPropagation();
-            setMainCollapseChoice(true);
-            document.getElementById("main-menu-toggle")?.focus();
-          }
-        }}
-      >
+      <header className="platform-userbar">
+        <Link
+          href="/security"
+          title={name}
+          onClick={(e) => {
+            e.preventDefault();
+            navigate(() => router.push("/security"));
+          }}
+        >
+          {name}
+        </Link>
+      </header>
+      <aside className="sidebar primary-sidebar" aria-label="Menu principal">
         <button
           id="main-menu-toggle"
           className="menu-collapse"
@@ -407,9 +403,7 @@ export default function Home() {
               : "Recolher menu principal"
           }
         >
-          {compact ? (
-            <Menu size={20} aria-hidden />
-          ) : mainCollapsed ? (
+          {mainCollapsed ? (
             <PanelLeftOpen size={20} />
           ) : (
             <PanelLeftClose size={20} />
@@ -430,11 +424,7 @@ export default function Home() {
         >
           <Brand />
         </Link>
-        <nav
-          id="primary-navigation"
-          hidden={compact && mainCollapsed}
-          aria-label="Navegação principal"
-        >
+        <nav id="primary-navigation" aria-label="Navegação principal">
           {[
             {
               id: "portfolio",
@@ -551,13 +541,6 @@ export default function Home() {
         <aside
           className="sidebar area-sidebar"
           aria-label="Navegação das áreas"
-          onKeyDown={(e) => {
-            if (compact && e.key === "Escape") {
-              e.stopPropagation();
-              setAreaCollapseChoice(true);
-              document.getElementById("area-menu-toggle")?.focus();
-            }
-          }}
         >
           <button
             id="area-menu-toggle"
@@ -572,9 +555,7 @@ export default function Home() {
             onClick={() => setAreaCollapseChoice(!areasCollapsed)}
             title={areasCollapsed ? "Expandir áreas" : "Recolher áreas"}
           >
-            {compact ? (
-              <Menu size={20} aria-hidden />
-            ) : areasCollapsed ? (
+            {areasCollapsed ? (
               <PanelLeftOpen size={20} />
             ) : (
               <PanelLeftClose size={20} />
@@ -641,6 +622,9 @@ export default function Home() {
             <span className="eyebrow">WORKSPACE</span>
             <select
               aria-label="Organização"
+              style={{
+                width: `${Math.max(10, (orgs.find((o) => o.id === org)?.name.length ?? 10) + 4)}ch`,
+              }}
               value={org}
               onChange={(e) => {
                 const value = e.target.value;
@@ -666,9 +650,7 @@ export default function Home() {
           <div className="row workspace-controls">
             {data.admin && (
               <button
-                className="btn secondary workspace-create"
-                aria-label="Novo workspace"
-                title="Novo workspace"
+                className="btn secondary"
                 onClick={() =>
                   navigate(() => {
                     setEditingArea(null);
@@ -676,28 +658,9 @@ export default function Home() {
                   })
                 }
               >
-                <Plus size={18} aria-hidden />
-                <span>Novo workspace</span>
+                Novo workspace
               </button>
             )}
-            <button
-              className="btn secondary"
-              aria-label="Alternar tema"
-              onClick={() => setDark(!dark)}
-            >
-              {dark ? <Sun size={16} /> : <Moon size={16} />}
-            </button>
-            <Link
-              href="/security"
-              className="workspace-user"
-              title={name}
-              onClick={(e) => {
-                e.preventDefault();
-                navigate(() => router.push("/security"));
-              }}
-            >
-              {name}
-            </Link>
             <button
               className="btn secondary"
               aria-label="Sair"

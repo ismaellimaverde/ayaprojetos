@@ -2,6 +2,7 @@
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useState } from "react";
+import { Eye, EyeOff } from "lucide-react";
 import { authClient } from "@/lib/client";
 import { Brand } from "@/components/brand";
 export default function Login() {
@@ -98,12 +99,13 @@ export default function Login() {
                     name="email"
                     type="email"
                     autoComplete="username"
+                    defaultValue="Ismael@ayaprojetos.com.br"
                     required
                   />
                 </label>
                 <div className="password-control">
                   <label htmlFor="login-password">Senha</label>
-                  <span className="password-control">
+                  <span className="login-password-field">
                     <input
                       id="login-password"
                       name="password"
@@ -115,9 +117,18 @@ export default function Login() {
                       type="button"
                       className="password-toggle"
                       aria-controls="login-password"
+                      aria-label={
+                        showPassword ? "Ocultar senha" : "Mostrar senha"
+                      }
+                      title={showPassword ? "Ocultar senha" : "Mostrar senha"}
+                      aria-pressed={showPassword}
                       onClick={() => setShowPassword((visible) => !visible)}
                     >
-                      {showPassword ? "Ocultar senha" : "Mostrar senha"}
+                      {showPassword ? (
+                        <EyeOff size={20} aria-hidden />
+                      ) : (
+                        <Eye size={20} aria-hidden />
+                      )}
                     </button>
                   </span>
                 </div>
