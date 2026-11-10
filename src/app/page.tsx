@@ -637,7 +637,7 @@ export default function Home() {
       )}
       <div className="main">
         <header className="topbar">
-          <label className="row">
+          <label className="row workspace-switcher">
             <span className="eyebrow">WORKSPACE</span>
             <select
               aria-label="Organização"
@@ -663,10 +663,12 @@ export default function Home() {
               ))}
             </select>
           </label>
-          <div className="row">
+          <div className="row workspace-controls">
             {data.admin && (
               <button
-                className="btn secondary"
+                className="btn secondary workspace-create"
+                aria-label="Novo workspace"
+                title="Novo workspace"
                 onClick={() =>
                   navigate(() => {
                     setEditingArea(null);
@@ -674,7 +676,8 @@ export default function Home() {
                   })
                 }
               >
-                Novo workspace
+                <Plus size={18} aria-hidden />
+                <span>Novo workspace</span>
               </button>
             )}
             <button
@@ -686,6 +689,8 @@ export default function Home() {
             </button>
             <Link
               href="/security"
+              className="workspace-user"
+              title={name}
               onClick={(e) => {
                 e.preventDefault();
                 navigate(() => router.push("/security"));

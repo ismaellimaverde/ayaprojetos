@@ -235,7 +235,7 @@ test("revoked project disappearing during refresh does not trap platform navigat
       });
     }
     return route.fulfill({
-      json: { projects: revoked ? [] : [project], companies: [], admin: false },
+      json: { projects: revoked ? [] : [project], companies: [], admin: true },
     });
   });
   await page.goto("/?workspace=org&project=revoked-project&area=executive");
@@ -300,7 +300,7 @@ for (const width of [320, 390, 768]) {
         return route.fulfill({ json: { documents: [] } });
       return route.fulfill({
         json: {
-          admin: false,
+          admin: true,
           companies: [],
           projects: [
             {
@@ -319,6 +319,37 @@ for (const width of [320, 390, 768]) {
       name: "Resumo executivo",
       exact: true,
     });
+    await expect(editor).toHaveText("Texto salvo");
+    const topbar = page.locator("header.topbar");
+    const controls = [
+      topbar.getByRole("combobox"),
+      topbar.getByRole("button", { name: "Novo workspace", exact: true }),
+      topbar.getByRole("link"),
+    ];
+    const boxes = await Promise.all(
+      controls.map((control) => control.boundingBox()),
+    );
+    for (const box of boxes) {
+      expect(box).not.toBeNull();
+      expect(box!.x).toBeGreaterThanOrEqual(0);
+      expect(box!.x + box!.width).toBeLessThanOrEqual(width);
+      expect(
+        Math.abs(
+          box!.y + box!.height / 2 - (boxes[0]!.y + boxes[0]!.height / 2),
+        ),
+      ).toBeLessThan(3);
+    }
+    await topbar
+      .getByRole("button", { name: "Novo workspace", exact: true })
+      .click();
+    await expect(page.getByRole("alertdialog")).toBeVisible();
+    await page.getByRole("button", { name: "Não salvar", exact: true }).click();
+    await expect(page.getByRole("dialog")).toBeVisible();
+    await page
+      .getByRole("dialog")
+      .getByRole("button", { name: "Fechar", exact: true })
+      .click();
+    await page.goto("/?workspace=org&project=project&area=executive");
     await expect(editor).toHaveText("Texto salvo");
     await editor.fill("Rascunho preservado");
     const main = page.locator("#main-menu-toggle"),
