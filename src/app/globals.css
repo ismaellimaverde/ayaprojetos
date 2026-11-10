@@ -1807,3 +1807,14 @@ h3 {
 .private-file-preview canvas[hidden] { display: none; }
 .file-manager .file-filters { width: 50%; }
 @media (max-width: 650px) { .file-manager .file-filters { width: 100%; } }
+/* Compact return affordance retains a 44px hit area around its 32px visual pill. */
+.file-trash-heading { margin-top: 24px; }
+.file-category-actions { justify-content: flex-end; }
+.file-return-button.btn { min-height: 44px; padding: 6px 0; border: 0; background: transparent; box-shadow: none; }
+.file-return-button > span { display: inline-flex; align-items: center; gap: 6px; min-height: 32px; padding: 5px 12px; border: 1px solid var(--line); border-radius: 999px; background: var(--surface); font-size: 12px; }
+.file-return-button:hover > span { background: var(--bg); }
+.file-folder-section { display: flex; align-items: center; flex-wrap: wrap; gap: 10px 16px; margin-top: 16px; }
+.file-folder-section h4 { margin: 0; font-size: 14px; font-weight: 600; }
+.file-folder-section .file-folders { margin-top: 0; }
+.file-entry-form > label { width: 50%; }
+@media (max-width: 650px) { .file-entry-form > label { width: 100%; } }

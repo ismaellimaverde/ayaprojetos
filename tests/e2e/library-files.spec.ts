@@ -253,6 +253,26 @@ test("Library file manager stores private files, groups and HTTPS links without 
     await page.setViewportSize({ width, height: 900 });
     await trashTitle.scrollIntoViewIfNeeded();
     await expect(trashTitle).toBeVisible();
+    const back = manager.getByRole("button", {
+      name: "Voltar aos arquivos",
+      exact: true,
+    });
+    await expect(back.locator("svg.lucide-arrow-left")).toHaveCount(1);
+    await expect(back.locator("svg.lucide-trash-2")).toHaveCount(0);
+    await expect(trashTitle.locator("svg.lucide-trash-2")).toHaveCount(1);
+    expect((await back.boundingBox())!.height).toBeGreaterThanOrEqual(44);
+    expect(
+      (await back.locator("span").boundingBox())!.height,
+    ).toBeLessThanOrEqual(36);
+    const categoryBottom = await manager
+      .locator(".file-categories")
+      .boundingBox();
+    const headerBox = await manager
+      .locator(".file-trash-heading")
+      .boundingBox();
+    expect(
+      headerBox!.y - categoryBottom!.y - categoryBottom!.height,
+    ).toBeGreaterThanOrEqual(24);
     expect(
       await page.evaluate(
         () => document.documentElement.scrollWidth <= innerWidth,
@@ -332,6 +352,11 @@ for (const width of [1440, 390]) {
     await docs.focus();
     await docs.press("Enter");
     await expect(docs).toHaveAttribute("aria-pressed", "true");
+    await expect(
+      manager
+        .locator(".file-folder-section")
+        .getByRole("heading", { name: "Documentos", exact: true }),
+    ).toBeVisible();
     await manager
       .getByRole("button", { name: "Adicionar arquivo ou link" })
       .click();
@@ -339,6 +364,16 @@ for (const width of [1440, 390]) {
     await expect(form.getByLabel("Nome", { exact: true })).toHaveValue(
       "Documentos",
     );
+    const widthRatio = await form.evaluate((el) => {
+      const style = getComputedStyle(el);
+      return (
+        el.querySelector("label")!.getBoundingClientRect().width /
+        (el.clientWidth -
+          parseFloat(style.paddingLeft) -
+          parseFloat(style.paddingRight))
+      );
+    });
+    expect(widthRatio).toBeCloseTo(width > 650 ? 0.5 : 1, 1);
     page.once("dialog", (d) => d.dismiss());
     await form.getByRole("button", { name: "Cancelar", exact: true }).click();
     await expect(form).toBeVisible();
@@ -357,6 +392,18 @@ for (const width of [1440, 390]) {
     await form.getByRole("button", { name: "Criar pasta e continuar" }).click();
     form = manager.getByRole("form", { name: "Novo arquivo ou link" });
     await expect(form.getByLabel("Como adicionar")).toHaveValue("upload");
+    const fieldRatios = await form.evaluate((el) => {
+      const style = getComputedStyle(el);
+      const available =
+        el.clientWidth -
+        parseFloat(style.paddingLeft) -
+        parseFloat(style.paddingRight);
+      return [...el.querySelectorAll(":scope > label")].map(
+        (label) => label.getBoundingClientRect().width / available,
+      );
+    });
+    for (const ratio of fieldRatios)
+      expect(ratio).toBeCloseTo(width > 650 ? 0.5 : 1, 1);
     await expect(
       form.getByRole("combobox", { name: "Categoria", exact: true }),
     ).toHaveCount(0);

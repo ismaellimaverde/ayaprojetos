@@ -9,6 +9,7 @@ import {
   Folder,
   Download,
   Hourglass,
+  ArrowLeft,
   FileText,
   Files,
   Trash2,
@@ -343,21 +344,17 @@ export function LibraryFiles({
           </button>
         ))}
       </nav>
-      <div className="row file-category-heading">
-        <h4 className="row">
-          {trash ? (
-            <>
-              <Trash2 aria-hidden size={18} /> Lixeira
-            </>
-          ) : category ? (
-            labels[category]
-          ) : (
-            "Arquivos do projeto"
-          )}
-        </h4>
+      <div
+        className={`row file-category-heading ${trash ? "file-trash-heading" : "file-category-actions"}`}
+      >
+        {trash && (
+          <h4 className="row">
+            <Trash2 aria-hidden size={18} /> Lixeira
+          </h4>
+        )}
         <button
           type="button"
-          className="btn secondary"
+          className={`btn secondary ${trash ? "file-return-button" : ""}`}
           disabled={busy || !!form}
           onClick={() => {
             setLoading(true);
@@ -366,8 +363,15 @@ export function LibraryFiles({
             setError("");
           }}
         >
-          <Trash2 aria-hidden size={18} />
-          {trash ? "Voltar aos arquivos" : "Lixeira"}
+          {trash ? (
+            <span>
+              <ArrowLeft aria-hidden size={16} /> Voltar aos arquivos
+            </span>
+          ) : (
+            <>
+              <Trash2 aria-hidden size={18} /> Lixeira
+            </>
+          )}
         </button>
       </div>
       {trash && (
@@ -387,7 +391,7 @@ export function LibraryFiles({
         <>
           {form && (
             <form
-              className="panel stack"
+              className="panel stack file-entry-form"
               aria-label={
                 form === "folder"
                   ? "Nova pasta"
@@ -548,34 +552,39 @@ export function LibraryFiles({
               </div>
             </form>
           )}
-          {listing.folders.length > 0 && (
-            <nav className="row file-folders" aria-label="Pastas de arquivos">
-              <button
-                type="button"
-                className={`btn ${!folder ? "" : "secondary"}`}
-                aria-pressed={!folder}
-                onClick={() => setFolder("")}
-              >
-                Todas as pastas
-              </button>
-              {listing.folders.map((g) => (
+          <div className="file-folder-section">
+            {!trash && (
+              <h4>{category ? labels[category] : "Arquivos do projeto"}</h4>
+            )}
+            {listing.folders.length > 0 && (
+              <nav className="row file-folders" aria-label="Pastas de arquivos">
                 <button
-                  key={g.id}
                   type="button"
-                  className={`btn ${folder === g.id ? "" : "secondary"}`}
-                  aria-pressed={folder === g.id}
-                  onClick={() => setFolder(g.id)}
+                  className={`btn ${!folder ? "" : "secondary"}`}
+                  aria-pressed={!folder}
+                  onClick={() => setFolder("")}
                 >
-                  <Folder aria-hidden size={18} />
-                  {g.name}
-                  <span className="subtle">
-                    {" "}
-                    {g.scope === "area" ? "· Acesso legado restrito" : ""}
-                  </span>
+                  Todas as pastas
                 </button>
-              ))}
-            </nav>
-          )}
+                {listing.folders.map((g) => (
+                  <button
+                    key={g.id}
+                    type="button"
+                    className={`btn ${folder === g.id ? "" : "secondary"}`}
+                    aria-pressed={folder === g.id}
+                    onClick={() => setFolder(g.id)}
+                  >
+                    <Folder aria-hidden size={18} />
+                    {g.name}
+                    <span className="subtle">
+                      {" "}
+                      {g.scope === "area" ? "· Acesso legado restrito" : ""}
+                    </span>
+                  </button>
+                ))}
+              </nav>
+            )}
+          </div>
           <div className="file-filters">
             <label>
               Buscar arquivo
